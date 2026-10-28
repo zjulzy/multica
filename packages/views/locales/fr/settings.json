@@ -1230,7 +1230,9 @@
     "appearance": {
       "title": "Appearance",
       "single_tab_mode_title": "Single-tab mode",
-      "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off."
+      "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off.",
+      "inbox_dock_title": "Panneau inférieur de la boîte de réception",
+      "inbox_dock_description": "Conservez une boîte de réception repliable en bas de la fenêtre et masquez son entrée dans la barre latérale."
     },
     "tab_bar": {
       "pin": "Épingler l'onglet",

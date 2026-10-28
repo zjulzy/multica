@@ -1224,7 +1224,9 @@
     "appearance": {
       "title": "Appearance",
       "single_tab_mode_title": "Single-tab mode",
-      "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off."
+      "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off.",
+      "inbox_dock_title": "下部受信トレイパネル",
+      "inbox_dock_description": "ウィンドウ下部に折りたたみ可能な受信トレイを常設し、サイドバーの受信トレイ項目を非表示にします。"
     },
     "tab_bar": {
       "pin": "タブをピン留め",

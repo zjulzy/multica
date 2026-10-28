@@ -1224,7 +1224,9 @@
     "appearance": {
       "title": "介面",
       "single_tab_mode_title": "單分頁模式",
-      "single_tab_mode_description": "隱藏分頁列。連結、Ctrl+點擊和固定分頁的跳轉都在目前頁面開啟；上一頁 / 下一頁照常。既有分頁會保留，關閉此開關後恢復顯示。"
+      "single_tab_mode_description": "隱藏分頁列。連結、Ctrl+點擊和固定分頁的跳轉都在目前頁面開啟；上一頁 / 下一頁照常。既有分頁會保留，關閉此開關後恢復顯示。",
+      "inbox_dock_title": "底部收件匣面板",
+      "inbox_dock_description": "在視窗底部常駐可收合的收件匣，並隱藏側邊欄中的收件匣入口。"
     },
     "tab_bar": {
       "pin": "固定標籤頁",
