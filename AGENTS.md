@@ -125,3 +125,8 @@ Workspace-scoped queries filter by `workspace_id`; membership gates access and `
 - Use names, types, and tests to express behavior. Code comments are English and kept for non-obvious rationale and constraints; remove superseded plans and incident narratives when updating code. Preserve tool directives and mixed-version contracts.
 - New global pre-workspace routes use a single word or `/{noun}/{verb}`, not hyphenated root names. Update `server/internal/handler/reserved_slugs.json`, run `pnpm generate:reserved-slugs`, and commit `packages/core/paths/reserved-slugs.ts` when changing reserved slugs.
 - Use atomic conventional commits and the repository PR template. For releases, follow [.github/RELEASING.md](.github/RELEASING.md); default to a patch bump unless specified otherwise.
+
+
+## Lilith fork
+
+This checkout is the `zjulzy/multica` fork (branch `lilith/main`). Before touching desktop code, releases or dev mode, read `docs/lilith/DEV-NOTES.md`.
