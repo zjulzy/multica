@@ -3,6 +3,10 @@
     "title": "인박스",
     "back": "인박스"
   },
+  "dock": {
+    "expand": "받은편지함 펼치기",
+    "collapse": "받은편지함 접기"
+  },
   "menu": {
     "mark_all_read": "모두 읽음으로 표시",
     "archive_all": "모두 보관",

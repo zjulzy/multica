@@ -129,6 +129,7 @@ export interface InboxSurfaceProps {
   variant: "page" | "dock";
   layoutId: string;
   headerAction?: ReactNode;
+  onDockHeaderToggle?: () => void;
   enableGlobalArchiveShortcut?: boolean;
   contentInert?: boolean;
 }
@@ -138,6 +139,7 @@ export function InboxSurface({
   variant,
   layoutId,
   headerAction,
+  onDockHeaderToggle,
   enableGlobalArchiveShortcut,
   contentInert = false,
 }: InboxSurfaceProps): ReactElement {
@@ -566,9 +568,8 @@ export function InboxSurface({
 
   // -- Shared sub-components --------------------------------------------------
 
-  const headerContent = (
+  const headerTitle = (
     <>
-      <div className="flex flex-1 items-center gap-2">
         <h1 className="text-body font-semibold">{t(($) => $.page.title)}</h1>
         {unreadCount > 0 && (
           <NumberFlow
@@ -579,7 +580,21 @@ export function InboxSurface({
             className="text-caption text-muted-foreground"
           />
         )}
-      </div>
+    </>
+  );
+  const headerContent = (
+    <>
+      {variant === "dock" ? (
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={onDockHeaderToggle}
+        >
+          {headerTitle}
+        </button>
+      ) : (
+        <div className="flex flex-1 items-center gap-2">{headerTitle}</div>
+      )}
       <InboxFilterMenu
         wsId={wsId}
         items={viewItems}

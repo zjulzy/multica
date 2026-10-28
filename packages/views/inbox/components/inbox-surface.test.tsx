@@ -180,13 +180,17 @@ function controller(overrides: Partial<InboxSurfaceController> = {}): InboxSurfa
   };
 }
 
-function renderDock(value: InboxSurfaceController) {
+function renderDock(
+  value: InboxSurfaceController,
+  onDockHeaderToggle: () => void = vi.fn(),
+) {
   return render(
     <InboxSurface
       controller={value}
       variant="dock"
       layoutId="test-dock-layout"
       enableGlobalArchiveShortcut={false}
+      onDockHeaderToggle={onDockHeaderToggle}
       headerAction={<button type="button">Dock action</button>}
     />,
   );
@@ -225,6 +229,17 @@ describe("InboxSurface dock controller", () => {
 
     expect(screen.getByText("Dock action")).toBeInTheDocument();
     expect(screen.queryByTestId("page-header")).not.toBeInTheDocument();
+  });
+
+  it("toggles from the dock title without treating header controls as toggles", () => {
+    const onDockHeaderToggle = vi.fn();
+    renderDock(controller(), onDockHeaderToggle);
+
+    fireEvent.click(screen.getByRole("heading", { name: "Inbox" }));
+    expect(onDockHeaderToggle).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    expect(onDockHeaderToggle).toHaveBeenCalledTimes(1);
   });
 
   it("does not register the global archive shortcut when disabled", () => {

@@ -3,6 +3,10 @@
     "title": "インボックス",
     "back": "インボックス"
   },
+  "dock": {
+    "expand": "受信トレイを展開",
+    "collapse": "受信トレイを折りたたむ"
+  },
   "menu": {
     "mark_all_read": "すべて既読にする",
     "archive_all": "すべてアーカイブ",

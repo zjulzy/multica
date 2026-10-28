@@ -3,6 +3,10 @@
     "title": "收件箱",
     "back": "收件箱"
   },
+  "dock": {
+    "expand": "展開收件箱",
+    "collapse": "收合收件箱"
+  },
   "menu": {
     "mark_all_read": "全部標為已讀",
     "archive_all": "歸檔全部",

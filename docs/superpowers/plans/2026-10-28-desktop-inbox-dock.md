@@ -166,6 +166,7 @@
     variant: "page" | "dock";
     layoutId: string;
     headerAction?: React.ReactNode;
+    onDockHeaderToggle?: () => void;
     enableGlobalArchiveShortcut?: boolean;
     contentInert?: boolean;
   }
