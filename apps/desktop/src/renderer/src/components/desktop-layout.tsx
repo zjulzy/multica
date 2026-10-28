@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@multica/ui/lib/utils";
@@ -16,6 +16,7 @@ import {
   AppSidebar,
   GlobalShortcuts,
   NavigationProgress,
+  PageHeaderPortalProvider,
 } from "@multica/views/layout";
 import { SearchCommand, SearchTrigger } from "@multica/views/search";
 import { FloatingChat } from "@multica/views/chat";
@@ -71,7 +72,14 @@ function useNativeNavigationGestures() {
 // do not land beneath the traffic lights / navigation controls. The matching
 // 200ms transition cancels the sidebar gap's movement during toggle; live
 // resize previews disable it through data-sidebar-resize-consumer.
-function MainTopBar({ sidebarMounted }: { sidebarMounted: boolean }) {
+function MainTopBar({
+  sidebarMounted,
+  headerSlotRef,
+}: {
+  sidebarMounted: boolean;
+  /** Single-tab mode: where page headers portal their breadcrumb/actions. */
+  headerSlotRef: (el: HTMLDivElement | null) => void;
+}) {
   const { state, isCompact } = useSidebar();
   const sidebarHidden = !sidebarMounted || state === "collapsed" || isCompact;
   const clearance = windowToolbarClearance();
@@ -109,9 +117,17 @@ function MainTopBar({ sidebarMounted }: { sidebarMounted: boolean }) {
       />
       <div
         data-slot="main-top-bar-content"
-        className="relative z-10 flex h-full min-w-0 max-w-full items-center"
+        className="relative z-10 flex h-full min-w-0 max-w-full flex-1 items-center"
       >
-        {!singleTabMode && <TabBar />}
+        {singleTabMode ? (
+          <div
+            ref={headerSlotRef}
+            data-slot="page-header-slot"
+            className="flex h-full min-w-0 flex-1 items-center px-4"
+          />
+        ) : (
+          <TabBar />
+        )}
       </div>
     </header>
   );
@@ -250,6 +266,10 @@ export function DesktopShell() {
     currentSlug && workspaces.some((w) => w.slug === currentSlug)
       ? currentSlug
       : null;
+  // Single-tab mode: page headers render into the top bar instead of the
+  // page. The slot element lives in MainTopBar; pages read it via context.
+  const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
+  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   return (
     <DesktopNavigationProvider>
@@ -285,7 +305,10 @@ export function DesktopShell() {
             {slug && <AppSidebar topSlot={<SidebarTopSpacer />} searchSlot={<SearchTrigger />} />}
             {/* Right side: header + content container */}
             <div className="flex flex-1 min-w-0 flex-col">
-              <MainTopBar sidebarMounted={Boolean(slug)} />
+              <MainTopBar
+                sidebarMounted={Boolean(slug)}
+                headerSlotRef={setHeaderSlot}
+              />
               <MainCanvas showWorkspaceLoading={!slug}>
                 {/* Same indicator, same anchor as web: DashboardLayout puts it
                     at the top of SidebarInset, and MainCanvas is desktop's
@@ -293,7 +316,9 @@ export function DesktopShell() {
                     used to have no navigation feedback at all — a click just
                     froze until the destination committed (MUL-6404). */}
                 <NavigationProgress />
-                <TabContent />
+                <PageHeaderPortalProvider value={singleTabMode ? headerSlot : null}>
+                  <TabContent />
+                </PageHeaderPortalProvider>
                 {slug && <FloatingChat />}
               </MainCanvas>
             </div>

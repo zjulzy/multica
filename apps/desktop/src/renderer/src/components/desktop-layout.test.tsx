@@ -69,6 +69,7 @@ vi.mock("@multica/views/layout", () => ({
   AppSidebar: () => null,
   GlobalShortcuts: () => null,
   NavigationProgress: () => null,
+  PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@multica/views/modals/registry", () => ({ ModalRegistry: () => null }));
@@ -212,5 +213,22 @@ describe("single-tab mode", () => {
     renderShell();
     expect(await screen.findByTestId("main-top-bar")).toBeInTheDocument();
     expect(screen.queryByTestId("tab-bar")).toBeNull();
+  });
+});
+
+describe("single-tab mode header slot", () => {
+  afterEach(() => useDesktopPrefsStore.setState({ singleTabMode: false }));
+
+  it("offers a page-header slot in the top bar instead of the tab bar", async () => {
+    useDesktopPrefsStore.setState({ singleTabMode: true });
+    const { container } = renderShell();
+    expect(await screen.findByTestId("main-top-bar")).toBeInTheDocument();
+    expect(container.querySelector("[data-slot='page-header-slot']")).not.toBeNull();
+  });
+
+  it("has no header slot in tabbed mode", async () => {
+    const { container } = renderShell();
+    expect(await screen.findByTestId("tab-bar")).toBeInTheDocument();
+    expect(container.querySelector("[data-slot='page-header-slot']")).toBeNull();
   });
 });

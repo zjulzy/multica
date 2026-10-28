@@ -8,7 +8,12 @@ import {
   CollectionPageHeader,
   CollectionPageHeaderAction,
 } from "./collection-page";
-import { CollapsedNavTrigger, PAGE_GUTTER, PageHeader } from "./page-header";
+import {
+  CollapsedNavTrigger,
+  PAGE_GUTTER,
+  PageHeader,
+  PageHeaderPortalProvider,
+} from "./page-header";
 
 // The layout rules under test are documented on `PageHeader` itself; each
 // test here pins one of them against the rendered output.
@@ -111,5 +116,41 @@ describe("PageHeader base chrome", () => {
     const { container } = renderWithI18n(<CollapsedNavTrigger />);
 
     expect(container.querySelector("[data-slot='sidebar-trigger']")).toBeNull();
+  });
+});
+
+describe("PageHeader portal host", () => {
+  it("renders into the host element and leaves no header in the page", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    try {
+      const { container } = renderWithI18n(
+        <SidebarProvider hasExternalTrigger>
+          <PageHeaderPortalProvider value={host}>
+            <PageHeader>
+              <h1>Portaled title</h1>
+            </PageHeader>
+          </PageHeaderPortalProvider>
+        </SidebarProvider>,
+      );
+      expect(within(container).queryByRole("banner")).toBeNull();
+      expect(within(host).getByText("Portaled title")).toBeInTheDocument();
+      expect(host.querySelector("[data-slot='page-header-portal']")).not.toBeNull();
+    } finally {
+      host.remove();
+    }
+  });
+
+  it("keeps the in-page header when the host is null", () => {
+    const { container } = renderWithI18n(
+      <SidebarProvider hasExternalTrigger>
+        <PageHeaderPortalProvider value={null}>
+          <PageHeader>
+            <h1>Inline title</h1>
+          </PageHeader>
+        </PageHeaderPortalProvider>
+      </SidebarProvider>,
+    );
+    expect(within(container).getByRole("banner")).toBeInTheDocument();
   });
 });

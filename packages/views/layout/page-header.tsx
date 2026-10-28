@@ -1,5 +1,7 @@
 "use client";
 
+import { createContext, useContext, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@multica/ui/lib/utils";
 import { SidebarTrigger, useSidebarSafe } from "@multica/ui/components/ui/sidebar";
 import { ActionShortcutKeycaps } from "../common/shortcut-keycaps";
@@ -107,7 +109,44 @@ interface PageHeaderProps {
  * Do not pass a `px-*` through `className`. The gutter is `PAGE_GUTTER` for
  * every page, and the toolbar beneath the header reads the same constant.
  */
+/**
+ * Optional host element for page headers. When a shell provides one (desktop
+ * single-tab mode parks it in the window's top bar), every `PageHeader`
+ * renders its content there via a portal and leaves no header row in the
+ * page. `null` (web, tabbed desktop) keeps the in-page header.
+ */
+const PageHeaderPortalContext = createContext<HTMLElement | null>(null);
+
+export function PageHeaderPortalProvider({
+  value,
+  children,
+}: {
+  value: HTMLElement | null;
+  children: ReactNode;
+}) {
+  return (
+    <PageHeaderPortalContext.Provider value={value}>
+      {children}
+    </PageHeaderPortalContext.Provider>
+  );
+}
+
 export function PageHeader({ children, leading, className }: PageHeaderProps) {
+  const portalTarget = useContext(PageHeaderPortalContext);
+  if (portalTarget) {
+    // The host sits inside a window drag region; keep the header's links and
+    // buttons clickable.
+    return createPortal(
+      <div
+        data-slot="page-header-portal"
+        className="flex h-full min-w-0 flex-1 items-center gap-2 text-body"
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+      >
+        {children}
+      </div>,
+      portalTarget,
+    );
+  }
   return (
     <header
       className={cn(
