@@ -12,27 +12,38 @@ export interface OverlayColors {
   symbolColor: string;
 }
 
-const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+function toHexByte(n: number): string {
+  return n.toString(16).padStart(2, "0");
+}
 
 /**
  * Read `--app-shell` / `--muted-foreground` and normalize them to `#rrggbb`.
- * The tokens are `oklch(...)`, which `titleBarOverlay` does not accept;
- * assigning any CSS color to a 2D canvas `fillStyle` and reading it back
- * yields the normalized hex form for opaque colors.
+ * The tokens are `oklch(...)`, which `titleBarOverlay` does not accept and
+ * which canvas `fillStyle` serialization does not fold to hex either. Painting
+ * one pixel and reading it back does: the rasterized sRGB value is what the
+ * window would show anyway.
  */
 export function resolveOverlayColors(
   readVariable: (name: string) => string = (name) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim(),
   canvas: HTMLCanvasElement = document.createElement("canvas"),
 ): OverlayColors | null {
-  const ctx = canvas.getContext("2d");
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) return null;
   const toHex = (value: string): string | null => {
     if (!value) return null;
-    ctx.fillStyle = "#000000";
+    ctx.clearRect(0, 0, 1, 1);
+    // Sentinel first: if `value` fails to parse, fillStyle keeps the sentinel
+    // and the painted pixel reveals it.
+    ctx.fillStyle = "#010203";
     ctx.fillStyle = value;
-    const out = String(ctx.fillStyle);
-    return HEX_COLOR.test(out) ? out : null;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+    if (a !== 255) return null;
+    const hex = `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}`;
+    return hex === "#010203" ? null : hex;
   };
   const color = toHex(readVariable("--app-shell"));
   const symbolColor = toHex(readVariable("--muted-foreground"));

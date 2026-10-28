@@ -15,37 +15,52 @@ vi.stubGlobal("cancelAnimationFrame", () => {});
 import { TitleBarOverlaySync, resolveOverlayColors } from "./title-bar-overlay-sync";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
-function fakeCanvas(normalize: (value: string) => string) {
-  let current = "";
+/**
+ * jsdom has no 2D raster. Emulate the parts resolveOverlayColors relies on:
+ * fillStyle keeps the last *parseable* color (unknown values are ignored,
+ * like Chromium), fillRect paints it, getImageData reads it back.
+ */
+function fakeCanvas(parse: (value: string) => [number, number, number] | null) {
+  let current: [number, number, number] = [0, 0, 0];
+  let painted: [number, number, number, number] = [0, 0, 0, 0];
   const ctx = {
-    get fillStyle() {
-      return current;
-    },
     set fillStyle(value: string) {
-      current = normalize(value);
+      const rgb = parse(value);
+      if (rgb) current = rgb;
+    },
+    clearRect() {
+      painted = [0, 0, 0, 0];
+    },
+    fillRect() {
+      painted = [...current, 255];
+    },
+    getImageData() {
+      return { data: Uint8ClampedArray.from(painted) };
     },
   };
   return { getContext: () => ctx } as unknown as HTMLCanvasElement;
 }
 
+const parseKnown = (v: string): [number, number, number] | null => {
+  if (v === "#010203") return [1, 2, 3];
+  if (v === "oklch(0.964 0.0013 286)") return [245, 245, 246];
+  if (v === "oklch(0.505 0.016 286)") return [120, 120, 138];
+  return null;
+};
+
 describe("resolveOverlayColors", () => {
-  it("normalizes CSS variable colors to 6-digit hex via canvas", () => {
-    // jsdom's canvas stub does not normalize; emulate Chromium's behavior.
-    const canvas = fakeCanvas((v) =>
-      v === "rgb(245, 245, 246)" ? "#f5f5f6" : v === "rgb(120, 120, 138)" ? "#78788a" : v,
-    );
+  it("rasterizes CSS variable colors (incl. oklch) to 6-digit hex", () => {
     const read = (name: string) =>
-      name === "--app-shell" ? "rgb(245, 245, 246)" : "rgb(120, 120, 138)";
-    expect(resolveOverlayColors(read, canvas)).toEqual({
+      name === "--app-shell" ? "oklch(0.964 0.0013 286)" : "oklch(0.505 0.016 286)";
+    expect(resolveOverlayColors(read, fakeCanvas(parseKnown))).toEqual({
       color: "#f5f5f6",
       symbolColor: "#78788a",
     });
   });
 
-  it("returns null when the canvas cannot normalize to hex", () => {
-    const canvas = fakeCanvas((v) => v);
-    expect(resolveOverlayColors(() => "", canvas)).toBeNull();
-    expect(resolveOverlayColors(() => "oklch(0.5 0 0)", canvas)).toBeNull();
+  it("returns null for empty or unparseable colors", () => {
+    expect(resolveOverlayColors(() => "", fakeCanvas(parseKnown))).toBeNull();
+    expect(resolveOverlayColors(() => "not-a-color", fakeCanvas(parseKnown))).toBeNull();
   });
 });
 
