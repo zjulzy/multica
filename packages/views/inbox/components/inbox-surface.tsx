@@ -343,6 +343,7 @@ export function InboxSurface({
   const selectedId = selected?.id;
   const selectedRead = selected?.read;
   useEffect(() => {
+    if (contentInert) return;
     if (!selectedId || selectedRead) return;
     if (manualUnreadIdRef.current === selectedId) return;
     if (filters.unreadOnly) {
@@ -363,7 +364,7 @@ export function InboxSurface({
             : t(($) => $.errors.mark_read_failed),
         ),
     });
-  }, [selectedId, selectedRead, selectedKey, selected, filters.unreadOnly, isArchivedView, queryClient, wsId, markReadMutate, t]);
+  }, [contentInert, selectedId, selectedRead, selectedKey, selected, filters.unreadOnly, isArchivedView, queryClient, wsId, markReadMutate, t]);
 
   // Release the guards as soon as the selection moves off their row.
   useEffect(() => {
@@ -506,6 +507,10 @@ export function InboxSurface({
       if (event.defaultPrevented || event.repeat || isImeComposing(event)) return;
       if (isEditableShortcutTarget(event.target)) return;
       if (isPortalLayerShortcutTarget(event.target)) return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[data-inbox-surface-shortcuts="disabled"]')
+      ) return;
       if (useModalStore.getState().modal) return;
       if (!shortcutMatchesEvent(getShortcut("archiveInboxItem"), event)) return;
       const run = actionOnSelectedRef.current;
@@ -800,6 +805,7 @@ export function InboxSurface({
           }
           highlightCommentId={detailItem.details?.comment_id ?? undefined}
           highlightRequestToken={highlightRequestToken}
+          enableGlobalFindShortcut={!contentInert}
           // The split layout already has a nav trigger in the list header.
           // Explicit false suppresses the detail header's fallback trigger.
           leadingAction={compactBackAction ?? false}
@@ -1063,7 +1069,11 @@ export function InboxSurface({
 
   if (variant === "dock") {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        data-inbox-surface="dock"
+        data-inbox-surface-shortcuts="disabled"
+        className="flex h-full min-h-0 flex-1 flex-col"
+      >
         {dockHeader}
         <div
           inert={contentInert || undefined}

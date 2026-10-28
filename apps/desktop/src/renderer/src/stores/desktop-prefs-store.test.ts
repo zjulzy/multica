@@ -7,6 +7,7 @@ beforeEach(() => {
     singleTabMode: false,
     inboxDockEnabled: false,
     inboxDockOpen: false,
+    inboxDockSize: 38,
   });
 });
 
@@ -28,15 +29,18 @@ describe("desktop prefs store", () => {
 
     expect(state.inboxDockEnabled).toBe(false);
     expect(state.inboxDockOpen).toBe(false);
+    expect(state.inboxDockSize).toBe(38);
   });
 
   it("persists the Inbox dock enable and open preferences", () => {
     useDesktopPrefsStore.getState().setInboxDockEnabled(true);
     useDesktopPrefsStore.getState().setInboxDockOpen(true);
+    useDesktopPrefsStore.getState().setInboxDockSize(57);
 
     let raw = JSON.parse(localStorage.getItem("multica_desktop_prefs") ?? "{}");
     expect(raw.state.inboxDockEnabled).toBe(true);
     expect(raw.state.inboxDockOpen).toBe(true);
+    expect(raw.state.inboxDockSize).toBe(57);
 
     useDesktopPrefsStore.getState().setInboxDockEnabled(false);
 
@@ -58,5 +62,6 @@ describe("desktop prefs store", () => {
     expect(state.singleTabMode).toBe(true);
     expect(state.inboxDockEnabled).toBe(false);
     expect(state.inboxDockOpen).toBe(false);
+    expect(state.inboxDockSize).toBe(38);
   });
 });

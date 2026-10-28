@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { InboxSurface, type InboxSurfaceController } from "@multica/views/inbox";
 import { useT } from "@multica/views/i18n";
@@ -7,7 +7,6 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-  useDefaultLayout,
   usePanelRef,
   type PanelSize,
 } from "@multica/ui/components/ui/resizable";
@@ -22,20 +21,17 @@ interface DesktopInboxDockLayoutProps {
   workspaceId: string | null;
 }
 
-export function DesktopInboxDockLayout({
-  children,
-  enabled,
-  workspaceId,
-}: DesktopInboxDockLayoutProps): ReactElement {
-  const { t } = useT("inbox");
-  const inboxDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
-  const setInboxDockOpen = useDesktopPrefsStore((state) => state.setInboxDockOpen);
+function DockInboxSurface({
+  open,
+  onToggle,
+  headerAction,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  headerAction: ReactNode;
+}) {
   const [view, setViewState] = useState<InboxView>("inbox");
   const [selectedKey, setSelectedKey] = useState("");
-  const dockPanelRef = usePanelRef();
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
-    id: "multica_desktop_inbox_dock_layout",
-  });
 
   const setView = useCallback((nextView: InboxView) => {
     setViewState(nextView);
@@ -46,15 +42,48 @@ export function DesktopInboxDockLayout({
     setSelectedKey("");
   }, []);
 
-  useEffect(() => {
-    setViewState("inbox");
-    setSelectedKey("");
-  }, [workspaceId]);
+  return (
+    <InboxSurface
+      controller={{
+        view,
+        selectedKey,
+        setView,
+        setSelectedKey,
+        onUnresolvedSelection: clearUnresolvedSelection,
+      }}
+      variant="dock"
+      layoutId="multica_inbox_dock_content_layout"
+      enableGlobalArchiveShortcut={false}
+      contentInert={!open}
+      onDockHeaderToggle={onToggle}
+      headerAction={headerAction}
+    />
+  );
+}
+
+export function DesktopInboxDockLayout({
+  children,
+  enabled,
+  workspaceId,
+}: DesktopInboxDockLayoutProps): ReactElement {
+  const { t } = useT("inbox");
+  const inboxDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
+  const inboxDockSize = useDesktopPrefsStore((state) => state.inboxDockSize);
+  const setInboxDockOpen = useDesktopPrefsStore((state) => state.setInboxDockOpen);
+  const setInboxDockSize = useDesktopPrefsStore((state) => state.setInboxDockSize);
+  const dockPanelRef = usePanelRef();
+  const initialDockSizeRef = useRef(`${inboxDockSize}%`);
+  const inboxDockSizeRef = useRef(inboxDockSize);
+  inboxDockSizeRef.current = inboxDockSize;
 
   useEffect(() => {
     if (!enabled || !workspaceId) return;
-    if (inboxDockOpen) dockPanelRef.current?.expand();
-    else dockPanelRef.current?.collapse();
+    if (inboxDockOpen) {
+      dockPanelRef.current?.expand();
+      dockPanelRef.current?.resize(`${inboxDockSizeRef.current}%`);
+    } else {
+      dockPanelRef.current?.collapse();
+    }
   }, [dockPanelRef, enabled, inboxDockOpen, workspaceId]);
 
   const handleDockResize = useCallback(
@@ -64,9 +93,10 @@ export function DesktopInboxDockLayout({
       // deliberately persisted as collapsed.
       if (!previousSize) return;
       const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE;
+      if (nextOpen) setInboxDockSize(size.asPercentage);
       if (nextOpen !== inboxDockOpen) setInboxDockOpen(nextOpen);
     },
-    [inboxDockOpen, setInboxDockOpen],
+    [inboxDockOpen, setInboxDockOpen, setInboxDockSize],
   );
 
   if (!enabled || !workspaceId) return <>{children}</>;
@@ -92,8 +122,6 @@ export function DesktopInboxDockLayout({
     <ResizablePanelGroup
       orientation="vertical"
       className="min-h-0 flex-1"
-      defaultLayout={defaultLayout}
-      onLayoutChanged={onLayoutChanged}
     >
       <ResizablePanel id="content" defaultSize="62%" minSize="30%">
         <div className="flex h-full min-h-0 flex-col">{children}</div>
@@ -101,27 +129,19 @@ export function DesktopInboxDockLayout({
       <ResizableHandle />
       <ResizablePanel
         id="inbox-dock"
+        className="h-full !overflow-hidden"
         panelRef={dockPanelRef}
-        defaultSize={inboxDockOpen ? "38%" : DOCK_COLLAPSED_SIZE}
+        defaultSize={initialDockSizeRef.current}
         minSize={260}
         maxSize="70%"
         collapsedSize={DOCK_COLLAPSED_SIZE}
         collapsible
         onResize={handleDockResize}
       >
-        <InboxSurface
-          controller={{
-            view,
-            selectedKey,
-            setView,
-            setSelectedKey,
-            onUnresolvedSelection: clearUnresolvedSelection,
-          }}
-          variant="dock"
-          layoutId="multica_inbox_dock_content_layout"
-          enableGlobalArchiveShortcut={false}
-          contentInert={!inboxDockOpen}
-          onDockHeaderToggle={() => setInboxDockOpen(!inboxDockOpen)}
+        <DockInboxSurface
+          key={workspaceId}
+          open={inboxDockOpen}
+          onToggle={() => setInboxDockOpen(!inboxDockOpen)}
           headerAction={headerAction}
         />
       </ResizablePanel>

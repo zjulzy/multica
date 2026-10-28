@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const panelApi = vi.hoisted(() => ({
   collapse: vi.fn(),
   expand: vi.fn(),
+  resize: vi.fn(),
+  getSize: vi.fn(() => ({ inPixels: 300, asPercentage: 38 })),
   isCollapsed: vi.fn(() => false),
 }));
 
@@ -34,6 +36,7 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
     collapsedSize,
     collapsible,
     onResize,
+    className,
   }: {
     children: ReactNode;
     id: string;
@@ -47,6 +50,7 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
       id: string,
       previousSize?: { inPixels: number; asPercentage: number },
     ) => void;
+    className?: string;
   }) => (
     <section
       data-testid={`panel-${id}`}
@@ -55,6 +59,7 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
       data-max-size={maxSize}
       data-collapsed-size={collapsedSize}
       data-collapsible={collapsible}
+      data-class-name={className}
     >
       {id === "inbox-dock" && onResize && (
         <>
@@ -75,6 +80,18 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
             onClick={() => onResize({ inPixels: 300, asPercentage: 38 }, id)}
           >
             Simulate initial restored layout
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onResize(
+                { inPixels: 480, asPercentage: 60 },
+                id,
+                { inPixels: 300, asPercentage: 38 },
+              )
+            }
+          >
+            Simulate drag expanded
           </button>
         </>
       )}
@@ -158,9 +175,11 @@ describe("DesktopInboxDockLayout", () => {
       singleTabMode: false,
       inboxDockEnabled: false,
       inboxDockOpen: false,
+      inboxDockSize: 38,
     });
     panelApi.collapse.mockClear();
     panelApi.expand.mockClear();
+    panelApi.resize.mockClear();
   });
 
   it.each([
@@ -178,7 +197,11 @@ describe("DesktopInboxDockLayout", () => {
 
     expect(screen.getByTestId("dock-layout")).toHaveAttribute("data-orientation", "vertical");
     expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute("data-collapsed-size", "36");
-    expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute("data-default-size", "36");
+    expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute("data-default-size", "38%");
+    expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute(
+      "data-class-name",
+      expect.stringContaining("!overflow-hidden"),
+    );
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "true");
     expect(panelApi.collapse).toHaveBeenCalled();
   });
@@ -190,6 +213,7 @@ describe("DesktopInboxDockLayout", () => {
 
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
     expect(panelApi.expand).toHaveBeenCalled();
+    expect(panelApi.resize).toHaveBeenCalledWith("38%");
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "false");
   });
 
@@ -240,5 +264,41 @@ describe("DesktopInboxDockLayout", () => {
     fireEvent.click(screen.getByRole("button", { name: "Simulate initial restored layout" }));
 
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+    expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(38);
+  });
+
+  it("restores the last expanded height after collapsing", () => {
+    useDesktopPrefsStore.setState({ inboxDockOpen: true });
+    renderDock();
+
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+    expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(60);
+
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag collapse" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+    expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(60);
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(panelApi.resize).toHaveBeenLastCalledWith("60%");
+  });
+
+  it("discards transient Inbox state when the feature is disabled", () => {
+    const { rerender } = renderDock();
+    fireEvent.click(screen.getByRole("button", { name: "Show archive" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select issue" }));
+
+    rerender(
+      <DesktopInboxDockLayout enabled={false} workspaceId="workspace-1">
+        <main>Main content</main>
+      </DesktopInboxDockLayout>,
+    );
+    rerender(
+      <DesktopInboxDockLayout enabled workspaceId="workspace-1">
+        <main>Main content</main>
+      </DesktopInboxDockLayout>,
+    );
+
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-view", "inbox");
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-selected-key", "");
   });
 });

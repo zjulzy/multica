@@ -95,7 +95,9 @@ vi.mock("@multica/core/inbox/filter-store", () => ({
 }));
 
 vi.mock("../../issues/components/issue-detail", () => ({
-  IssueDetail: () => <div>Issue detail</div>,
+  IssueDetail: ({ enableGlobalFindShortcut }: { enableGlobalFindShortcut?: boolean }) => (
+    <div data-testid="issue-detail" data-global-find={enableGlobalFindShortcut}>Issue detail</div>
+  ),
   issueHighlightMementoKey: (id: string) => `highlight:${id}`,
 }));
 vi.mock("../../issues/components/issue-peek", () => ({
@@ -183,6 +185,7 @@ function controller(overrides: Partial<InboxSurfaceController> = {}): InboxSurfa
 function renderDock(
   value: InboxSurfaceController,
   onDockHeaderToggle: () => void = vi.fn(),
+  contentInert = false,
 ) {
   return render(
     <InboxSurface
@@ -190,6 +193,7 @@ function renderDock(
       variant="dock"
       layoutId="test-dock-layout"
       enableGlobalArchiveShortcut={false}
+      contentInert={contentInert}
       onDockHeaderToggle={onDockHeaderToggle}
       headerAction={<button type="button">Dock action</button>}
     />,
@@ -249,5 +253,60 @@ describe("InboxSurface dock controller", () => {
     fireEvent.keyDown(document, { key: "e" });
 
     expect(state.archive).not.toHaveBeenCalled();
+  });
+
+  it("does not let the page archive shortcut act on a key event from the dock", () => {
+    state.items = [item()];
+    render(
+      <>
+        <InboxSurface
+          controller={controller({ selectedKey: "issue-1" })}
+          variant="page"
+          layoutId="page-layout"
+          enableGlobalArchiveShortcut
+        />
+        <InboxSurface
+          controller={controller({ selectedKey: "issue-1" })}
+          variant="dock"
+          layoutId="dock-layout"
+          enableGlobalArchiveShortcut={false}
+        />
+      </>,
+    );
+
+    const dock = document.querySelector('[data-inbox-surface="dock"]');
+    expect(dock).not.toBeNull();
+
+    fireEvent.keyDown(document.body, { key: "e" });
+    expect(state.archive).toHaveBeenCalledTimes(1);
+    state.archive.mockClear();
+
+    fireEvent.keyDown(dock!, { key: "e" });
+
+    expect(state.archive).not.toHaveBeenCalled();
+  });
+
+  it("keeps collapsed content full-height but inert without marking unread work as read", () => {
+    state.items = [item({ read: false })];
+
+    const value = controller({ selectedKey: "issue-1" });
+    const { rerender } = renderDock(value, vi.fn(), true);
+
+    const dock = document.querySelector('[data-inbox-surface="dock"]');
+    expect(dock).toHaveClass("h-full");
+    expect(state.markRead).not.toHaveBeenCalled();
+    expect(screen.getByTestId("issue-detail")).toHaveAttribute("data-global-find", "false");
+
+    rerender(
+      <InboxSurface
+        controller={value}
+        variant="dock"
+        layoutId="test-dock-layout"
+        enableGlobalArchiveShortcut={false}
+        contentInert={false}
+      />,
+    );
+    expect(state.markRead).toHaveBeenCalledWith("inbox-1", expect.anything());
+    expect(screen.getByTestId("issue-detail")).toHaveAttribute("data-global-find", "true");
   });
 });

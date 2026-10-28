@@ -12,9 +12,12 @@ interface DesktopPrefsStore {
   inboxDockEnabled: boolean;
   /** Restore the bottom Inbox dock's expanded/collapsed state. */
   inboxDockOpen: boolean;
+  /** Last expanded Inbox dock height as a percentage of the canvas. */
+  inboxDockSize: number;
   setSingleTabMode: (enabled: boolean) => void;
   setInboxDockEnabled: (enabled: boolean) => void;
   setInboxDockOpen: (open: boolean) => void;
+  setInboxDockSize: (size: number) => void;
 }
 
 export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
@@ -23,14 +26,17 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       singleTabMode: false,
       inboxDockEnabled: false,
       inboxDockOpen: false,
+      inboxDockSize: 38,
       setSingleTabMode: (enabled) => set({ singleTabMode: enabled }),
       setInboxDockEnabled: (enabled) =>
         set(enabled ? { inboxDockEnabled: true } : { inboxDockEnabled: false, inboxDockOpen: false }),
       setInboxDockOpen: (open) => set({ inboxDockOpen: open }),
+      setInboxDockSize: (size) =>
+        set({ inboxDockSize: Math.min(70, Math.max(0, size)) }),
     }),
     {
       name: "multica_desktop_prefs",
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as Partial<DesktopPrefsStore>;
         return {
@@ -38,6 +44,7 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
           singleTabMode: state.singleTabMode ?? false,
           inboxDockEnabled: state.inboxDockEnabled ?? false,
           inboxDockOpen: state.inboxDockOpen ?? false,
+          inboxDockSize: state.inboxDockSize ?? 38,
         } as DesktopPrefsStore;
       },
     },

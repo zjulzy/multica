@@ -1138,6 +1138,8 @@ interface IssueDetailProps {
   onDone?: () => void;
   defaultSidebarOpen?: boolean;
   layoutId?: string;
+  /** Disable document-level find while this embedded detail is hidden/inert. */
+  enableGlobalFindShortcut?: boolean;
   /** When set, the issue detail will auto-scroll to this comment and briefly highlight it. */
   highlightCommentId?: string;
   /**
@@ -1293,7 +1295,7 @@ export function IssueDetailSkeleton({
 
 // IssueDetail
 
-export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = true, layoutId = "multica_issue_detail_layout", highlightCommentId, highlightRequestToken, leadingAction, variant = "page", trailingActions }: IssueDetailProps) {
+export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = true, layoutId = "multica_issue_detail_layout", enableGlobalFindShortcut = true, highlightCommentId, highlightRequestToken, leadingAction, variant = "page", trailingActions }: IssueDetailProps) {
   const isPeek = variant === "peek";
   const { t } = useT("issues");
   const { t: tCommon } = useT("common");
@@ -1754,7 +1756,7 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
   const find = useInPageFind({
     container: scrollContainerEl,
     contentKey: items.length,
-    enabled: !!issue,
+    enabled: !!issue && enableGlobalFindShortcut,
   });
   // Close the bar (and drop highlights) when navigating to another issue —
   // the web route reuses this component instead of remounting.
