@@ -15,9 +15,9 @@ export type RuntimeConfigResult =
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = Object.freeze({
   schemaVersion: 1,
-  apiUrl: "https://api.multica.ai",
-  wsUrl: "wss://api.multica.ai/ws",
-  appUrl: "https://multica.ai",
+  apiUrl: "http://zengine-multica.lilithgames.com",
+  wsUrl: "ws://zengine-multica.lilithgames.com/ws",
+  appUrl: "http://zengine-multica.lilithgames.com",
 });
 
 const LOCAL_DEV_RUNTIME_CONFIG: RuntimeConfig = Object.freeze({
