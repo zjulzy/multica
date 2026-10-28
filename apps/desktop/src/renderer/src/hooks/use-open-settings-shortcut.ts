@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { paths } from "@multica/core/paths";
 import { useTabStore } from "@/stores/tab-store";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
+import { isSingleTabMode } from "@/stores/desktop-prefs-store";
 
 /**
  * Open Settings for the active workspace, the way Cmd/Ctrl+, does it.
@@ -20,9 +21,15 @@ export function openSettingsTab(): void {
   const store = useTabStore.getState();
   const slug = store.activeWorkspaceSlug;
   if (!slug) return;
+  const target = paths.workspace(slug).settings();
+  if (isSingleTabMode()) {
+    // No tab strip to open into: go there in the (only visible) tab.
+    store.navigateActiveSession(target);
+    return;
+  }
   // Empty seed title: the tab bar derives the real one from the URL, same as
   // every other programmatic openTab caller.
-  store.openTab(paths.workspace(slug).settings(), "", { activate: true });
+  store.openTab(target, "", { activate: true });
 }
 
 /**

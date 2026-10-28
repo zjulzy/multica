@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { useTabStore } from "@/stores/tab-store";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
@@ -129,5 +129,24 @@ describe("useOpenSettingsShortcut", () => {
     render(<Probe />);
 
     expect(onOpenSettings).not.toHaveBeenCalled();
+  });
+});
+
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+
+describe("openSettingsTab in single-tab mode", () => {
+  beforeEach(() => {
+    seedTabs();
+    useWindowOverlayStore.setState({ overlay: null });
+    useDesktopPrefsStore.setState({ singleTabMode: true });
+  });
+  afterEach(() => {
+    useDesktopPrefsStore.setState({ singleTabMode: false });
+  });
+
+  it("navigates the active tab to settings instead of opening one", () => {
+    openSettingsTab();
+    expect(tabUrls()).toEqual(["/acme/settings"]);
+    expect(activeTabUrl()).toBe("/acme/settings");
   });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { TabSelectionShortcutKey } from "../../../shared/main-renderer-messages";
 import { useTabStore, type TabSession } from "@/stores/tab-store";
@@ -158,5 +158,23 @@ describe("useTabSelectionShortcut", () => {
     render(<Probe />);
 
     expect(onSelectTabShortcut).not.toHaveBeenCalled();
+  });
+});
+
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+
+describe("selectTabByShortcut in single-tab mode", () => {
+  beforeEach(() => {
+    seedTabs(3, 1);
+    useWindowOverlayStore.setState({ overlay: null });
+    useDesktopPrefsStore.setState({ singleTabMode: true });
+  });
+  afterEach(() => {
+    useDesktopPrefsStore.setState({ singleTabMode: false });
+  });
+
+  it("does not switch tabs", () => {
+    selectTabByShortcut(2);
+    expect(activeTabId()).toBe("t1");
   });
 });

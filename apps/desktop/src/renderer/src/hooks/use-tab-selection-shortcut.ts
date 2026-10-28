@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { TabSelectionShortcutKey } from "../../../shared/main-renderer-messages";
 import { useTabStore } from "@/stores/tab-store";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
+import { isSingleTabMode } from "@/stores/desktop-prefs-store";
 
 /**
  * Select a product tab using browser numbering semantics:
@@ -15,6 +16,9 @@ import { useWindowOverlayStore } from "@/stores/window-overlay-store";
  */
 export function selectTabByShortcut(key: TabSelectionShortcutKey): void {
   if (useWindowOverlayStore.getState().overlay) return;
+  // Single-tab mode hides the strip; switching to an invisible tab would be
+  // a silent surprise.
+  if (isSingleTabMode()) return;
 
   const store = useTabStore.getState();
   const slug = store.activeWorkspaceSlug;

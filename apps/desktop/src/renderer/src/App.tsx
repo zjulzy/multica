@@ -10,6 +10,7 @@ import { useHasOnboarded } from "@multica/core/paths";
 import { setCurrentWorkspace } from "@multica/core/platform";
 import { ThemeProvider } from "@multica/ui/components/common/theme-provider";
 import { TitleBarOverlaySync } from "@/platform/title-bar-overlay-sync";
+import { isSingleTabMode } from "@/stores/desktop-prefs-store";
 import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
 import { Toaster } from "@multica/ui/components/ui/sonner";
 import { DesktopLoginPage } from "./pages/login";
@@ -74,6 +75,9 @@ function useCmdWCloseTab() {
         window.desktopAPI.closeWindow();
         return;
       }
+      // Single-tab mode: Cmd/Ctrl+W neither closes the only visible page nor
+      // the window — ignore it, like a browser with the strip disabled.
+      if (isSingleTabMode()) return;
       const group = byWorkspace[activeWorkspaceSlug];
       if (!group || group.tabs.length <= 1) {
         // Last tab (or no tabs) — close the window.
