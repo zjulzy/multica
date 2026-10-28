@@ -52,6 +52,8 @@ interface DesktopAPI {
   downloadURL: (url: string) => Promise<void>;
   /** Hide macOS traffic lights for full-screen modals; restore when false. */
   setImmersiveMode: (immersive: boolean) => Promise<void>;
+  /** Windows only: recolor the native window-control overlay to match the theme. */
+  setTitleBarOverlay: (colors: { color: string; symbolColor: string }) => void;
   /** Show a native OS notification for a new inbox item. */
   showNotification: (payload: {
     slug: string;

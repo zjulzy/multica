@@ -157,6 +157,8 @@ const desktopAPI = {
   /** Toggle immersive mode — hide macOS traffic lights for full-screen modals */
   setImmersiveMode: (immersive: boolean) =>
     ipcRenderer.invoke("window:setImmersive", immersive),
+  setTitleBarOverlay: (colors: { color: string; symbolColor: string }) =>
+    ipcRenderer.send("window:set-title-bar-overlay", colors),
   /**
    * Show a native OS notification for a new inbox item. Fired from the
    * renderer only when the app is unfocused — in-focus feedback is the

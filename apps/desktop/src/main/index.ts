@@ -63,6 +63,7 @@ import {
   type MainRendererMessageChannel,
 } from "../shared/main-renderer-messages";
 import { AuthSessionCoordinator } from "./auth-session-coordinator";
+import { parseTitleBarOverlayColors, titleBarOptionsFor } from "./title-bar";
 import {
   NotificationGate,
   parseNativeNotificationPayload,
@@ -318,9 +319,7 @@ function createWindow(): BrowserWindow {
       : {}),
     minWidth: 900,
     minHeight: 600,
-    titleBarStyle: "hiddenInset",
-    // Center the native controls in the main window's 40px tab toolbar.
-    trafficLightPosition: { x: 16, y: 13 },
+    ...titleBarOptionsFor(process.platform, "main"),
     show: false,
     autoHideMenuBar: true,
     // Windows/Linux pick up the window/taskbar icon from this option.
@@ -480,8 +479,7 @@ function createIssueWindow(context: IssueWindowContext): void {
     minWidth: 720,
     minHeight: 520,
     title: context.title,
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 17 },
+    ...titleBarOptionsFor(process.platform, "issue"),
     show: false,
     autoHideMenuBar: true,
     ...(is.dev || process.platform === "linux"
@@ -782,6 +780,22 @@ if (!gotTheLock) {
       BrowserWindow.fromWebContents(event.sender)?.setWindowButtonVisibility(
         !immersive,
       );
+    });
+
+    // IPC: the renderer resyncs the Windows title bar overlay (native
+    // min/max/close buttons) to the live theme. No-op elsewhere.
+    ipcMain.on("window:set-title-bar-overlay", (_event, payload: unknown) => {
+      if (process.platform !== "win32") return;
+      const colors = parseTitleBarOverlayColors(payload);
+      if (!colors) return;
+      for (const target of BrowserWindow.getAllWindows()) {
+        if (target.isDestroyed()) continue;
+        try {
+          target.setTitleBarOverlay(colors);
+        } catch {
+          // Windows created without an overlay (none today) throw; ignore.
+        }
+      }
     });
 
     // Main owns foreground detection and item-level dedupe. Every renderer
