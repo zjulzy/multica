@@ -8,15 +8,12 @@ const panelApi = vi.hoisted(() => ({
   isCollapsed: vi.fn(() => false),
 }));
 
-vi.mock("react-resizable-panels", () => ({
+vi.mock("@multica/ui/components/ui/resizable", () => ({
   useDefaultLayout: () => ({
     defaultLayout: { content: 62, "inbox-dock": 38 },
     onLayoutChanged: vi.fn(),
   }),
   usePanelRef: () => ({ current: panelApi }),
-}));
-
-vi.mock("@multica/ui/components/ui/resizable", () => ({
   ResizablePanelGroup: ({
     children,
     orientation,

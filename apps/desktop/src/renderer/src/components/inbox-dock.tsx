@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
-import { useDefaultLayout, usePanelRef, type PanelSize } from "react-resizable-panels";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { InboxSurface, type InboxSurfaceController } from "@multica/views/inbox";
 import { useT } from "@multica/views/i18n";
@@ -8,6 +7,9 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  useDefaultLayout,
+  usePanelRef,
+  type PanelSize,
 } from "@multica/ui/components/ui/resizable";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
