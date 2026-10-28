@@ -1,1 +1,6 @@
-export { InboxPage } from "./components";
+export {
+  InboxPage,
+  InboxSurface,
+  type InboxSurfaceController,
+  type InboxSurfaceProps,
+} from "./components";
