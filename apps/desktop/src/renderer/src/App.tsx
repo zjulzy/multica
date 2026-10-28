@@ -9,6 +9,7 @@ import { api } from "@multica/core/api";
 import { useHasOnboarded } from "@multica/core/paths";
 import { setCurrentWorkspace } from "@multica/core/platform";
 import { ThemeProvider } from "@multica/ui/components/common/theme-provider";
+import { TitleBarOverlaySync } from "@/platform/title-bar-overlay-sync";
 import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
 import { Toaster } from "@multica/ui/components/ui/sonner";
 import { DesktopLoginPage } from "./pages/login";
@@ -454,6 +455,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <TitleBarOverlaySync />
       {runtimeConfigResult.ok ? (
         <CoreProvider
           apiBaseUrl={runtimeConfigResult.config.apiUrl}
