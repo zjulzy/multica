@@ -150,10 +150,12 @@ function SingleTabHeaderSlot({
   const activeUrl = useActiveTabUrl();
   const { visual } = useTabPresentation(activeUrl ?? "");
   return (
-    <div className="flex h-full min-w-0 flex-1 items-center gap-2.5 px-4">
+    <div className="group/slot flex h-full min-w-0 flex-1 items-center gap-2.5 px-4">
+      {/* Collection headers bring their own icon (data-page-header-icon);
+          hide ours so the bar never shows two. */}
       <span
         aria-hidden
-        className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-muted-foreground"
+        className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-muted-foreground group-has-[[data-page-header-icon]]/slot:hidden"
       >
         <ResourceLeadingVisual visual={visual} />
       </span>

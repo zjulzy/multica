@@ -45,6 +45,7 @@ export function CollectionPageHeader({
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <Icon
           aria-hidden="true"
+          data-page-header-icon
           className="size-4 shrink-0 text-muted-foreground"
         />
         <h1 className="truncate text-body font-medium">{title}</h1>

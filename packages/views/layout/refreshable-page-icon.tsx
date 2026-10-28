@@ -13,7 +13,10 @@ export function RefreshablePageIcon({
   children: ReactNode;
 }) {
   return (
-    <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+    <span
+      data-page-header-icon
+      className="flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+    >
       {refreshing ? <PendingIcon>{children}</PendingIcon> : children}
     </span>
   );
