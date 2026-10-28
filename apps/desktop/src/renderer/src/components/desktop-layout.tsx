@@ -40,6 +40,7 @@ import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
 import { WindowOverlay } from "./window-overlay";
 import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
+import { DesktopInboxDockLayout } from "./inbox-dock";
 import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop-os";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
@@ -297,13 +298,14 @@ export function DesktopShell() {
   // the tab router can mount WorkspaceRouteLayout, which is what populates
   // the singleton in the first place.
   const { data: workspaces = [] } = useQuery(workspaceListOptions());
-  const slug =
-    currentSlug && workspaces.some((w) => w.slug === currentSlug)
-      ? currentSlug
-      : null;
+  const resolvedWorkspace = currentSlug
+    ? workspaces.find((workspace) => workspace.slug === currentSlug) ?? null
+    : null;
+  const slug = resolvedWorkspace?.slug ?? null;
   // Single-tab mode: page headers render into the top bar instead of the
   // page. The slot element lives in MainTopBar; pages read it via context.
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
+  const inboxDockEnabled = useDesktopPrefsStore((s) => s.inboxDockEnabled);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   return (
@@ -337,7 +339,13 @@ export function DesktopShell() {
           >
             {slug && <GlobalShortcuts />}
             {slug && <WindowToolbar />}
-            {slug && <AppSidebar topSlot={<SidebarTopSpacer />} searchSlot={<SearchTrigger />} />}
+            {slug && (
+              <AppSidebar
+                hideInboxNav={inboxDockEnabled}
+                topSlot={<SidebarTopSpacer />}
+                searchSlot={<SearchTrigger />}
+              />
+            )}
             {/* Right side: header + content container */}
             <div className="flex flex-1 min-w-0 flex-col">
               <MainTopBar
@@ -351,9 +359,14 @@ export function DesktopShell() {
                     used to have no navigation feedback at all — a click just
                     froze until the destination committed (MUL-6404). */}
                 <NavigationProgress />
-                <PageHeaderPortalProvider value={singleTabMode ? headerSlot : null}>
-                  <TabContent />
-                </PageHeaderPortalProvider>
+                <DesktopInboxDockLayout
+                  enabled={inboxDockEnabled}
+                  workspaceId={resolvedWorkspace?.id ?? null}
+                >
+                  <PageHeaderPortalProvider value={singleTabMode ? headerSlot : null}>
+                    <TabContent />
+                  </PageHeaderPortalProvider>
+                </DesktopInboxDockLayout>
                 {slug && <FloatingChat />}
               </MainCanvas>
             </div>

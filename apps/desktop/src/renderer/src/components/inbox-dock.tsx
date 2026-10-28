@@ -56,7 +56,11 @@ export function DesktopInboxDockLayout({
   }, [dockPanelRef, enabled, inboxDockOpen, workspaceId]);
 
   const handleDockResize = useCallback(
-    (size: PanelSize) => {
+    (size: PanelSize, _id: string | number | undefined, previousSize: PanelSize | undefined) => {
+      // react-resizable-panels reports a restored default layout on mount.
+      // It is not a user resize and must not reopen a preference that was
+      // deliberately persisted as collapsed.
+      if (!previousSize) return;
       const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE;
       if (nextOpen !== inboxDockOpen) setInboxDockOpen(nextOpen);
     },

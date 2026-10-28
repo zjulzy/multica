@@ -407,6 +407,35 @@ describe("navigation item presentation", () => {
   });
 });
 
+describe("personal nav — Inbox dock visibility", () => {
+  beforeEach(() => {
+    summary.current = [];
+    chatSessions.current = [];
+  });
+
+  it("renders Inbox by default", () => {
+    const { container } = render(<AppSidebar />);
+
+    expect(container.querySelector('button[data-href="/acme/inbox"]')).not.toBeNull();
+  });
+
+  it("hides only Inbox when the desktop dock owns its persistent entry", () => {
+    const { container } = render(<AppSidebar hideInboxNav />);
+
+    expect(container.querySelector('button[data-href="/acme/inbox"]')).toBeNull();
+    expect(container.querySelector('button[data-href="/acme/my-issues"]')).not.toBeNull();
+    expect(container.querySelector('button[data-href="/acme/chat"]')).not.toBeNull();
+  });
+
+  it("keeps the shared unread summary active while Inbox is hidden", () => {
+    summary.current = [{ workspace_id: "ws-2", count: 3 }];
+
+    const { container } = render(<AppSidebar hideInboxNav />);
+
+    expect(container.querySelector("span.bg-brand.ring-sidebar")).not.toBeNull();
+  });
+});
+
 describe("personal nav — Chat", () => {
   beforeEach(() => {
     chatSessions.current = [];

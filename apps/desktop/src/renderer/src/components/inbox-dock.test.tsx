@@ -45,7 +45,11 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
     maxSize?: number | string;
     collapsedSize?: number | string;
     collapsible?: boolean;
-    onResize?: (size: { inPixels: number; asPercentage: number }) => void;
+    onResize?: (
+      size: { inPixels: number; asPercentage: number },
+      id: string,
+      previousSize?: { inPixels: number; asPercentage: number },
+    ) => void;
   }) => (
     <section
       data-testid={`panel-${id}`}
@@ -56,12 +60,26 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
       data-collapsible={collapsible}
     >
       {id === "inbox-dock" && onResize && (
-        <button
-          type="button"
-          onClick={() => onResize({ inPixels: 36, asPercentage: 5 })}
-        >
-          Simulate drag collapse
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              onResize(
+                { inPixels: 36, asPercentage: 5 },
+                id,
+                { inPixels: 300, asPercentage: 38 },
+              )
+            }
+          >
+            Simulate drag collapse
+          </button>
+          <button
+            type="button"
+            onClick={() => onResize({ inPixels: 300, asPercentage: 38 }, id)}
+          >
+            Simulate initial restored layout
+          </button>
+        </>
       )}
       {children}
     </section>
@@ -215,6 +233,14 @@ describe("DesktopInboxDockLayout", () => {
     renderDock();
 
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag collapse" }));
+
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+  });
+
+  it("ignores an initial restored layout callback while the dock preference is closed", () => {
+    renderDock();
+
+    fireEvent.click(screen.getByRole("button", { name: "Simulate initial restored layout" }));
 
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
   });

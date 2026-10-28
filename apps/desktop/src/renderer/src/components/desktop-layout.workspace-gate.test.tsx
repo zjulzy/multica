@@ -79,7 +79,9 @@ vi.mock("@multica/views/platform", () => ({
 // Each workspace-scoped component gets a marker so the assertions can tell
 // which of them the shell decided to mount.
 vi.mock("@multica/views/layout", () => ({
-  AppSidebar: () => <div data-testid="app-sidebar" />,
+  AppSidebar: ({ hideInboxNav }: { hideInboxNav?: boolean }) => (
+    <div data-testid="app-sidebar" data-hide-inbox={hideInboxNav} />
+  ),
   GlobalShortcuts: () => <div data-testid="global-shortcuts" />,
   NavigationProgress: () => <div data-testid="navigation-progress" />,
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -113,11 +115,30 @@ vi.mock("@multica/views/chat", () => ({
 
 vi.mock("./tab-bar", () => ({ TabBar: () => null }));
 vi.mock("./window-overlay", () => ({ WindowOverlay: () => null }));
+vi.mock("./inbox-dock", () => ({
+  DesktopInboxDockLayout: ({
+    children,
+    enabled,
+    workspaceId,
+  }: {
+    children: ReactNode;
+    enabled: boolean;
+    workspaceId: string | null;
+  }) =>
+    enabled && workspaceId ? (
+      <div data-testid="inbox-dock-layout" data-workspace-id={workspaceId}>
+        {children}
+      </div>
+    ) : (
+      <>{children}</>
+    ),
+}));
 vi.mock("./tab-content", () => ({
   TabContent: () => <div data-testid="tab-content" />,
 }));
 
 const { DesktopShell } = await import("./desktop-layout");
+const { useDesktopPrefsStore } = await import("@/stores/desktop-prefs-store");
 
 function renderShell() {
   (
@@ -149,6 +170,11 @@ beforeEach(() => {
   localStorage.clear();
   state.currentSlug = "acme";
   state.wsList = [{ id: "ws-1", slug: "acme" }];
+  useDesktopPrefsStore.setState({
+    singleTabMode: false,
+    inboxDockEnabled: false,
+    inboxDockOpen: false,
+  });
 });
 
 describe("DesktopShell workspace gating", () => {
@@ -198,10 +224,25 @@ describe("DesktopShell workspace gating", () => {
 
   it("keeps TabContent mounted with no workspace so the tab router can still resolve one", () => {
     state.wsList = [];
+    useDesktopPrefsStore.setState({ inboxDockEnabled: true });
 
     const { queryByTestId } = renderShell();
 
     expect(queryByTestId("tab-content")).not.toBeNull();
+    expect(queryByTestId("inbox-dock-layout")).toBeNull();
+  });
+
+  it("mounts the Inbox dock only after a workspace resolves", () => {
+    useDesktopPrefsStore.setState({ inboxDockEnabled: true });
+
+    const { getByTestId } = renderShell();
+
+    expect(getByTestId("inbox-dock-layout")).toHaveAttribute(
+      "data-workspace-id",
+      "ws-1",
+    );
+    expect(getByTestId("app-sidebar")).toHaveAttribute("data-hide-inbox", "true");
+    expect(getByTestId("tab-content")).toBeInTheDocument();
   });
 
   // The shell had no navigation feedback at all before MUL-6404 — the bar

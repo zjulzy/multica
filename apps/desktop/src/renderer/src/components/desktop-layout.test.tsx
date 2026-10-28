@@ -66,7 +66,9 @@ vi.mock("@multica/views/platform", () => ({
 }));
 
 vi.mock("@multica/views/layout", () => ({
-  AppSidebar: () => null,
+  AppSidebar: ({ hideInboxNav }: { hideInboxNav?: boolean }) => (
+    <div data-testid="app-sidebar" data-hide-inbox={hideInboxNav} />
+  ),
   GlobalShortcuts: () => null,
   NavigationProgress: () => null,
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -82,6 +84,25 @@ vi.mock("@multica/views/search", () => ({
 vi.mock("@multica/views/chat", () => ({ FloatingChat: () => null }));
 vi.mock("./tab-bar", () => ({ TabBar: () => <div data-testid="tab-bar" /> }));
 vi.mock("./window-overlay", () => ({ WindowOverlay: () => null }));
+vi.mock("./inbox-dock", () => ({
+  DesktopInboxDockLayout: ({
+    children,
+    enabled,
+    workspaceId,
+  }: {
+    children: ReactNode;
+    enabled: boolean;
+    workspaceId: string | null;
+  }) =>
+    enabled && workspaceId ? (
+      <div data-testid="inbox-dock-layout" data-workspace-id={workspaceId}>
+        {children}
+        <div data-testid="dock-inbox-surface" />
+      </div>
+    ) : (
+      <>{children}</>
+    ),
+}));
 
 // Stands in for whatever page the active tab is showing. Reports the one fact
 // a `PageHeader` reads before deciding to render its own fallback trigger.
@@ -136,6 +157,11 @@ beforeEach(() => {
     value: 1280,
   });
   localStorage.clear();
+  useDesktopPrefsStore.setState({
+    singleTabMode: false,
+    inboxDockEnabled: false,
+    inboxDockOpen: false,
+  });
 });
 
 describe("DesktopShell sidebar trigger", () => {
@@ -233,4 +259,45 @@ describe("single-tab mode header slot", () => {
     expect(await screen.findByTestId("tab-bar")).toBeInTheDocument();
     expect(container.querySelector("[data-slot='page-header-slot']")).toBeNull();
   });
+});
+
+describe("Inbox dock integration", () => {
+  it("mounts the Dock for the resolved workspace and hides the sidebar Inbox row", () => {
+    useDesktopPrefsStore.setState({ inboxDockEnabled: true });
+
+    renderShell();
+
+    expect(screen.getByTestId("inbox-dock-layout")).toHaveAttribute(
+      "data-workspace-id",
+      "ws-1",
+    );
+    expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-hide-inbox", "true");
+    expect(screen.getAllByTestId("page-content")).toHaveLength(1);
+    expect(screen.getByTestId("dock-inbox-surface")).toBeInTheDocument();
+  });
+
+  it("keeps the previous content tree and sidebar entry when disabled", () => {
+    renderShell();
+
+    expect(screen.queryByTestId("inbox-dock-layout")).not.toBeInTheDocument();
+    expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-hide-inbox", "false");
+    expect(screen.getAllByTestId("page-content")).toHaveLength(1);
+  });
+
+  it.each([
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])(
+    "keeps one active page with single-tab=%s and Inbox dock=%s",
+    (singleTabMode, inboxDockEnabled) => {
+      useDesktopPrefsStore.setState({ singleTabMode, inboxDockEnabled });
+
+      renderShell();
+
+      expect(screen.getAllByTestId("page-content")).toHaveLength(1);
+      expect(screen.queryByTestId("inbox-dock-layout") !== null).toBe(inboxDockEnabled);
+    },
+  );
 });
