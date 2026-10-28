@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@multica/core/i18n/react";
 import { useSidebar } from "@multica/ui/components/ui/sidebar";
@@ -77,7 +77,7 @@ vi.mock("@multica/views/search", () => ({
   SearchTrigger: () => null,
 }));
 vi.mock("@multica/views/chat", () => ({ FloatingChat: () => null }));
-vi.mock("./tab-bar", () => ({ TabBar: () => null }));
+vi.mock("./tab-bar", () => ({ TabBar: () => <div data-testid="tab-bar" /> }));
 vi.mock("./window-overlay", () => ({ WindowOverlay: () => null }));
 
 // Stands in for whatever page the active tab is showing. Reports the one fact
@@ -194,5 +194,23 @@ describe("DesktopShell sidebar trigger", () => {
       "expanded",
     );
     expect(mainTopBar).toHaveStyle({ paddingLeft: "200px" });
+  });
+});
+
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+
+describe("single-tab mode", () => {
+  afterEach(() => useDesktopPrefsStore.setState({ singleTabMode: false }));
+
+  it("renders the tab bar by default", async () => {
+    renderShell();
+    expect(await screen.findByTestId("tab-bar")).toBeInTheDocument();
+  });
+
+  it("hides the tab bar but keeps the top bar when enabled", async () => {
+    useDesktopPrefsStore.setState({ singleTabMode: true });
+    renderShell();
+    expect(await screen.findByTestId("main-top-bar")).toBeInTheDocument();
+    expect(screen.queryByTestId("tab-bar")).toBeNull();
   });
 });

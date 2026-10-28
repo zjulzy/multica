@@ -37,6 +37,7 @@ import { TabContent } from "./tab-content";
 import { WindowOverlay } from "./window-overlay";
 import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
 import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop-os";
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
 const TOP_BAR_HEIGHT_CLASS = "h-10";
 const toolbarMotion = {
@@ -81,6 +82,9 @@ function MainTopBar({ sidebarMounted }: { sidebarMounted: boolean }) {
   // tabs and the "+" button out from under them. The drag region still
   // extends to the edge so the strip stays grabbable.
   const controlsClearance = isWindowsDesktop() ? WINDOWS_CONTROLS_CLEARANCE : 0;
+  // Single-tab mode keeps the bar (drag region, nav buttons, Windows window
+  // controls) and drops only the strip itself.
+  const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
 
   return (
     <header
@@ -107,7 +111,7 @@ function MainTopBar({ sidebarMounted }: { sidebarMounted: boolean }) {
         data-slot="main-top-bar-content"
         className="relative z-10 flex h-full min-w-0 max-w-full items-center"
       >
-        <TabBar />
+        {!singleTabMode && <TabBar />}
       </div>
     </header>
   );
