@@ -7,6 +7,7 @@ import {
   type PointerEventHandler,
 } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { cn } from "@multica/ui/lib/utils";
 import {
   SidebarTrigger,
   useSidebar,
@@ -32,6 +33,7 @@ import { useT } from "@multica/views/i18n";
 import { useTabHistory } from "@/hooks/use-tab-history";
 import { browsingHistoryKeyForUrl } from "@/stores/tab-store";
 import { isWindowsDesktop } from "@/platform/desktop-os";
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
 // Controls sit left-aligned just past the macOS traffic lights, which end
 // around x=76 with trafficLightPosition { x: 16 }. The clearance covers that
@@ -186,6 +188,8 @@ export function WindowToolbar() {
   const { state: sidebarState, isCompact } = useSidebar();
   const sidebarHidden = sidebarState === "collapsed" || isCompact;
   const clearance = windowToolbarClearance();
+  // Single-tab mode runs a taller (48px) top bar; keep the nav buttons centered.
+  const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   const toolbarWidth: React.CSSProperties["width"] = sidebarHidden
     ? clearance
     : `max(var(--sidebar-live-width, var(--sidebar-width)), ${clearance}px)`;
@@ -265,7 +269,10 @@ export function WindowToolbar() {
     <div
       data-slot="window-toolbar"
       data-sidebar-resize-consumer
-      className="fixed left-0 top-0 z-30 flex h-10 shrink-0 items-center pr-3"
+      className={cn(
+        "fixed left-0 top-0 z-30 flex shrink-0 items-center pr-3",
+        singleTabMode ? "h-12" : "h-10",
+      )}
       style={
         {
           WebkitAppRegion: "drag",

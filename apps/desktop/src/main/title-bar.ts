@@ -5,6 +5,8 @@ export type WindowKind = "main" | "issue";
 export interface TitleBarOverlayColors {
   color: string;
   symbolColor: string;
+  /** Main-window overlay height; follows the renderer top bar (40 or 48). */
+  height?: number;
 }
 
 /**
@@ -60,5 +62,10 @@ export function parseTitleBarOverlayColors(
   const { color, symbolColor } = value as Partial<TitleBarOverlayColors>;
   if (typeof color !== "string" || !HEX_COLOR.test(color)) return null;
   if (typeof symbolColor !== "string" || !HEX_COLOR.test(symbolColor)) return null;
-  return { color, symbolColor };
+  const { height } = value as { height?: unknown };
+  if (height === undefined) return { color, symbolColor };
+  if (typeof height !== "number" || !Number.isInteger(height) || height < 24 || height > 80) {
+    return null;
+  }
+  return { color, symbolColor, height };
 }

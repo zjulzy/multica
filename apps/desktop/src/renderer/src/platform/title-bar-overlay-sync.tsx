@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { useTheme } from "@multica/ui/components/common/theme-provider";
 import { isWindowsDesktop } from "./desktop-os";
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+
+/** Top bar heights (px); must match desktop-layout.tsx and window-toolbar.tsx. */
+export const TOP_BAR_HEIGHT_TABBED = 40;
+export const TOP_BAR_HEIGHT_SINGLE_TAB = 48;
 
 export interface OverlayColors {
   color: string;
@@ -46,15 +51,17 @@ export function TitleBarOverlaySync({
   resolve?: () => OverlayColors | null;
 }) {
   const { resolvedTheme } = useTheme();
+  const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
+  const height = singleTabMode ? TOP_BAR_HEIGHT_SINGLE_TAB : TOP_BAR_HEIGHT_TABBED;
   useEffect(() => {
     if (!isWindowsDesktop()) return;
     // next-themes applies the `.dark` class in an effect too; defer one frame
     // so the computed variables reflect the new theme.
     const frame = requestAnimationFrame(() => {
       const colors = resolve();
-      if (colors) window.desktopAPI.setTitleBarOverlay(colors);
+      if (colors) window.desktopAPI.setTitleBarOverlay({ ...colors, height });
     });
     return () => cancelAnimationFrame(frame);
-  }, [resolve, resolvedTheme]);
+  }, [resolve, resolvedTheme, height]);
   return null;
 }

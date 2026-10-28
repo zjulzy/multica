@@ -790,8 +790,12 @@ if (!gotTheLock) {
       if (!colors) return;
       for (const target of BrowserWindow.getAllWindows()) {
         if (target.isDestroyed()) continue;
+        // Height tracks the main window's top bar; issue windows keep theirs.
+        const { height, ...palette } = colors;
+        const overlay =
+          height !== undefined && target === mainWindow ? { ...palette, height } : palette;
         try {
-          target.setTitleBarOverlay(colors);
+          target.setTitleBarOverlay(overlay);
         } catch {
           // Windows created without an overlay (none today) throw; ignore.
         }

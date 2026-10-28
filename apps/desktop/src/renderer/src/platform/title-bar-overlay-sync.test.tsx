@@ -13,6 +13,7 @@ vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
 vi.stubGlobal("cancelAnimationFrame", () => {});
 
 import { TitleBarOverlaySync, resolveOverlayColors } from "./title-bar-overlay-sync";
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
 function fakeCanvas(normalize: (value: string) => string) {
   let current = "";
@@ -64,10 +65,21 @@ describe("TitleBarOverlaySync", () => {
     const resolve = () => colors;
     const { rerender } = render(<TitleBarOverlaySync resolve={resolve} />);
     expect(setTitleBarOverlay).toHaveBeenCalledTimes(1);
-    expect(setTitleBarOverlay).toHaveBeenCalledWith(colors);
+    expect(setTitleBarOverlay).toHaveBeenCalledWith({ ...colors, height: 40 });
     theme.resolvedTheme = "dark";
     rerender(<TitleBarOverlaySync resolve={resolve} />);
     expect(setTitleBarOverlay).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the taller bar height in single-tab mode", () => {
+    useDesktopPrefsStore.setState({ singleTabMode: true });
+    try {
+      const colors = { color: "#f5f5f6", symbolColor: "#78788a" };
+      render(<TitleBarOverlaySync resolve={() => colors} />);
+      expect(setTitleBarOverlay).toHaveBeenCalledWith({ ...colors, height: 48 });
+    } finally {
+      useDesktopPrefsStore.setState({ singleTabMode: false });
+    }
   });
 
   it("does nothing off Windows", () => {

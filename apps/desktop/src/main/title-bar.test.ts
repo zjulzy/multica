@@ -49,4 +49,16 @@ describe("parseTitleBarOverlayColors", () => {
     expect(parseTitleBarOverlayColors(null)).toBeNull();
     expect(parseTitleBarOverlayColors({ color: "#f5f5f6" })).toBeNull();
   });
+
+  it("accepts an optional integer height within 24..80", () => {
+    expect(
+      parseTitleBarOverlayColors({ color: "#f5f5f6", symbolColor: "#000000", height: 48 }),
+    ).toEqual({ color: "#f5f5f6", symbolColor: "#000000", height: 48 });
+    expect(
+      parseTitleBarOverlayColors({ color: "#f5f5f6", symbolColor: "#000000", height: 400 }),
+    ).toBeNull();
+    expect(
+      parseTitleBarOverlayColors({ color: "#f5f5f6", symbolColor: "#000000", height: "48" }),
+    ).toBeNull();
+  });
 });

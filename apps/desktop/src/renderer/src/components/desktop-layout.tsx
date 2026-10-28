@@ -17,7 +17,10 @@ import {
   GlobalShortcuts,
   NavigationProgress,
   PageHeaderPortalProvider,
+  ResourceLeadingVisual,
+  useTabPresentation,
 } from "@multica/views/layout";
+import { useActiveTabUrl } from "@/stores/tab-store";
 import { SearchCommand, SearchTrigger } from "@multica/views/search";
 import { FloatingChat } from "@multica/views/chat";
 import { WorkspaceSlugProvider, paths, useCurrentWorkspace } from "@multica/core/paths";
@@ -40,7 +43,12 @@ import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
 import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop-os";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
-const TOP_BAR_HEIGHT_CLASS = "h-10";
+// Tabbed: 40px; single-tab mode: 48px (page-header height). Keep in sync with
+// TOP_BAR_HEIGHT_* in platform/title-bar-overlay-sync.tsx and window-toolbar.tsx.
+function useTopBarHeightClass(): string {
+  const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
+  return singleTabMode ? "h-12" : "h-10";
+}
 const toolbarMotion = {
   type: "spring",
   stiffness: 420,
@@ -49,7 +57,7 @@ const toolbarMotion = {
 } as const;
 
 function SidebarTopSpacer() {
-  return <div className={cn("shrink-0", TOP_BAR_HEIGHT_CLASS)} />;
+  return <div className={cn("shrink-0", useTopBarHeightClass())} />;
 }
 
 function useNativeNavigationGestures() {
@@ -93,6 +101,7 @@ function MainTopBar({
   // Single-tab mode keeps the bar (drag region, nav buttons, Windows window
   // controls) and drops only the strip itself.
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
+  const topBarHeightClass = useTopBarHeightClass();
 
   return (
     <header
@@ -101,7 +110,7 @@ function MainTopBar({
       data-sidebar-resize-consumer
       className={cn(
         "relative shrink-0 flex items-center gap-2 transition-[padding-left] duration-200 ease-out motion-reduce:transition-none",
-        TOP_BAR_HEIGHT_CLASS,
+        topBarHeightClass,
       )}
       style={{ paddingLeft: toolbarClearance, paddingRight: controlsClearance }}
     >
@@ -120,16 +129,40 @@ function MainTopBar({
         className="relative z-10 flex h-full min-w-0 max-w-full flex-1 items-center"
       >
         {singleTabMode ? (
-          <div
-            ref={headerSlotRef}
-            data-slot="page-header-slot"
-            className="flex h-full min-w-0 flex-1 items-center px-4"
-          />
+          <SingleTabHeaderSlot headerSlotRef={headerSlotRef} />
         ) : (
           <TabBar />
         )}
       </div>
     </header>
+  );
+}
+
+// Single-tab mode: the top bar hosts the page header (breadcrumb + actions)
+// through a portal. A leading visual derived from the active URL — the same
+// icon/status the tab strip would show — makes it read as a title bar rather
+// than a bare breadcrumb.
+function SingleTabHeaderSlot({
+  headerSlotRef,
+}: {
+  headerSlotRef: (el: HTMLDivElement | null) => void;
+}) {
+  const activeUrl = useActiveTabUrl();
+  const { visual } = useTabPresentation(activeUrl ?? "");
+  return (
+    <div className="flex h-full min-w-0 flex-1 items-center gap-2.5 px-4">
+      <span
+        aria-hidden
+        className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-muted-foreground"
+      >
+        <ResourceLeadingVisual visual={visual} />
+      </span>
+      <div
+        ref={headerSlotRef}
+        data-slot="page-header-slot"
+        className="flex h-full min-w-0 flex-1 items-center text-[15px] [&_h1]:font-semibold [&_.font-medium]:font-semibold"
+      />
+    </div>
   );
 }
 

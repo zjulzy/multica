@@ -70,6 +70,8 @@ vi.mock("@multica/views/layout", () => ({
   GlobalShortcuts: () => null,
   NavigationProgress: () => null,
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  ResourceLeadingVisual: () => null,
+  useTabPresentation: () => ({ visual: { kind: "icon", icon: "issues" }, title: "" }),
 }));
 
 vi.mock("@multica/views/modals/registry", () => ({ ModalRegistry: () => null }));
