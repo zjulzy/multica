@@ -400,3 +400,45 @@ describe("existing reserved workspace navigation", () => {
     expect(getActiveTab(useTabStore.getState())?.url).toBe("/invite/issues/MUL-123");
   });
 });
+
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+
+describe("single-tab mode", () => {
+  beforeEach(() => {
+    useDesktopPrefsStore.setState({ singleTabMode: true });
+  });
+  afterEach(() => {
+    useDesktopPrefsStore.setState({ singleTabMode: false });
+  });
+
+  it("openInNewTab navigates the active session instead of adding a tab", () => {
+    const getAdapter = renderProvider();
+    getAdapter().openInNewTab!("/acme/agents", "Agents", { activate: true });
+    const group = acmeGroup();
+    expect(group.tabs).toHaveLength(1);
+    expect(getActiveTab(useTabStore.getState())?.url).toBe("/acme/agents");
+  });
+
+  it("openInNewTab still switches workspace for a cross-workspace path", () => {
+    const getAdapter = renderProvider();
+    getAdapter().openInNewTab!("/butter/inbox");
+    expect(useTabStore.getState().activeWorkspaceSlug).toBe("butter");
+  });
+
+  it("push from a pinned tab stays in that tab", () => {
+    const store = useTabStore.getState();
+    store.togglePin(getActiveTab(store)!.id);
+    const getAdapter = renderProvider();
+    getAdapter().push("/acme/projects");
+    const group = acmeGroup();
+    expect(group.tabs).toHaveLength(1);
+    expect(group.tabs[0].url).toBe("/acme/projects");
+  });
+
+  it("content links with a modifier disposition navigate in place", () => {
+    renderProvider();
+    routeContentLinkPath("/acme/agents", "background-tab");
+    expect(acmeGroup().tabs).toHaveLength(1);
+    expect(getActiveTab(useTabStore.getState())?.url).toBe("/acme/agents");
+  });
+});

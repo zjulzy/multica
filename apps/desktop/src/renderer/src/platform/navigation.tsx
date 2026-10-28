@@ -13,6 +13,7 @@ import {
   useActiveTabUrl,
 } from "@/stores/tab-store";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
+import { isSingleTabMode } from "@/stores/desktop-prefs-store";
 
 function requireRuntimeAppUrl(scope: string): string {
   const runtimeConfig = window.desktopAPI.runtimeConfig;
@@ -112,7 +113,8 @@ export function routeContentLinkPath(
     store.switchWorkspace(slug, path);
     return;
   }
-  if (disposition === "push") {
+  // Single-tab mode: there is nowhere else to open; every disposition is a push.
+  if (disposition === "push" || isSingleTabMode()) {
     const active = getActiveTab(store);
     if (active && active.url === path) return;
     if (tryRouteToPinnedNewTab(path)) return;
@@ -138,6 +140,7 @@ export function routeContentLinkPath(
  * explicit user action, not a background cmd+click, so the focus follows.
  */
 function tryRouteToPinnedNewTab(path: string): boolean {
+  if (isSingleTabMode()) return false;
   const store = useTabStore.getState();
   const active = getActiveTab(store);
   if (!active?.pinned) return false;
@@ -235,6 +238,14 @@ export function DesktopNavigationProvider({
         const store = useTabStore.getState();
         if (slug && slug !== store.activeWorkspaceSlug) {
           store.switchWorkspace(slug, path);
+          return;
+        }
+        if (isSingleTabMode()) {
+          // Single-tab mode: "open in new tab" means "go there" — same
+          // dedupe/no-op rules as push.
+          const active = getActiveTab(store);
+          if (active && active.url === path) return;
+          store.navigateActiveSession(path);
           return;
         }
         store.openTab(path, title ?? "", { activate: opts?.activate });
