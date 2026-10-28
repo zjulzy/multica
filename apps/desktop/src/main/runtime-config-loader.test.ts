@@ -4,6 +4,7 @@ import { join } from "path";
 import { tmpdir } from "os";
 import { describe, expect, it } from "vitest";
 import { loadRuntimeConfig } from "./runtime-config-loader";
+import { DEFAULT_RUNTIME_CONFIG } from "../shared/runtime-config";
 
 describe("loadRuntimeConfig", () => {
   it("uses dev env and ignores desktop.json during electron-vite dev", async () => {
@@ -45,12 +46,8 @@ describe("loadRuntimeConfig", () => {
       }),
     ).resolves.toEqual({
       ok: true,
-      config: {
-        schemaVersion: 1,
-        apiUrl: "https://api.multica.ai",
-        wsUrl: "wss://api.multica.ai/ws",
-        appUrl: "https://multica.ai",
-      },
+      // lilith fork: the packaged default points at the internal server.
+      config: DEFAULT_RUNTIME_CONFIG,
     });
   });
 

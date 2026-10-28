@@ -1218,7 +1218,13 @@
   },
   "desktop": {
     "tabs": {
+      "appearance": "介面",
       "updates": "更新"
+    },
+    "appearance": {
+      "title": "介面",
+      "single_tab_mode_title": "單分頁模式",
+      "single_tab_mode_description": "隱藏分頁列。連結、Ctrl+點擊和固定分頁的跳轉都在目前頁面開啟；上一頁 / 下一頁照常。既有分頁會保留，關閉此開關後恢復顯示。"
     },
     "tab_bar": {
       "pin": "固定標籤頁",

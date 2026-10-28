@@ -32,7 +32,8 @@ import { InboxPage } from "@multica/views/inbox";
 import { ChatPage } from "@multica/views/chat";
 import { SettingsPage } from "@multica/views/settings";
 import { useT } from "@multica/views/i18n";
-import { Download, Server } from "lucide-react";
+import { Download, PanelTop, Server } from "lucide-react";
+import { AppearanceSettingsTab } from "./components/appearance-settings-tab";
 import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
 import { WorkspaceRouteLayout } from "./components/workspace-route-layout";
@@ -48,6 +49,12 @@ function DesktopSettingsRoute() {
   return (
     <SettingsPage
       extraDeviceTabs={[
+        {
+          value: "appearance",
+          label: t(($) => $.desktop.tabs.appearance),
+          icon: PanelTop,
+          content: <AppearanceSettingsTab />,
+        },
         {
           value: "daemon",
           label: t(($) => $.desktop.daemon.title),

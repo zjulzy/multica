@@ -1224,7 +1224,13 @@
   },
   "desktop": {
     "tabs": {
+      "appearance": "Appearance",
       "updates": "Mises à jour"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "single_tab_mode_title": "Single-tab mode",
+      "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off."
     },
     "tab_bar": {
       "pin": "Épingler l'onglet",
