@@ -19,7 +19,7 @@ export const DEFAULT_OVERLAY_COLORS: TitleBarOverlayColors = {
 };
 
 const MAIN_TOP_BAR_HEIGHT = 40; // matches TOP_BAR_HEIGHT_CLASS "h-10"
-const ISSUE_DRAG_STRIP_HEIGHT = 32; // matches issue-window.tsx "h-8"
+const ISSUE_DRAG_STRIP_HEIGHT = 48; // matches the shared <DragStrip /> ("h-12") in issue-window.tsx
 
 /**
  * `titleBarStyle: "hiddenInset"` is macOS-only; Electron ignores it on

@@ -13,10 +13,10 @@ describe("titleBarOptionsFor", () => {
     });
   });
 
-  it("uses a 32px overlay for issue windows on Windows", () => {
+  it("uses a 48px overlay for issue windows on Windows (matches DragStrip)", () => {
     expect(titleBarOptionsFor("win32", "issue")).toEqual({
       titleBarStyle: "hidden",
-      titleBarOverlay: { ...DEFAULT_OVERLAY_COLORS, height: 32 },
+      titleBarOverlay: { ...DEFAULT_OVERLAY_COLORS, height: 48 },
     });
   });
 

@@ -31,14 +31,21 @@ import { ActionShortcutKeycaps } from "@multica/views/common/shortcut-keycaps";
 import { useT } from "@multica/views/i18n";
 import { useTabHistory } from "@/hooks/use-tab-history";
 import { browsingHistoryKeyForUrl } from "@/stores/tab-store";
+import { isWindowsDesktop } from "@/platform/desktop-os";
 
 // Controls sit left-aligned just past the macOS traffic lights, which end
 // around x=76 with trafficLightPosition { x: 16 }. The clearance covers that
 // inset plus Back, Forward and the sidebar toggle (3 × 28px, 2 × 8px gaps) and
 // a 12px trailing pad, and matches the sidebar's minimum width so the
 // controls always fit inside the expanded sidebar column.
-const TRAFFIC_LIGHT_CLEARANCE = 88;
-export const WINDOW_TOOLBAR_CLEARANCE = 200;
+// macOS: leave room for the traffic lights; Windows: plain left padding.
+function leadingClearance(): number {
+  return isWindowsDesktop() ? 12 : 88;
+}
+// Total width of the toolbar (clearance + back/forward/sidebar buttons).
+export function windowToolbarClearance(): number {
+  return isWindowsDesktop() ? 124 : 200;
+}
 const LONG_PRESS_DURATION_MS = 500;
 const LONG_PRESS_MOVE_TOLERANCE_PX = 8;
 const MAX_HISTORY_MENU_ITEMS = 30;
@@ -178,9 +185,10 @@ export function WindowToolbar() {
   const { t } = useT("layout");
   const { state: sidebarState, isCompact } = useSidebar();
   const sidebarHidden = sidebarState === "collapsed" || isCompact;
+  const clearance = windowToolbarClearance();
   const toolbarWidth: React.CSSProperties["width"] = sidebarHidden
-    ? WINDOW_TOOLBAR_CLEARANCE
-    : `max(var(--sidebar-live-width, var(--sidebar-width)), ${WINDOW_TOOLBAR_CLEARANCE}px)`;
+    ? clearance
+    : `max(var(--sidebar-live-width, var(--sidebar-width)), ${clearance}px)`;
   const {
     canGoBack,
     canGoForward,
@@ -262,7 +270,7 @@ export function WindowToolbar() {
         {
           WebkitAppRegion: "drag",
           width: toolbarWidth,
-          paddingLeft: TRAFFIC_LIGHT_CLEARANCE,
+          paddingLeft: leadingClearance(),
         } as React.CSSProperties
       }
     >

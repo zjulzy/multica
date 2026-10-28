@@ -35,7 +35,8 @@ import {
 import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
 import { WindowOverlay } from "./window-overlay";
-import { WindowToolbar, WINDOW_TOOLBAR_CLEARANCE } from "./window-toolbar";
+import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
+import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop-os";
 
 const TOP_BAR_HEIGHT_CLASS = "h-10";
 const toolbarMotion = {
@@ -72,19 +73,25 @@ function useNativeNavigationGestures() {
 function MainTopBar({ sidebarMounted }: { sidebarMounted: boolean }) {
   const { state, isCompact } = useSidebar();
   const sidebarHidden = !sidebarMounted || state === "collapsed" || isCompact;
+  const clearance = windowToolbarClearance();
   const toolbarClearance: React.CSSProperties["paddingLeft"] = sidebarHidden
-    ? WINDOW_TOOLBAR_CLEARANCE
-    : `max(0px, calc(${WINDOW_TOOLBAR_CLEARANCE}px - var(--sidebar-live-width, var(--sidebar-width))))`;
+    ? clearance
+    : `max(0px, calc(${clearance}px - var(--sidebar-live-width, var(--sidebar-width))))`;
+  // Windows draws the native window buttons over the top-right corner; keep
+  // tabs and the "+" button out from under them. The drag region still
+  // extends to the edge so the strip stays grabbable.
+  const controlsClearance = isWindowsDesktop() ? WINDOWS_CONTROLS_CLEARANCE : 0;
 
   return (
     <header
       data-slot="main-top-bar"
+      data-testid="main-top-bar"
       data-sidebar-resize-consumer
       className={cn(
         "relative shrink-0 flex items-center gap-2 transition-[padding-left] duration-200 ease-out motion-reduce:transition-none",
         TOP_BAR_HEIGHT_CLASS,
       )}
-      style={{ paddingLeft: toolbarClearance }}
+      style={{ paddingLeft: toolbarClearance, paddingRight: controlsClearance }}
     >
       <div
         aria-hidden

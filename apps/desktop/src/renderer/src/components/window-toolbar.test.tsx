@@ -43,7 +43,7 @@ vi.mock("@multica/ui/components/ui/sidebar", () => ({
   ),
 }));
 
-const { WINDOW_TOOLBAR_CLEARANCE, WindowToolbar, historyIndicesForMenu } =
+const { windowToolbarClearance, WindowToolbar, historyIndicesForMenu } =
   await import("./window-toolbar");
 
 function I18nWrapper({ children }: { children: ReactNode }) {
@@ -117,8 +117,24 @@ describe("WindowToolbar history controls", () => {
     rerender(<WindowToolbar />);
 
     const toolbar = document.querySelector('[data-slot="window-toolbar"]');
-    expect(WINDOW_TOOLBAR_CLEARANCE).toBe(200);
+    expect(windowToolbarClearance()).toBe(200);
     expect(toolbar).toHaveStyle({ paddingLeft: "88px", width: "200px" });
+  });
+
+  it("drops the traffic-light clearance on Windows (native buttons sit on the right)", () => {
+    Object.defineProperty(window, "desktopAPI", {
+      configurable: true,
+      value: { appInfo: { os: "windows", version: "test" } },
+    });
+    try {
+      sidebarState.state = "collapsed";
+      render(<WindowToolbar />, { wrapper: I18nWrapper });
+      const toolbar = document.querySelector('[data-slot="window-toolbar"]');
+      expect(windowToolbarClearance()).toBe(124);
+      expect(toolbar).toHaveStyle({ paddingLeft: "12px", width: "124px" });
+    } finally {
+      delete (window as unknown as { desktopAPI?: unknown }).desktopAPI;
+    }
   });
 
   it("orders Back, Forward, then the sidebar toggle with no separate History button", () => {
