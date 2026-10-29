@@ -48,6 +48,7 @@ export function AgentStatusHub() {
   if (!workspace || active.length === 0) return null;
   return (
     <section aria-label={t(($) => $.status_hub.title)} className="border-t border-sidebar-border px-2 pt-2 pb-1">
+      <style>{`@keyframes agent-hub-unread-ripple { 0% { opacity: .7; transform: scale(1); } 75%, 100% { opacity: 0; transform: scale(1.4); } }`}</style>
       <p className="px-1 text-caption text-muted-foreground">{t(($) => $.status_hub.title)}</p>
       <div className="mt-2 flex flex-wrap gap-1.5 p-1">
         {active.map(({ agent, runningCount, queuedCount, unread }) => {
@@ -66,7 +67,7 @@ export function AgentStatusHub() {
                 </span>
                 <ActorAvatar name={agent.name} initials={agent.name.slice(0, 2)} avatarUrl={resolvePublicFileUrl(agent.avatar_url)} isAgent size="md" />
                 {runningCount === 0 && queuedCount > 0 && <span aria-hidden className="absolute -top-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-warning text-background ring-1 ring-background"><Hourglass className="size-2.5" /></span>}
-                {unread && <span aria-hidden data-agent-unread className="pointer-events-none absolute -inset-0.5 rounded-full border border-brand/60 motion-safe:animate-ping motion-safe:[animation-duration:2.4s]" />}
+                {unread && <span aria-hidden data-agent-unread className="pointer-events-none absolute -inset-0.5 rounded-full border border-brand/60 motion-safe:[animation:agent-hub-unread-ripple_2.4s_cubic-bezier(0.2,0.55,0.4,1)_infinite]" />}
                 {unread && (runningCount > 0 || queuedCount > 0) && <span aria-hidden className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-brand ring-1 ring-background" />}
               </TooltipTrigger>
               <TooltipContent side="right" className="flex-col items-start">
