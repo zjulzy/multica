@@ -7,7 +7,7 @@ const panelApi = vi.hoisted(() => ({
   expand: vi.fn(),
   resize: vi.fn(),
   getSize: vi.fn(() => ({ inPixels: 300, asPercentage: 38 })),
-  isCollapsed: vi.fn(() => false),
+  isCollapsed: vi.fn(() => true),
 }));
 
 vi.mock("@multica/ui/components/ui/resizable", () => ({
@@ -19,11 +19,14 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
   ResizablePanelGroup: ({
     children,
     orientation,
+    onLayoutChanged,
   }: {
     children: ReactNode;
     orientation: string;
+    onLayoutChanged?: (layout: Record<string, number>) => void;
   }) => (
     <div data-testid="dock-layout" data-orientation={orientation}>
+      <button type="button" onClick={() => onLayoutChanged?.({ content: 40, "inbox-dock": 60 })}>Finish drag</button>
       {children}
     </div>
   ),
@@ -98,7 +101,7 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
       {children}
     </section>
   ),
-  ResizableHandle: () => <div data-testid="dock-resize-handle" />,
+  ResizableHandle: ({ className }: { className?: string }) => <div data-testid="dock-resize-handle" className={className} />,
 }));
 
 vi.mock("@multica/views/inbox", () => ({
@@ -108,7 +111,7 @@ vi.mock("@multica/views/inbox", () => ({
     layoutId,
     enableGlobalArchiveShortcut,
     contentInert,
-    headerAction,
+    onDockHeaderToggle,
   }: {
     controller: {
       view: string;
@@ -120,7 +123,7 @@ vi.mock("@multica/views/inbox", () => ({
     layoutId: string;
     enableGlobalArchiveShortcut: boolean;
     contentInert: boolean;
-    headerAction: ReactNode;
+    onDockHeaderToggle: () => void;
   }) => (
     <div
       data-testid="inbox-surface"
@@ -131,7 +134,9 @@ vi.mock("@multica/views/inbox", () => ({
       data-global-shortcut={enableGlobalArchiveShortcut}
       data-content-inert={contentInert}
     >
-      {headerAction}
+      <button type="button" onClick={onDockHeaderToggle}>
+        {contentInert ? "Expand Inbox" : "Collapse Inbox"}
+      </button>
       <button type="button" onClick={() => controller.setView("archived")}>
         Show archive
       </button>
@@ -180,6 +185,8 @@ describe("DesktopInboxDockLayout", () => {
     panelApi.collapse.mockClear();
     panelApi.expand.mockClear();
     panelApi.resize.mockClear();
+    panelApi.isCollapsed.mockReturnValue(true);
+    panelApi.getSize.mockReturnValue({ inPixels: 300, asPercentage: 38 });
   });
 
   it.each([
@@ -196,7 +203,9 @@ describe("DesktopInboxDockLayout", () => {
     renderDock();
 
     expect(screen.getByTestId("dock-layout")).toHaveAttribute("data-orientation", "vertical");
+    expect(screen.getByTestId("dock-resize-handle")).toHaveClass("cursor-row-resize");
     expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute("data-collapsed-size", "36");
+    expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute("data-min-size", "36");
     expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute("data-default-size", "38%");
     expect(screen.getByTestId("panel-inbox-dock")).toHaveAttribute(
       "data-class-name",
@@ -258,6 +267,17 @@ describe("DesktopInboxDockLayout", () => {
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
   });
 
+  it("does not reapply a stored height while a collapsed panel is being dragged open", () => {
+    renderDock();
+    panelApi.isCollapsed.mockReturnValue(false);
+    panelApi.resize.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    expect(panelApi.resize).not.toHaveBeenCalled();
+  });
+
   it("ignores an initial restored layout callback while the dock preference is closed", () => {
     renderDock();
 
@@ -272,6 +292,9 @@ describe("DesktopInboxDockLayout", () => {
     renderDock();
 
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+    expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(38);
+    panelApi.getSize.mockReturnValue({ inPixels: 480, asPercentage: 60 });
+    fireEvent.click(screen.getByRole("button", { name: "Finish drag" }));
     expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(60);
 
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag collapse" }));

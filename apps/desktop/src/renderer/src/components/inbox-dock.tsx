@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { InboxSurface, type InboxSurfaceController } from "@multica/views/inbox";
-import { useT } from "@multica/views/i18n";
-import { IconButton } from "@multica/ui/components/common/icon-button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -24,11 +21,9 @@ interface DesktopInboxDockLayoutProps {
 function DockInboxSurface({
   open,
   onToggle,
-  headerAction,
 }: {
   open: boolean;
   onToggle: () => void;
-  headerAction: ReactNode;
 }) {
   const [view, setViewState] = useState<InboxView>("inbox");
   const [selectedKey, setSelectedKey] = useState("");
@@ -56,7 +51,6 @@ function DockInboxSurface({
       enableGlobalArchiveShortcut={false}
       contentInert={!open}
       onDockHeaderToggle={onToggle}
-      headerAction={headerAction}
     />
   );
 }
@@ -66,7 +60,6 @@ export function DesktopInboxDockLayout({
   enabled,
   workspaceId,
 }: DesktopInboxDockLayoutProps): ReactElement {
-  const { t } = useT("inbox");
   const inboxDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
   const inboxDockSize = useDesktopPrefsStore((state) => state.inboxDockSize);
   const setInboxDockOpen = useDesktopPrefsStore((state) => state.setInboxDockOpen);
@@ -79,8 +72,10 @@ export function DesktopInboxDockLayout({
   useEffect(() => {
     if (!enabled || !workspaceId) return;
     if (inboxDockOpen) {
-      dockPanelRef.current?.expand();
-      dockPanelRef.current?.resize(`${inboxDockSizeRef.current}%`);
+      if (dockPanelRef.current?.isCollapsed()) {
+        dockPanelRef.current.expand();
+        dockPanelRef.current.resize(`${inboxDockSizeRef.current}%`);
+      }
     } else {
       dockPanelRef.current?.collapse();
     }
@@ -93,46 +88,36 @@ export function DesktopInboxDockLayout({
       // deliberately persisted as collapsed.
       if (!previousSize) return;
       const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE;
-      if (nextOpen) setInboxDockSize(size.asPercentage);
       if (nextOpen !== inboxDockOpen) setInboxDockOpen(nextOpen);
     },
-    [inboxDockOpen, setInboxDockOpen, setInboxDockSize],
+    [inboxDockOpen, setInboxDockOpen],
   );
+
+  const handleLayoutChanged = useCallback(() => {
+    const size = dockPanelRef.current?.getSize();
+    if (size && size.inPixels > DOCK_COLLAPSED_SIZE && useDesktopPrefsStore.getState().inboxDockOpen) {
+      setInboxDockSize(size.asPercentage);
+    }
+  }, [dockPanelRef, setInboxDockSize]);
 
   if (!enabled || !workspaceId) return <>{children}</>;
-
-  const toggleLabel = inboxDockOpen
-    ? t(($) => $.dock.collapse)
-    : t(($) => $.dock.expand);
-  const headerAction = (
-    <IconButton
-      label={toggleLabel}
-      tooltipSide="top"
-      onClick={() => setInboxDockOpen(!inboxDockOpen)}
-    >
-      {inboxDockOpen ? (
-        <ChevronDown className="size-4" />
-      ) : (
-        <ChevronUp className="size-4" />
-      )}
-    </IconButton>
-  );
 
   return (
     <ResizablePanelGroup
       orientation="vertical"
-      className="min-h-0 flex-1"
+      className="min-h-0 flex-1 [&:has([data-separator=active])_*]:!cursor-row-resize [&:has([data-separator=active])]:!cursor-row-resize"
+      onLayoutChanged={handleLayoutChanged}
     >
       <ResizablePanel id="content" defaultSize="62%" minSize="30%">
         <div className="flex h-full min-h-0 flex-col">{children}</div>
       </ResizablePanel>
-      <ResizableHandle />
+      <ResizableHandle className="cursor-row-resize" />
       <ResizablePanel
         id="inbox-dock"
         className="h-full !overflow-hidden"
         panelRef={dockPanelRef}
         defaultSize={initialDockSizeRef.current}
-        minSize={260}
+        minSize={DOCK_COLLAPSED_SIZE}
         maxSize="70%"
         collapsedSize={DOCK_COLLAPSED_SIZE}
         collapsible
@@ -142,7 +127,6 @@ export function DesktopInboxDockLayout({
           key={workspaceId}
           open={inboxDockOpen}
           onToggle={() => setInboxDockOpen(!inboxDockOpen)}
-          headerAction={headerAction}
         />
       </ResizablePanel>
     </ResizablePanelGroup>

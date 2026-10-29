@@ -592,25 +592,31 @@ export function InboxSurface({
       {variant === "dock" ? (
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 self-stretch text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-expanded={!contentInert}
+          className={cn(
+            "inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+            !contentInert && "border-primary/30 bg-accent text-foreground",
+          )}
           onClick={onDockHeaderToggle}
         >
+          <Inbox aria-hidden className="size-4" />
           {headerTitle}
         </button>
       ) : (
         <div className="flex flex-1 items-center gap-2">{headerTitle}</div>
       )}
-      <InboxFilterMenu
+      {variant === "dock" && <div className="flex-1" />}
+      {(variant === "page" || !contentInert) && <InboxFilterMenu
         wsId={wsId}
         items={viewItems}
         priorityFilterSupport={priorityFilterSupport}
         activeIssueIds={activeIssueIds}
         archived={isArchivedView}
-      />
+      />}
       {/* Batch actions are main-view only. Every entry archives from the MAIN
           inbox, so offering them while the archived list is on screen reads as
           "archive all of these" and does the opposite of what it looks like. */}
-      {!isArchivedView && (
+      {!isArchivedView && (variant === "page" || !contentInert) && (
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -654,7 +660,7 @@ export function InboxSurface({
     variant === "dock" ? (
       <div
         data-slot="inbox-dock-header"
-        className="flex h-9 shrink-0 items-center gap-2 border-b px-3"
+        className="flex h-9 shrink-0 items-center gap-2 border-b bg-muted/30 px-2"
       >
         {headerContent}
       </div>

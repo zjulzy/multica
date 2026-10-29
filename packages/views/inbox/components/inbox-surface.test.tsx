@@ -246,6 +246,21 @@ describe("InboxSurface dock controller", () => {
     expect(onDockHeaderToggle).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the Inbox button at the top with its expanded state and keeps controls separate", () => {
+    const onToggle = vi.fn();
+    const value = controller();
+    const { rerender } = renderDock(value, onToggle, true);
+    const button = screen.getByRole("heading", { name: "Inbox" }).closest("button")!;
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    expect(button).toHaveClass("border");
+    const dock = document.querySelector('[data-inbox-surface="dock"]')!;
+    expect(dock.firstElementChild).toHaveAttribute("data-slot", "inbox-dock-header");
+    fireEvent.click(button);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    rerender(<InboxSurface controller={value} variant="dock" layoutId="test-dock-layout" onDockHeaderToggle={onToggle} contentInert={false} />);
+    expect(screen.getByRole("heading", { name: "Inbox" }).closest("button")).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("does not register the global archive shortcut when disabled", () => {
     state.items = [item()];
     renderDock(controller({ selectedKey: "issue-1" }));
