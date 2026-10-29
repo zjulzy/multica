@@ -31,13 +31,14 @@ const mockToastWarning = vi.hoisted(() => vi.fn());
 const mockToastError = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const mockSetTheme = vi.hoisted(() => vi.fn());
+const themeState = vi.hoisted(() => ({ theme: "light", themes: ["light", "dark", "system"] }));
 const mockSetUser = vi.hoisted(() => vi.fn());
 const userRef = vi.hoisted(() => ({
   current: null as { id: string; timezone?: string | null } | null,
 }));
 
 vi.mock("@multica/ui/components/common/theme-provider", () => ({
-  useTheme: () => ({ theme: "light", setTheme: mockSetTheme }),
+  useTheme: () => ({ ...themeState, setTheme: mockSetTheme }),
 }));
 
 vi.mock("@multica/core/i18n/react", async () => {
@@ -128,6 +129,8 @@ function I18nWrapper({ children }: { children: ReactNode }) {
 describe("PreferencesTab — Language switcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    themeState.theme = "light";
+    themeState.themes = ["light", "dark", "system"];
     userRef.current = null;
     vi.useFakeTimers({ shouldAdvanceTime: true });
     Object.defineProperty(window, "location", {
@@ -173,6 +176,21 @@ describe("PreferencesTab — Language switcher", () => {
 
     expect(mockSetTheme).toHaveBeenCalledWith("dark");
     expect(mockToastSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows desktop themes only when supported and preserves their selection", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const view = render(<PreferencesTab />, { wrapper: I18nWrapper });
+    expect(screen.queryByRole("button", { name: "Graphite Copper" })).not.toBeInTheDocument();
+    themeState.themes = ["light", "dark", "graphite-copper", "mist-celadon", "cream-gold", "system"];
+    view.rerender(<PreferencesTab />);
+    await user.click(screen.getByRole("button", { name: "Graphite Copper" }));
+    expect(mockSetTheme).toHaveBeenCalledWith("graphite-copper");
+    themeState.theme = "graphite-copper";
+    view.rerender(<PreferencesTab />);
+    expect(screen.getByRole("button", { name: "Graphite Copper" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Mist Celadon" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cream Gold" })).toBeInTheDocument();
   });
 
   it.each([

@@ -22,6 +22,9 @@
     "unfold_all_comments": "展开全部评论",
     "switch_to_light": "切换到浅色主题",
     "switch_to_dark": "切换到深色主题",
+    "switch_to_graphite_copper": "石墨金铜",
+    "switch_to_mist_celadon": "云雾青瓷",
+    "switch_to_cream_gold": "奶油砂金",
     "use_system_theme": "跟随系统主题"
   },
   "toast": {

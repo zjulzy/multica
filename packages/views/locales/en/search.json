@@ -22,6 +22,9 @@
     "unfold_all_comments": "Unfold All Comments",
     "switch_to_light": "Switch to Light Theme",
     "switch_to_dark": "Switch to Dark Theme",
+    "switch_to_graphite_copper": "Graphite Copper",
+    "switch_to_mist_celadon": "Mist Celadon",
+    "switch_to_cream_gold": "Cream Gold",
     "use_system_theme": "Use System Theme"
   },
   "toast": {

@@ -16,37 +16,64 @@ interface DesktopInboxDockLayoutProps {
   children: ReactNode;
   enabled: boolean;
   workspaceId: string | null;
+  openRequest?: { workspaceId: string; key: string } | null;
+  onRequestHandled?: (request: { workspaceId: string; key: string }) => void;
+  onTemporaryClose?: () => void;
 }
 
 function DockInboxSurface({
   open,
   onToggle,
+  workspaceId,
+  openRequest,
+  onRequestHandled,
 }: {
   open: boolean;
   onToggle: () => void;
+  workspaceId: string;
+  openRequest?: { workspaceId: string; key: string } | null;
+  onRequestHandled?: (request: { workspaceId: string; key: string }) => void;
 }) {
   const [view, setViewState] = useState<InboxView>("inbox");
-  const [selectedKey, setSelectedKey] = useState("");
+  const [selectedKey, setSelectedKeyState] = useState("");
+  const [pinnedSelectionKey, setPinnedSelectionKey] = useState<string | null>(null);
+  const [handledRequest, setHandledRequest] = useState<typeof openRequest>(null);
+  const pendingRequest = openRequest && openRequest.workspaceId === workspaceId && openRequest !== handledRequest ? openRequest : null;
+
+  useEffect(() => {
+    if (!pendingRequest) return;
+    setViewState("inbox");
+    setSelectedKeyState(pendingRequest.key);
+    setPinnedSelectionKey(pendingRequest.key);
+    setHandledRequest(pendingRequest);
+    onRequestHandled?.(pendingRequest);
+  }, [pendingRequest, onRequestHandled]);
+
+  const setSelectedKey = useCallback((key: string) => {
+    setSelectedKeyState(key);
+    setPinnedSelectionKey((previous) => previous === key ? previous : null);
+  }, []);
 
   const setView = useCallback((nextView: InboxView) => {
     setViewState(nextView);
     setSelectedKey("");
-  }, []);
+  }, [setSelectedKey]);
 
   const clearUnresolvedSelection = useCallback(() => {
     setSelectedKey("");
-  }, []);
+  }, [setSelectedKey]);
 
   return (
     <InboxSurface
       controller={{
-        view,
-        selectedKey,
+        view: pendingRequest ? "inbox" : view,
+        selectedKey: pendingRequest?.key ?? selectedKey,
         setView,
         setSelectedKey,
         onUnresolvedSelection: clearUnresolvedSelection,
       }}
       variant="dock"
+      pinnedSelectionKey={pendingRequest?.key ?? pinnedSelectionKey}
       layoutId="multica_inbox_dock_content_layout"
       enableGlobalArchiveShortcut={false}
       contentInert={!open}
@@ -59,8 +86,12 @@ export function DesktopInboxDockLayout({
   children,
   enabled,
   workspaceId,
+  openRequest,
+  onRequestHandled,
+  onTemporaryClose,
 }: DesktopInboxDockLayoutProps): ReactElement {
-  const inboxDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
+  const persistedDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
+  const inboxDockOpen = onTemporaryClose ? true : persistedDockOpen;
   const inboxDockSize = useDesktopPrefsStore((state) => state.inboxDockSize);
   const setInboxDockOpen = useDesktopPrefsStore((state) => state.setInboxDockOpen);
   const setInboxDockSize = useDesktopPrefsStore((state) => state.setInboxDockSize);
@@ -101,9 +132,12 @@ export function DesktopInboxDockLayout({
       // deliberately persisted as collapsed.
       if (!previousSize || animatingRef.current) return;
       const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE;
-      if (nextOpen !== inboxDockOpen) setInboxDockOpen(nextOpen);
+      if (nextOpen !== inboxDockOpen) {
+        if (!nextOpen && onTemporaryClose) onTemporaryClose();
+        else setInboxDockOpen(nextOpen);
+      }
     },
-    [inboxDockOpen, setInboxDockOpen],
+    [inboxDockOpen, onTemporaryClose, setInboxDockOpen],
   );
 
   const handleLayoutChanged = useCallback(() => {
@@ -114,11 +148,10 @@ export function DesktopInboxDockLayout({
     }
   }, [dockPanelRef, setInboxDockSize]);
 
-  if (!enabled || !workspaceId) return <>{children}</>;
-
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
     <div data-testid="dock-main-content" className="flex min-h-0 flex-1 flex-col">{children}</div>
+    {enabled && workspaceId && <>
     <div aria-hidden data-testid="dock-collapsed-spacer" className="h-9 shrink-0" />
     <ResizablePanelGroup
       orientation="vertical"
@@ -143,6 +176,9 @@ export function DesktopInboxDockLayout({
         <div ref={inboxContentRef} data-testid="dock-inbox-content" className="h-full" style={frozenInboxHeight ? { height: frozenInboxHeight, flex: "none" } : undefined}>
         <DockInboxSurface
           key={workspaceId}
+          workspaceId={workspaceId}
+          openRequest={openRequest}
+          onRequestHandled={onRequestHandled}
           open={inboxDockOpen}
           onToggle={() => {
             clearTimeout(animationTimer.current);
@@ -154,12 +190,14 @@ export function DesktopInboxDockLayout({
               setAnimating(true);
               animationTimer.current = setTimeout(stopDockMotion, 220);
             }
-            setInboxDockOpen(!inboxDockOpen);
+            if (inboxDockOpen && onTemporaryClose) onTemporaryClose();
+            else setInboxDockOpen(!inboxDockOpen);
           }}
         />
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>
+    </>}
     </div>
   );
 }

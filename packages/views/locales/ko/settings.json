@@ -161,6 +161,9 @@
       "title": "테마",
       "light": "라이트",
       "dark": "다크",
+      "graphite_copper": "그래파이트 코퍼",
+      "mist_celadon": "미스트 청자",
+      "cream_gold": "크림 골드",
       "system": "시스템"
     },
     "language": {

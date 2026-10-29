@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@multica/ui/lib/utils";
@@ -307,6 +307,35 @@ export function DesktopShell() {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   const inboxDockEnabled = useDesktopPrefsStore((s) => s.inboxDockEnabled);
   const agentStatusHubEnabled = useDesktopPrefsStore((s) => s.agentStatusHubEnabled);
+  const setInboxDockOpen = useDesktopPrefsStore((s) => s.setInboxDockOpen);
+  const [temporaryDockWorkspace, setTemporaryDockWorkspace] = useState<string | null>(null);
+  const [dockRequest, setDockRequest] = useState<{ workspaceId: string; key: string } | null>(null);
+  const temporaryDockVisible = !inboxDockEnabled && temporaryDockWorkspace === resolvedWorkspace?.id;
+  const openHubUnread = useCallback((workspaceId: string, key: string) => {
+    if (!resolvedWorkspace || workspaceId !== resolvedWorkspace.id) return;
+    setDockRequest({ workspaceId, key });
+    if (!inboxDockEnabled) setTemporaryDockWorkspace(workspaceId);
+    else setInboxDockOpen(true);
+  }, [resolvedWorkspace, inboxDockEnabled, setInboxDockOpen]);
+  const closeTemporaryDock = useCallback(() => {
+    setTemporaryDockWorkspace(null);
+    setDockRequest(null);
+  }, []);
+  const handleDockRequest = useCallback((request: { workspaceId: string; key: string }) => {
+    setDockRequest((current) => current === request ? null : current);
+  }, []);
+  useEffect(() => {
+    if (temporaryDockWorkspace && temporaryDockWorkspace !== resolvedWorkspace?.id) closeTemporaryDock();
+  }, [temporaryDockWorkspace, resolvedWorkspace?.id, closeTemporaryDock]);
+  useEffect(() => {
+    setDockRequest((current) => current && current.workspaceId !== resolvedWorkspace?.id ? null : current);
+  }, [resolvedWorkspace?.id]);
+  useEffect(() => {
+    if (inboxDockEnabled && temporaryDockWorkspace) {
+      setInboxDockOpen(true);
+      setTemporaryDockWorkspace(null);
+    }
+  }, [inboxDockEnabled, temporaryDockWorkspace, setInboxDockOpen]);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   return (
@@ -343,6 +372,7 @@ export function DesktopShell() {
             {slug && (
               <AppSidebar
                 showAgentStatusHub={agentStatusHubEnabled}
+                onAgentUnreadOpen={openHubUnread}
                 hideInboxNav={inboxDockEnabled}
                 topSlot={<SidebarTopSpacer />}
                 searchSlot={<SearchTrigger />}
@@ -362,8 +392,11 @@ export function DesktopShell() {
                     froze until the destination committed (MUL-6404). */}
                 <NavigationProgress />
                 <DesktopInboxDockLayout
-                  enabled={inboxDockEnabled}
+                  enabled={inboxDockEnabled || temporaryDockVisible}
                   workspaceId={resolvedWorkspace?.id ?? null}
+                  openRequest={dockRequest}
+                  onRequestHandled={handleDockRequest}
+                  onTemporaryClose={temporaryDockVisible ? closeTemporaryDock : undefined}
                 >
                   <PageHeaderPortalProvider value={singleTabMode ? headerSlot : null}>
                     <TabContent />

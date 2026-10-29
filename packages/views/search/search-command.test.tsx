@@ -100,7 +100,7 @@ const {
   mockRecentItems: { current: [] as Array<{ id: string; visitedAt: number }> },
   mockAllIssues: { current: [] as Array<Record<string, unknown>> },
   mockSetTheme: vi.fn(),
-  mockTheme: { current: "system" as "light" | "dark" | "system" },
+  mockTheme: { current: "system" as "light" | "dark" | "system" | "pink", themes: ["light", "dark", "system"] as string[] },
   mockPathname: { current: "/ws-test/issues" as string },
   mockGetShareableUrl: vi.fn((p: string) => `https://app.multica/${p}`),
   mockMembers: {
@@ -328,7 +328,7 @@ vi.mock("../navigation/context", () => {
 });
 
 vi.mock("@multica/ui/components/common/theme-provider", () => ({
-  useTheme: () => ({ theme: mockTheme.current, setTheme: mockSetTheme }),
+  useTheme: () => ({ theme: mockTheme.current, themes: mockTheme.themes, setTheme: mockSetTheme }),
 }));
 
 vi.mock("sonner", () => ({
@@ -348,6 +348,7 @@ describe("SearchCommand", () => {
     mockUnreadSummary.current = [];
     mockSetTheme.mockReset();
     mockTheme.current = "system";
+    mockTheme.themes = ["light", "dark", "system"];
     mockPathname.current = "/ws-test/issues";
     mockGetShareableUrl.mockReset().mockImplementation((p: string) => `https://app.multica/${p}`);
     mockMembers.current = [];
@@ -911,6 +912,23 @@ describe("SearchCommand", () => {
 
     expect(mockSetTheme).toHaveBeenCalledWith("dark");
     expect(useSearchStore.getState().open).toBe(false);
+  });
+
+  it("offers the desktop theme in the command palette when supported", async () => {
+    const user = userEvent.setup();
+    mockTheme.themes = ["light", "dark", "graphite-copper", "system"];
+    renderSearch();
+    await user.type(screen.getByPlaceholderText("Type a command or search..."), "graphite");
+    const result = await screen.findByText((_, el) => el?.textContent === "Graphite Copper" && el?.tagName === "SPAN");
+    await user.click(result);
+    expect(mockSetTheme).toHaveBeenCalledWith("graphite-copper");
+  });
+
+  it("does not expose desktop themes in a provider that does not support them", async () => {
+    const user = userEvent.setup();
+    renderSearch();
+    await user.type(screen.getByPlaceholderText("Type a command or search..."), "graphite");
+    expect(screen.queryByText("Graphite Copper")).not.toBeInTheDocument();
   });
 
   it("matches theme action via generic 'theme' keyword and marks current theme", async () => {

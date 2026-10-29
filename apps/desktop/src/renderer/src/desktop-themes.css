@@ -1,0 +1,42 @@
+/* Desktop themes use the existing semantic tokens so all surfaces and portals follow along. */
+html[data-desktop-theme="graphite-copper"] {
+  --app-shell:#191a1d; --page-canvas:#28282b; --surface:#323135; --surface-raised:#3c3a3c;
+  --surface-hover:#403d3e; --surface-selected:#46403c; --surface-border:#62574e;
+  --foreground:#f0ece7; --surface-foreground:#f0ece7; --surface-selected-foreground:#f0ece7;
+  --card-foreground:#f0ece7; --popover-foreground:#f0ece7; --muted-foreground:#cbbeb2; --faint-foreground:#b8a799;
+  --primary:#e0ae7c; --primary-foreground:#302013; --secondary:#403d3e; --secondary-foreground:#f0ece7;
+  --muted:#403d3e; --accent:#46403c; --accent-foreground:#f0ece7;
+  --border:#5b524d; --input:#75685d; --ring:#dfaf80;
+  --sidebar:#212124; --sidebar-foreground:#f0ece7; --sidebar-primary:#e0ae7c; --sidebar-primary-foreground:#302013;
+  --sidebar-accent:#46403c; --sidebar-accent-foreground:#f0ece7; --sidebar-border:#514a45; --sidebar-ring:#dfaf80;
+  --brand:#e0ae7c; --brand-foreground:#302013; --tooltip:#3c3531; --theme-glow:rgba(219,164,107,.10);
+}
+html[data-desktop-theme="mist-celadon"] {
+  --app-shell:#e8f0ef; --page-canvas:#f8fbfa; --surface:#ffffff; --surface-raised:#ffffff;
+  --surface-hover:#edf6f3; --surface-selected:#e5f1ee; --surface-border:#cadbd7;
+  --foreground:#203c3b; --surface-foreground:#203c3b; --surface-selected-foreground:#203c3b;
+  --card-foreground:#203c3b; --popover-foreground:#203c3b; --muted-foreground:#526f6b; --faint-foreground:#65817d;
+  --primary:#167f79; --primary-foreground:#ffffff; --secondary:#e5f1ee; --secondary-foreground:#203c3b;
+  --muted:#e5f1ee; --accent:#e5f1ee; --accent-foreground:#203c3b;
+  --border:#cadbd7; --input:#acc6bf; --ring:#167f79;
+  --sidebar:#f1f7f6; --sidebar-foreground:#203c3b; --sidebar-primary:#167f79; --sidebar-primary-foreground:#ffffff;
+  --sidebar-accent:#e1efeb; --sidebar-accent-foreground:#203c3b; --sidebar-border:#cadbd7; --sidebar-ring:#167f79;
+  --brand:#167f79; --brand-foreground:#ffffff; --tooltip:#274440; --theme-glow:rgba(50,159,147,.09);
+}
+html[data-desktop-theme="cream-gold"] {
+  --app-shell:#eeeae4; --page-canvas:#fcfaf7; --surface:#ffffff; --surface-raised:#ffffff;
+  --surface-hover:#f8f2eb; --surface-selected:#f3e9dc; --surface-border:#e1d5c7;
+  --foreground:#3f352e; --surface-foreground:#3f352e; --surface-selected-foreground:#3f352e;
+  --card-foreground:#3f352e; --popover-foreground:#3f352e; --muted-foreground:#746253; --faint-foreground:#887465;
+  --primary:#965c2d; --primary-foreground:#ffffff; --secondary:#f3e9dc; --secondary-foreground:#3f352e;
+  --muted:#f3e9dc; --accent:#f3e9dc; --accent-foreground:#3f352e;
+  --border:#e1d5c7; --input:#cab9a6; --ring:#965c2d;
+  --sidebar:#f6f2ed; --sidebar-foreground:#3f352e; --sidebar-primary:#965c2d; --sidebar-primary-foreground:#ffffff;
+  --sidebar-accent:#f2e7d9; --sidebar-accent-foreground:#3f352e; --sidebar-border:#e1d5c7; --sidebar-ring:#965c2d;
+  --brand:#965c2d; --brand-foreground:#ffffff; --tooltip:#4a382d; --theme-glow:rgba(191,136,75,.09);
+}
+html[data-desktop-theme] :is([data-slot="button"], [data-slot="input"], [data-slot="textarea"], [data-slot="dialog-content"], [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="select-trigger"], [data-slot="card"], [data-slot="inbox-dock-header"]) {
+  background-image:linear-gradient(140deg,var(--theme-glow),transparent 70%);
+}
+html[data-desktop-theme] [data-slot="sidebar-inner"] { background-image:radial-gradient(ellipse at 100% 0,var(--theme-glow),transparent 50%); }
+html[data-desktop-theme="graphite-copper"] .bg-brand.text-white { color:var(--brand-foreground); }

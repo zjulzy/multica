@@ -161,6 +161,9 @@
       "title": "テーマ",
       "light": "ライト",
       "dark": "ダーク",
+      "graphite_copper": "グラファイトコッパー",
+      "mist_celadon": "ミスト青磁",
+      "cream_gold": "クリームゴールド",
       "system": "システム"
     },
     "language": {

@@ -127,11 +127,16 @@ export function PreferencesTab() {
 
 function ThemeRow() {
   const { t } = useT("settings");
-  const { theme, setTheme } = useTheme();
-  const value = theme === "light" || theme === "dark" ? theme : "system";
+  const { theme, setTheme, themes } = useTheme();
+  const extraThemes = [
+    ["graphite-copper", t(($) => $.preferences.theme.graphite_copper)],
+    ["mist-celadon", t(($) => $.preferences.theme.mist_celadon)],
+    ["cream-gold", t(($) => $.preferences.theme.cream_gold)],
+  ] as const;
+  const value = theme && themes?.includes(theme) ? theme : "system";
   return (
     <SettingsRow anchor="theme" label={t(($) => $.preferences.theme.title)}>
-      <div role="group" aria-label={t(($) => $.preferences.theme.title)}>
+      <div role="group" aria-label={t(($) => $.preferences.theme.title)} className="flex flex-col gap-2">
         <SegmentedToggle
           value={value}
           onChange={setTheme}
@@ -142,6 +147,14 @@ function ThemeRow() {
             ["system", t(($) => $.preferences.theme.system)],
           ]}
         />
+        {extraThemes.some(([key]) => themes?.includes(key)) && (
+          <SegmentedToggle
+            value={value}
+            onChange={setTheme}
+            buttonClassName="px-3 py-1 text-label"
+            options={extraThemes.filter(([key]) => themes?.includes(key))}
+          />
+        )}
       </div>
     </SettingsRow>
   );

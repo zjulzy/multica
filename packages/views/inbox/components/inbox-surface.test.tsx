@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   archive: vi.fn(),
   markRead: vi.fn(),
   clearFilters: vi.fn(),
+  filterOut: false,
 }));
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -78,7 +79,7 @@ vi.mock("@multica/core/inbox/mutations", () => {
 });
 
 vi.mock("@multica/core/inbox/filter-store", () => ({
-  filterInboxItems: (items: InboxItem[]) => items,
+  filterInboxItems: (items: InboxItem[]) => state.filterOut ? [] : items,
   inboxFiltersForArchive: (filters: unknown) => filters,
   inboxFiltersForPrioritySupport: (filters: unknown) => filters,
   inboxFilterCount: () => 0,
@@ -206,6 +207,8 @@ describe("InboxSurface dock controller", () => {
     state.replace.mockClear();
     state.archive.mockClear();
     state.markRead.mockClear();
+    state.clearFilters.mockClear();
+    state.filterOut = false;
   });
 
   it("selects through the supplied controller without calling navigation", () => {
@@ -226,6 +229,16 @@ describe("InboxSurface dock controller", () => {
 
     expect(value.onUnresolvedSelection).toHaveBeenCalledWith("missing-issue");
     expect(state.replace).not.toHaveBeenCalled();
+  });
+
+  it("keeps a Hub target visible despite filters without changing shared filters", () => {
+    state.items = [item({ read: false })];
+    state.filterOut = true;
+    const value = controller({ selectedKey: "issue-1" });
+    render(<InboxSurface controller={value} variant="dock" layoutId="test-dock" pinnedSelectionKey="issue-1" />);
+    expect(screen.getByRole("button", { name: "Issue title" })).toBeInTheDocument();
+    expect(value.onUnresolvedSelection).not.toHaveBeenCalled();
+    expect(state.clearFilters).not.toHaveBeenCalled();
   });
 
   it("renders dock chrome locally instead of mounting PageHeader", () => {

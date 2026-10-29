@@ -17,6 +17,7 @@ import {
   Monitor,
   Moon,
   Sun,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { Command as CommandPrimitive } from "cmdk";
@@ -119,7 +120,7 @@ interface NavPage {
   keywords: string[];
 }
 
-type ThemeValue = "light" | "dark" | "system";
+type ThemeValue = "light" | "dark" | "system" | "graphite-copper" | "mist-celadon" | "cream-gold";
 
 function memberInitials(name: string) {
   return name
@@ -369,7 +370,7 @@ export function SearchCommand() {
   const { colorOf, iconOf } = useIssueStatuses(wsId);
   const recentItems = useRecentIssuesStore(selectRecentIssues(wsId));
   const p: WorkspacePaths = useWorkspacePaths();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, themes } = useTheme();
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   // Both are account-level cache entries the sidebar's workspace switcher
   // already holds, so the Workspaces group adds no requests of its own.
@@ -560,8 +561,23 @@ export function SearchCommand() {
       },
     );
 
+    for (const [value, label] of [
+      ["graphite-copper", t(($) => $.commands.switch_to_graphite_copper)],
+      ["mist-celadon", t(($) => $.commands.switch_to_mist_celadon)],
+      ["cream-gold", t(($) => $.commands.switch_to_cream_gold)],
+    ] as const) if (themes?.includes(value)) {
+      items.push({
+        key: `theme-${value}`,
+        label,
+        icon: Sparkles,
+        keywords: [value, label, "theme", "appearance"],
+        trailing: activeThemeCheck(value),
+        onSelect: () => { setTheme(value); setOpen(false); },
+      });
+    }
+
     return items;
-  }, [currentIssue, currentIssueId, getShareableUrl, pathname, queryClient, setOpen, setTheme, theme, t]);
+  }, [currentIssue, currentIssueId, getShareableUrl, pathname, queryClient, setOpen, setTheme, theme, themes, t]);
 
   const filteredCommands = useMemo(() => {
     const q = query.trim().toLowerCase();

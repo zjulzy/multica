@@ -15,7 +15,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/
 import { AppLink } from "../navigation";
 import { useT } from "../i18n";
 
-export function AgentStatusHub() {
+export function AgentStatusHub({ onOpenUnread }: { onOpenUnread?: (workspaceId: string, key: string) => void } = {}) {
   const workspace = useCurrentWorkspace();
   const paths = useWorkspacePaths();
   const { t } = useT("agents");
@@ -58,7 +58,11 @@ export function AgentStatusHub() {
           const href = unread ? `${paths.inbox()}?${new URLSearchParams({ issue: unread.key })}` : paths.agentDetail(agent.id);
           return (
             <Tooltip key={agent.id}>
-              <TooltipTrigger render={<AppLink href={href} aria-label={`${agent.name}: ${counts}${unreadLabel ? ` · ${unreadLabel}` : ""} · ${destination}`} className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />}>
+              <TooltipTrigger render={<AppLink href={href} onClick={(event) => {
+                if (!unread || !onOpenUnread || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                onOpenUnread(workspaceId, unread.key);
+              }} aria-label={`${agent.name}: ${counts}${unreadLabel ? ` · ${unreadLabel}` : ""} · ${destination}`} className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />}>
                 <span aria-hidden data-agent-workload={runningCount > 0 ? "running" : queuedCount > 0 ? "queued" : "idle"} className={runningCount > 0
                   ? "pointer-events-none absolute inset-0.5 rounded-full border-2 border-brand/30 border-t-brand border-r-brand motion-safe:animate-spin"
                   : queuedCount > 0

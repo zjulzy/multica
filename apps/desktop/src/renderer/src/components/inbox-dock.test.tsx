@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,7 @@ const panelApi = vi.hoisted(() => ({
   getSize: vi.fn(() => ({ inPixels: 300, asPercentage: 38 })),
   isCollapsed: vi.fn(() => true),
 }));
+const observedInbox = vi.hoisted(() => [] as Array<{ key: string; inert: boolean }>);
 
 vi.mock("@multica/ui/components/ui/resizable", () => ({
   useDefaultLayout: () => ({
@@ -128,7 +129,9 @@ vi.mock("@multica/views/inbox", () => ({
     enableGlobalArchiveShortcut: boolean;
     contentInert: boolean;
     onDockHeaderToggle: () => void;
-  }) => (
+  }) => {
+    observedInbox.push({ key: controller.selectedKey, inert: contentInert });
+    return (
     <div
       data-testid="inbox-surface"
       data-view={controller.view}
@@ -148,7 +151,8 @@ vi.mock("@multica/views/inbox", () => ({
         Select issue
       </button>
     </div>
-  ),
+    );
+  },
 }));
 
 const translations = {
@@ -192,6 +196,7 @@ describe("DesktopInboxDockLayout", () => {
     panelApi.resize.mockClear();
     panelApi.isCollapsed.mockReturnValue(true);
     panelApi.getSize.mockReturnValue({ inPixels: 300, asPercentage: 38 });
+    observedInbox.length = 0;
   });
 
   it.each([
@@ -229,6 +234,80 @@ describe("DesktopInboxDockLayout", () => {
     expect(panelApi.expand).toHaveBeenCalled();
     expect(panelApi.resize).toHaveBeenCalledWith("38%");
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "false");
+  });
+
+  it("selects the Hub target in the current workspace and returns from archive to inbox", () => {
+    const request = { workspaceId: "workspace-1", key: "issue-9" };
+    const { rerender } = render(
+      <DesktopInboxDockLayout enabled workspaceId="workspace-1" openRequest={request}>
+        <main>Main content</main>
+      </DesktopInboxDockLayout>,
+    );
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-selected-key", "issue-9");
+    fireEvent.click(screen.getByRole("button", { name: "Show archive" }));
+    rerender(
+      <DesktopInboxDockLayout enabled workspaceId="workspace-1" openRequest={{ ...request }}>
+        <main>Main content</main>
+      </DesktopInboxDockLayout>,
+    );
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-view", "inbox");
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-selected-key", "issue-9");
+  });
+
+  it("preserves the main page when a previously disabled Dock is temporarily mounted", () => {
+    const { rerender } = render(<DesktopInboxDockLayout enabled={false} workspaceId="workspace-1"><main>Main content</main></DesktopInboxDockLayout>);
+    const page = screen.getByText("Main content");
+    rerender(<DesktopInboxDockLayout enabled workspaceId="workspace-1"><main>Main content</main></DesktopInboxDockLayout>);
+    expect(screen.getByText("Main content")).toBe(page);
+  });
+
+  it("renders the new Hub target immediately when opening instead of exposing the old selection", () => {
+    useDesktopPrefsStore.setState({ inboxDockOpen: true });
+    const { rerender } = render(<DesktopInboxDockLayout enabled workspaceId="workspace-1"><main>Main content</main></DesktopInboxDockLayout>);
+    fireEvent.click(screen.getByRole("button", { name: "Select issue" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    observedInbox.length = 0;
+    act(() => {
+      useDesktopPrefsStore.setState({ inboxDockOpen: true });
+      rerender(<DesktopInboxDockLayout enabled workspaceId="workspace-1" openRequest={{ workspaceId: "workspace-1", key: "issue-new" }}><main>Main content</main></DesktopInboxDockLayout>);
+    });
+    expect(observedInbox.some((entry) => !entry.inert && entry.key === "issue-9")).toBe(false);
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-selected-key", "issue-new");
+  });
+
+  it("reports a Hub request consumed so it cannot be replayed on a later remount", () => {
+    const handled = vi.fn();
+    const request = { workspaceId: "workspace-1", key: "issue-9" };
+    render(<DesktopInboxDockLayout enabled workspaceId="workspace-1" openRequest={request} onRequestHandled={handled}><main>Main content</main></DesktopInboxDockLayout>);
+    expect(handled).toHaveBeenCalledOnce();
+    expect(handled).toHaveBeenCalledWith(request);
+  });
+
+  it("ignores a Hub request belonging to a different workspace", () => {
+    render(
+      <DesktopInboxDockLayout enabled workspaceId="workspace-2" openRequest={{ workspaceId: "workspace-1", key: "issue-9" }}>
+        <main>Main content</main>
+      </DesktopInboxDockLayout>,
+    );
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-selected-key", "");
+  });
+
+  it("dismisses a temporary Dock when the user collapses it", () => {
+    useDesktopPrefsStore.setState({ inboxDockOpen: false });
+    const dismiss = vi.fn();
+    render(<DesktopInboxDockLayout enabled workspaceId="workspace-1" onTemporaryClose={dismiss}><main>Main content</main></DesktopInboxDockLayout>);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    expect(dismiss).toHaveBeenCalledOnce();
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+  });
+
+  it("dismisses a temporary Dock when dragged to the bottom", () => {
+    useDesktopPrefsStore.setState({ inboxDockOpen: false });
+    const dismiss = vi.fn();
+    render(<DesktopInboxDockLayout enabled workspaceId="workspace-1" onTemporaryClose={dismiss}><main>Main content</main></DesktopInboxDockLayout>);
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag collapse" }));
+    expect(dismiss).toHaveBeenCalledOnce();
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
   });
 
   it("enables dock motion only for a header toggle and stops it when a drag starts", () => {

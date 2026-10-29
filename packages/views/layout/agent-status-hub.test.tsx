@@ -1,6 +1,6 @@
 import React from "react";
 import { renderWithI18n } from "../test/i18n";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Agent, AgentTask, InboxItem } from "@multica/core/types";
 import { AgentStatusHub } from "./agent-status-hub";
@@ -94,6 +94,25 @@ describe("AgentStatusHub", () => {
     expect(link.querySelector('[data-agent-workload="running"]')).toBeInTheDocument();
     expect(link.querySelector('[data-agent-unread]')).toBeInTheDocument();
     expect(link.querySelector(".lucide-hourglass")).not.toBeInTheDocument();
+  });
+
+  it("opens an unread notification through the supplied Dock handler without navigating", () => {
+    data.agents = [agent("a", "Alice")];
+    data.inbox = [notification()];
+    const openUnread = vi.fn();
+    renderWithI18n(<AgentStatusHub onOpenUnread={openUnread} />);
+    const link = screen.getByRole("link", { name: /Alice/ });
+    expect(fireEvent.click(link)).toBe(false);
+    expect(openUnread).toHaveBeenCalledWith("ws-1", "issue-1");
+  });
+
+  it("preserves modifier-click navigation for an unread notification", () => {
+    data.agents = [agent("a", "Alice")];
+    data.inbox = [notification()];
+    const openUnread = vi.fn();
+    renderWithI18n(<AgentStatusHub onOpenUnread={openUnread} />);
+    fireEvent.click(screen.getByRole("link", { name: /Alice/ }), { ctrlKey: true });
+    expect(openUnread).not.toHaveBeenCalled();
   });
 
   it("shows unread and queued indicators together", () => {

@@ -161,6 +161,9 @@
       "title": "主題",
       "light": "淺色",
       "dark": "深色",
+      "graphite_copper": "石墨金銅",
+      "mist_celadon": "雲霧青瓷",
+      "cream_gold": "奶油砂金",
       "system": "跟隨系統"
     },
     "language": {

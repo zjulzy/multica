@@ -22,6 +22,9 @@
     "unfold_all_comments": "Déplier tous les commentaires",
     "switch_to_light": "Passer au thème clair",
     "switch_to_dark": "Passer au thème sombre",
+    "switch_to_graphite_copper": "Graphite cuivre",
+    "switch_to_mist_celadon": "Céladon brume",
+    "switch_to_cream_gold": "Crème dorée",
     "use_system_theme": "Utiliser le thème du système"
   },
   "toast": {

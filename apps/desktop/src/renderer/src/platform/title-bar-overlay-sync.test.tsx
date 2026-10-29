@@ -84,6 +84,9 @@ describe("TitleBarOverlaySync", () => {
     theme.resolvedTheme = "dark";
     rerender(<TitleBarOverlaySync resolve={resolve} />);
     expect(setTitleBarOverlay).toHaveBeenCalledTimes(2);
+    theme.resolvedTheme = "graphite-copper";
+    rerender(<TitleBarOverlaySync resolve={resolve} />);
+    expect(setTitleBarOverlay).toHaveBeenCalledTimes(3);
   });
 
   it("uses the taller bar height in single-tab mode", () => {

@@ -163,6 +163,9 @@
       "title": "Thème",
       "light": "Clair",
       "dark": "Sombre",
+      "graphite_copper": "Graphite cuivre",
+      "mist_celadon": "Céladon brume",
+      "cream_gold": "Crème dorée",
       "system": "Système"
     },
     "language": {

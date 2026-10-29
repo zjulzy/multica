@@ -132,6 +132,8 @@ export interface InboxSurfaceProps {
   onDockHeaderToggle?: () => void;
   enableGlobalArchiveShortcut?: boolean;
   contentInert?: boolean;
+  /** Keep an externally requested Dock selection visible without clearing filters. */
+  pinnedSelectionKey?: string | null;
 }
 
 export function InboxSurface({
@@ -142,6 +144,7 @@ export function InboxSurface({
   onDockHeaderToggle,
   enableGlobalArchiveShortcut,
   contentInert = false,
+  pinnedSelectionKey = null,
 }: InboxSurfaceProps): ReactElement {
   const queryClient = useQueryClient();
   const { t } = useT("inbox");
@@ -208,10 +211,18 @@ export function InboxSurface({
     () => ({ activeIssueIds: idleFilterIssueIds, pinnedUnreadKey, pinnedIdleKey }),
     [idleFilterIssueIds, pinnedUnreadKey, pinnedIdleKey],
   );
-  const filteredItems = useMemo(
+  const normallyFilteredItems = useMemo(
     () => filterInboxItems(viewItems, effectiveFilters, filterContext),
     [viewItems, effectiveFilters, filterContext],
   );
+  const filteredItems = useMemo(() => {
+    if (variant !== "dock" || isArchivedView || !pinnedSelectionKey || pinnedSelectionKey !== selectedKey) return normallyFilteredItems;
+    const included = new Set(normallyFilteredItems.map((item) => item.issue_id ?? item.id));
+    return viewItems.filter((item) => {
+      const key = item.issue_id ?? item.id;
+      return key === pinnedSelectionKey || included.has(key);
+    });
+  }, [variant, isArchivedView, pinnedSelectionKey, selectedKey, normallyFilteredItems, viewItems]);
   const hasActiveFilters = inboxFilterCount(effectiveFilters) > 0;
   const selectedOnPage = viewItems.find((i) => (i.issue_id ?? i.id) === selectedKey);
   // A deep link can point beyond every loaded page. Resolve its group directly

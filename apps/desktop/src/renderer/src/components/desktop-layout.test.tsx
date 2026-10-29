@@ -66,8 +66,8 @@ vi.mock("@multica/views/platform", () => ({
 }));
 
 vi.mock("@multica/views/layout", () => ({
-  AppSidebar: ({ hideInboxNav, showAgentStatusHub }: { hideInboxNav?: boolean; showAgentStatusHub?: boolean }) => (
-    <div data-testid="app-sidebar" data-hide-inbox={hideInboxNav} data-agent-status-hub={showAgentStatusHub} />
+  AppSidebar: ({ hideInboxNav, showAgentStatusHub, onAgentUnreadOpen }: { hideInboxNav?: boolean; showAgentStatusHub?: boolean; onAgentUnreadOpen?: (workspaceId: string, key: string) => void }) => (
+    <div data-testid="app-sidebar" data-hide-inbox={hideInboxNav} data-agent-status-hub={showAgentStatusHub}><button onClick={() => onAgentUnreadOpen?.("ws-1", "issue-9")}>Hub unread</button></div>
   ),
   GlobalShortcuts: () => null,
   NavigationProgress: () => null,
@@ -89,19 +89,23 @@ vi.mock("./inbox-dock", () => ({
     children,
     enabled,
     workspaceId,
+    openRequest,
+    onTemporaryClose,
   }: {
     children: ReactNode;
     enabled: boolean;
     workspaceId: string | null;
-  }) =>
-    enabled && workspaceId ? (
-      <div data-testid="inbox-dock-layout" data-workspace-id={workspaceId}>
-        {children}
+    openRequest?: { workspaceId: string; key: string } | null;
+    onTemporaryClose?: () => void;
+  }) => (
+    <div>
+      <div>{children}</div>
+      {enabled && workspaceId && <div data-testid="inbox-dock-layout" data-workspace-id={workspaceId} data-target={openRequest?.key}>
         <div data-testid="dock-inbox-surface" />
-      </div>
-    ) : (
-      <>{children}</>
-    ),
+        {onTemporaryClose && <button onClick={onTemporaryClose}>Dismiss temporary dock</button>}
+      </div>}
+    </div>
+  ),
 }));
 
 // Stands in for whatever page the active tab is showing. Reports the one fact
@@ -263,6 +267,26 @@ describe("single-tab mode header slot", () => {
 });
 
 describe("Inbox dock integration", () => {
+  it("opens the Dock from an unread Hub item without changing the disabled preference or main page", () => {
+    renderShell();
+    const page = screen.getByTestId("page-content");
+    fireEvent.click(screen.getByRole("button", { name: "Hub unread" }));
+    expect(screen.getByTestId("inbox-dock-layout")).toHaveAttribute("data-target", "issue-9");
+    expect(useDesktopPrefsStore.getState().inboxDockEnabled).toBe(false);
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+    expect(screen.getByTestId("page-content")).toBe(page);
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss temporary dock" }));
+    expect(screen.queryByTestId("inbox-dock-layout")).not.toBeInTheDocument();
+    expect(useDesktopPrefsStore.getState().inboxDockEnabled).toBe(false);
+  });
+
+  it("opens a collapsed enabled Dock for the selected Hub item", () => {
+    useDesktopPrefsStore.setState({ inboxDockEnabled: true, inboxDockOpen: false });
+    renderShell();
+    fireEvent.click(screen.getByRole("button", { name: "Hub unread" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    expect(screen.getByTestId("inbox-dock-layout")).toHaveAttribute("data-target", "issue-9");
+  });
   it("mounts the Dock for the resolved workspace and hides the sidebar Inbox row", () => {
     useDesktopPrefsStore.setState({ inboxDockEnabled: true });
 

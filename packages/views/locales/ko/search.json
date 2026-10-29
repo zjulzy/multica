@@ -22,6 +22,9 @@
     "unfold_all_comments": "모든 댓글 펼치기",
     "switch_to_light": "라이트 테마로 전환",
     "switch_to_dark": "다크 테마로 전환",
+    "switch_to_graphite_copper": "그래파이트 코퍼",
+    "switch_to_mist_celadon": "미스트 청자",
+    "switch_to_cream_gold": "크림 골드",
     "use_system_theme": "시스템 테마 사용"
   },
   "toast": {

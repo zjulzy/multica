@@ -163,6 +163,9 @@
       "title": "Theme",
       "light": "Light",
       "dark": "Dark",
+      "graphite_copper": "Graphite Copper",
+      "mist_celadon": "Mist Celadon",
+      "cream_gold": "Cream Gold",
       "system": "System"
     },
     "language": {

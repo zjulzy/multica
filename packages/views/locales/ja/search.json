@@ -22,6 +22,9 @@
     "unfold_all_comments": "すべてのコメントを展開",
     "switch_to_light": "ライトテーマに切り替え",
     "switch_to_dark": "ダークテーマに切り替え",
+    "switch_to_graphite_copper": "グラファイトコッパー",
+    "switch_to_mist_celadon": "ミスト青磁",
+    "switch_to_cream_gold": "クリームゴールド",
     "use_system_theme": "システムテーマを使用"
   },
   "toast": {

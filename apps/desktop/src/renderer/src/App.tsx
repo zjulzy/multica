@@ -8,8 +8,8 @@ import { useWorkspaceList } from "@multica/core/workspace";
 import { api } from "@multica/core/api";
 import { useHasOnboarded } from "@multica/core/paths";
 import { setCurrentWorkspace } from "@multica/core/platform";
-import { ThemeProvider } from "@multica/ui/components/common/theme-provider";
 import { TitleBarOverlaySync } from "@/platform/title-bar-overlay-sync";
+import { DesktopThemeProvider } from "@/platform/desktop-theme-provider";
 import { InterfaceMotionSync } from "@/platform/interface-motion-sync";
 import { NewItemMotionListener } from "@/platform/new-item-motion-listener";
 import { isSingleTabMode } from "@/stores/desktop-prefs-store";
@@ -460,7 +460,7 @@ export default function App() {
   }, [localeAdapter, locale]);
 
   return (
-    <ThemeProvider>
+    <DesktopThemeProvider>
       <InterfaceMotionSync />
       <TitleBarOverlaySync />
       {runtimeConfigResult.ok ? (
@@ -497,6 +497,6 @@ export default function App() {
       )}
       <Toaster />
       {windowContext.kind === "main" && <UpdateNotification />}
-    </ThemeProvider>
+    </DesktopThemeProvider>
   );
 }
