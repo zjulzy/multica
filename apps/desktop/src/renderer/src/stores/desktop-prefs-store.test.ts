@@ -8,6 +8,7 @@ beforeEach(() => {
     inboxDockEnabled: false,
     inboxDockOpen: false,
     inboxDockSize: 38,
+    agentStatusHubEnabled: true,
   });
 });
 
@@ -63,5 +64,25 @@ describe("desktop prefs store", () => {
     expect(state.inboxDockEnabled).toBe(false);
     expect(state.inboxDockOpen).toBe(false);
     expect(state.inboxDockSize).toBe(38);
+  });
+
+  it("defaults the agent status hub to enabled and preserves old version 3 preferences", async () => {
+    localStorage.setItem("multica_desktop_prefs", JSON.stringify({
+      state: { singleTabMode: true, inboxDockEnabled: true, inboxDockOpen: true, inboxDockSize: 55 },
+      version: 3,
+    }));
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(true);
+    expect(useDesktopPrefsStore.getState().singleTabMode).toBe(true);
+    expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(55);
+  });
+
+  it("persists disabling and re-enabling the agent status hub", async () => {
+    useDesktopPrefsStore.getState().setAgentStatusHubEnabled(false);
+    expect(JSON.parse(localStorage.getItem("multica_desktop_prefs") ?? "{}").state.agentStatusHubEnabled).toBe(false);
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(false);
+    useDesktopPrefsStore.getState().setAgentStatusHubEnabled(true);
+    expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(true);
   });
 });

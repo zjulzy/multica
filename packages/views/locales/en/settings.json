@@ -1232,7 +1232,9 @@
       "single_tab_mode_title": "Single-tab mode",
       "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off.",
       "inbox_dock_title": "Bottom inbox panel",
-      "inbox_dock_description": "Keep a collapsible inbox at the bottom of the window and hide Inbox from the sidebar."
+      "inbox_dock_description": "Keep a collapsible inbox at the bottom of the window and hide Inbox from the sidebar.",
+      "agent_hub_title": "Agent status hub",
+      "agent_hub_description": "Show active agents and unread notifications above Statistics in the sidebar."
     },
     "tab_bar": {
       "pin": "Pin tab",

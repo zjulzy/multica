@@ -9,6 +9,8 @@ export function AppearanceSettingsTab() {
   const setSingleTabMode = useDesktopPrefsStore((s) => s.setSingleTabMode);
   const inboxDockEnabled = useDesktopPrefsStore((s) => s.inboxDockEnabled);
   const setInboxDockEnabled = useDesktopPrefsStore((s) => s.setInboxDockEnabled);
+  const agentStatusHubEnabled = useDesktopPrefsStore((s) => s.agentStatusHubEnabled);
+  const setAgentStatusHubEnabled = useDesktopPrefsStore((s) => s.setAgentStatusHubEnabled);
 
   return (
     <SettingsTab title={t(($) => $.desktop.appearance.title)}>
@@ -31,6 +33,16 @@ export function AppearanceSettingsTab() {
             checked={inboxDockEnabled}
             onCheckedChange={setInboxDockEnabled}
             aria-label={t(($) => $.desktop.appearance.inbox_dock_title)}
+          />
+        </SettingsRow>
+        <SettingsRow
+          label={t(($) => $.desktop.appearance.agent_hub_title)}
+          description={t(($) => $.desktop.appearance.agent_hub_description)}
+        >
+          <Switch
+            checked={agentStatusHubEnabled}
+            onCheckedChange={setAgentStatusHubEnabled}
+            aria-label={t(($) => $.desktop.appearance.agent_hub_title)}
           />
         </SettingsRow>
       </SettingsCard>

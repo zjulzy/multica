@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@multica/core/i18n/react";
 import { useSidebar } from "@multica/ui/components/ui/sidebar";
@@ -161,6 +161,7 @@ beforeEach(() => {
     singleTabMode: false,
     inboxDockEnabled: false,
     inboxDockOpen: false,
+    agentStatusHubEnabled: true,
   });
 });
 
@@ -301,4 +302,16 @@ describe("Inbox dock integration", () => {
       expect(screen.queryByTestId("inbox-dock-layout") !== null).toBe(inboxDockEnabled);
     },
   );
+});
+
+describe("agent hub preference", () => {
+  it("updates the sidebar when the preference is disabled and enabled", () => {
+    useDesktopPrefsStore.setState({ agentStatusHubEnabled: true });
+    renderShell();
+    expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-agent-status-hub", "true");
+    act(() => useDesktopPrefsStore.getState().setAgentStatusHubEnabled(false));
+    expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-agent-status-hub", "false");
+    act(() => useDesktopPrefsStore.getState().setAgentStatusHubEnabled(true));
+    expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-agent-status-hub", "true");
+  });
 });

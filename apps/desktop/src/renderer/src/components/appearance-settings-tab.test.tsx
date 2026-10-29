@@ -9,6 +9,8 @@ const translations = {
       single_tab_mode_description: "Use one tab",
       inbox_dock_title: "Bottom inbox panel",
       inbox_dock_description: "Keep Inbox at the bottom",
+      agent_hub_title: "Agent status hub",
+      agent_hub_description: "Show active agents in the sidebar",
     },
   },
 };
@@ -28,6 +30,7 @@ describe("AppearanceSettingsTab", () => {
       singleTabMode: false,
       inboxDockEnabled: false,
       inboxDockOpen: false,
+      agentStatusHubEnabled: true,
     });
   });
 
@@ -47,6 +50,18 @@ describe("AppearanceSettingsTab", () => {
 
     fireEvent.click(screen.getByRole("switch", { name: "Bottom inbox panel" }));
 
+    expect(useDesktopPrefsStore.getState().inboxDockEnabled).toBe(true);
+    expect(useDesktopPrefsStore.getState().singleTabMode).toBe(true);
+  });
+
+  it("lets the user toggle the agent hub without changing Inbox or single-tab settings", () => {
+    useDesktopPrefsStore.setState({ agentStatusHubEnabled: true, inboxDockEnabled: true, singleTabMode: true });
+    render(<AppearanceSettingsTab />);
+    const toggle = screen.getByRole("switch", { name: "Agent status hub" });
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+    expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(false);
     expect(useDesktopPrefsStore.getState().inboxDockEnabled).toBe(true);
     expect(useDesktopPrefsStore.getState().singleTabMode).toBe(true);
   });

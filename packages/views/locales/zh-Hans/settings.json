@@ -1226,7 +1226,9 @@
       "single_tab_mode_title": "单页签模式",
       "single_tab_mode_description": "隐藏页签栏。链接、Ctrl+点击和固定页签的跳转都在当前页打开；前进 / 后退照常。已有页签会保留，关闭此开关后恢复显示。",
       "inbox_dock_title": "底部收件箱面板",
-      "inbox_dock_description": "在窗口底部常驻可折叠的收件箱，并隐藏侧栏中的收件箱入口。"
+      "inbox_dock_description": "在窗口底部常驻可折叠的收件箱，并隐藏侧栏中的收件箱入口。",
+      "agent_hub_title": "智能体状态 Hub",
+      "agent_hub_description": "在侧栏统计上方显示活跃智能体和未读通知。"
     },
     "tab_bar": {
       "pin": "固定标签页",

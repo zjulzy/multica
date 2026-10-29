@@ -107,6 +107,7 @@ vi.mock("../common/use-app-foreground", () => ({
   useAppForeground: () => appForeground.current,
 }));
 vi.mock("./help-launcher", () => ({ HelpLauncher: () => null }));
+vi.mock("./agent-status-hub", () => ({ AgentStatusHub: () => <div data-testid="agent-status-hub" /> }));
 vi.mock("../auth", () => ({ useLogout: () => vi.fn() }));
 vi.mock("../issues/components/status-icon", () => ({ StatusIcon: () => <span /> }));
 vi.mock("../navigation", () => ({
@@ -290,6 +291,15 @@ describe("PinRow", () => {
     } finally {
       pins.current = originalPins;
     }
+  });
+});
+
+describe("agent status hub", () => {
+  it("mounts only while enabled and unmounts when turned off", () => {
+    const { rerender } = renderWithI18n(<AppSidebar showAgentStatusHub />);
+    expect(screen.getByTestId("agent-status-hub")).toBeInTheDocument();
+    rerender(<AppSidebar showAgentStatusHub={false} />);
+    expect(screen.queryByTestId("agent-status-hub")).not.toBeInTheDocument();
   });
 });
 

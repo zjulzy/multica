@@ -306,6 +306,7 @@ export function DesktopShell() {
   // page. The slot element lives in MainTopBar; pages read it via context.
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   const inboxDockEnabled = useDesktopPrefsStore((s) => s.inboxDockEnabled);
+  const agentStatusHubEnabled = useDesktopPrefsStore((s) => s.agentStatusHubEnabled);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   return (
@@ -341,7 +342,7 @@ export function DesktopShell() {
             {slug && <WindowToolbar />}
             {slug && (
               <AppSidebar
-                showAgentStatusHub
+                showAgentStatusHub={agentStatusHubEnabled}
                 hideInboxNav={inboxDockEnabled}
                 topSlot={<SidebarTopSpacer />}
                 searchSlot={<SearchTrigger />}
