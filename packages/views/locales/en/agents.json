@@ -1,5 +1,5 @@
 {
-  "status_hub": { "title": "Active agents", "counts": "Running: {{running}} · Queued: {{queued}}" },
+  "status_hub": { "title": "Active agents", "counts": "Running: {{running}} · Queued: {{queued}}", "unread": "Unread notifications: {{count}}", "open_inbox": "Open latest unread notification", "open_agent": "Open agent profile" },
   "page": {
     "title": "Agents",
     "learn_more": "Learn more →",

@@ -1,5 +1,5 @@
 {
-  "status_hub": { "title": "活跃智能体", "counts": "运行中 {{running}} 个 · 排队 {{queued}} 个" },
+  "status_hub": { "title": "活跃智能体", "counts": "运行中 {{running}} 个 · 排队 {{queued}} 个", "unread": "未读通知 {{count}} 条", "open_inbox": "点击打开最新未读通知", "open_agent": "点击打开智能体页面" },
   "page": {
     "title": "智能体",
     "learn_more": "了解更多 →",

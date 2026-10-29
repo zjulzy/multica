@@ -1,5 +1,5 @@
 {
-  "status_hub": { "title": "活躍智能體", "counts": "執行中 {{running}} 個 · 排隊 {{queued}} 個" },
+  "status_hub": { "title": "活躍智能體", "counts": "執行中 {{running}} 個 · 排隊 {{queued}} 個", "unread": "未讀通知 {{count}} 則", "open_inbox": "點擊開啟最新未讀通知", "open_agent": "點擊開啟智能體頁面" },
   "page": {
     "title": "智慧體",
     "learn_more": "瞭解更多 →",

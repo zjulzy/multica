@@ -1,5 +1,5 @@
 {
-  "status_hub": { "title": "稼働中のエージェント", "counts": "実行中 {{running}} 件 · 待機中 {{queued}} 件" },
+  "status_hub": { "title": "稼働中のエージェント", "counts": "実行中 {{running}} 件 · 待機中 {{queued}} 件", "unread": "未読通知 {{count}} 件", "open_inbox": "最新の未読通知を開く", "open_agent": "エージェントのページを開く" },
   "page": {
     "title": "エージェント",
     "learn_more": "詳細はこちら →",

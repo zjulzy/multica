@@ -1,5 +1,5 @@
 {
-  "status_hub": { "title": "Agents actifs", "counts": "En cours : {{running}} · En attente : {{queued}}" },
+  "status_hub": { "title": "Agents actifs", "counts": "En cours : {{running}} · En attente : {{queued}}", "unread": "Notifications non lues : {{count}}", "open_inbox": "Ouvrir la dernière notification non lue", "open_agent": "Ouvrir le profil de l’agent" },
   "page": {
     "title": "Agents",
     "learn_more": "En savoir plus →",
