@@ -63,6 +63,7 @@ import {
   type MainRendererMessageChannel,
 } from "../shared/main-renderer-messages";
 import { AuthSessionCoordinator } from "./auth-session-coordinator";
+import { devAppSuffix, devProtocolArguments } from "./dev-protocol";
 import { parseTitleBarOverlayColors, titleBarOptionsFor } from "./title-bar";
 import {
   NotificationGate,
@@ -562,8 +563,9 @@ function createIssueWindow(context: IssueWindowContext): void {
 // appended to the app name + userData path, so each worktree gets its own
 // lock file. Default (no env var) keeps behavior unchanged — the common
 // single-worktree case still lands at "Multica Canary".
-const DEV_APP_NAME = process.env.DESKTOP_APP_SUFFIX
-  ? `Multica Canary ${process.env.DESKTOP_APP_SUFFIX}`
+const DEV_APP_SUFFIX = is.dev ? devAppSuffix(process.env.DESKTOP_APP_SUFFIX, process.argv) : undefined;
+const DEV_APP_NAME = DEV_APP_SUFFIX
+  ? `Multica Canary ${DEV_APP_SUFFIX}`
   : "Multica Canary";
 
 if (is.dev) {
@@ -583,9 +585,7 @@ if (is.dev) {
 
 if (process.defaultApp) {
   // In dev, register with the path to the electron binary + app path
-  app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
-    app.getAppPath(),
-  ]);
+  app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, devProtocolArguments(app.getAppPath(), DEV_APP_SUFFIX));
 } else {
   app.setAsDefaultProtocolClient(PROTOCOL);
 }
