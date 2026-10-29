@@ -88,6 +88,7 @@ import {
 } from "@multica/core/shortcuts";
 import { ShortcutKeycaps } from "../common/shortcut-keycaps";
 import { useAppForeground } from "../common/use-app-foreground";
+import { AgentStatusHub } from "./agent-status-hub";
 
 // Top-level nav items stay active when the user is on a child route
 // (e.g. "Projects" stays lit on /:slug/projects/:id). Pinned items keep
@@ -432,6 +433,8 @@ export interface AppSidebarProps {
   headerStyle?: React.CSSProperties;
   /** Hide the persistent Inbox row when a platform provides another global entry. */
   hideInboxNav?: boolean;
+  /** Show the desktop's workspace-scoped active-agent preview. */
+  showAgentStatusHub?: boolean;
 }
 
 export function AppSidebar({
@@ -440,6 +443,7 @@ export function AppSidebar({
   headerClassName,
   headerStyle,
   hideInboxNav = false,
+  showAgentStatusHub = false,
 }: AppSidebarProps = {}) {
   const { t } = useT("layout");
   const { pathname, push } = useNavigation();
@@ -917,6 +921,7 @@ export function AppSidebar({
         </SidebarContent>
 
         <SidebarFooter className="p-2">
+          {showAgentStatusHub && <AgentStatusHub />}
           <SidebarMenu className="gap-0.5">
             {utilityNav.map((item) => {
               const href = p[item.key]();

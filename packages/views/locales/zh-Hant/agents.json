@@ -1,4 +1,5 @@
 {
+  "status_hub": { "title": "活躍智能體", "counts": "執行中 {{running}} 個 · 排隊 {{queued}} 個" },
   "page": {
     "title": "智慧體",
     "learn_more": "瞭解更多 →",

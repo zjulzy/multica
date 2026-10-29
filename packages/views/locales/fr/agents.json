@@ -1,4 +1,5 @@
 {
+  "status_hub": { "title": "Agents actifs", "counts": "En cours : {{running}} · En attente : {{queued}}" },
   "page": {
     "title": "Agents",
     "learn_more": "En savoir plus →",

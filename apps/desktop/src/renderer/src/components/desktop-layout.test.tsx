@@ -66,8 +66,8 @@ vi.mock("@multica/views/platform", () => ({
 }));
 
 vi.mock("@multica/views/layout", () => ({
-  AppSidebar: ({ hideInboxNav }: { hideInboxNav?: boolean }) => (
-    <div data-testid="app-sidebar" data-hide-inbox={hideInboxNav} />
+  AppSidebar: ({ hideInboxNav, showAgentStatusHub }: { hideInboxNav?: boolean; showAgentStatusHub?: boolean }) => (
+    <div data-testid="app-sidebar" data-hide-inbox={hideInboxNav} data-agent-status-hub={showAgentStatusHub} />
   ),
   GlobalShortcuts: () => null,
   NavigationProgress: () => null,
@@ -281,6 +281,7 @@ describe("Inbox dock integration", () => {
 
     expect(screen.queryByTestId("inbox-dock-layout")).not.toBeInTheDocument();
     expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-hide-inbox", "false");
+    expect(screen.getByTestId("app-sidebar")).toHaveAttribute("data-agent-status-hub", "true");
     expect(screen.getAllByTestId("page-content")).toHaveLength(1);
   });
 

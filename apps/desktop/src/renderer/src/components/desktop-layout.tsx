@@ -341,6 +341,7 @@ export function DesktopShell() {
             {slug && <WindowToolbar />}
             {slug && (
               <AppSidebar
+                showAgentStatusHub
                 hideInboxNav={inboxDockEnabled}
                 topSlot={<SidebarTopSpacer />}
                 searchSlot={<SearchTrigger />}

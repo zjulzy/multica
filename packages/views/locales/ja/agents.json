@@ -1,4 +1,5 @@
 {
+  "status_hub": { "title": "稼働中のエージェント", "counts": "実行中 {{running}} 件 · 待機中 {{queued}} 件" },
   "page": {
     "title": "エージェント",
     "learn_more": "詳細はこちら →",

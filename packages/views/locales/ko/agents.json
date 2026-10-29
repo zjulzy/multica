@@ -1,4 +1,5 @@
 {
+  "status_hub": { "title": "활성 에이전트", "counts": "실행 중 {{running}}개 · 대기 중 {{queued}}개" },
   "page": {
     "title": "에이전트",
     "learn_more": "자세히 보기 →",
