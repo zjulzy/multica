@@ -85,4 +85,17 @@ describe("desktop prefs store", () => {
     useDesktopPrefsStore.getState().setAgentStatusHubEnabled(true);
     expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(true);
   });
+
+  it("defaults interface motion to off when upgrading and persists changes independently", async () => {
+    localStorage.setItem("multica_desktop_prefs", JSON.stringify({
+      state: { singleTabMode: true, agentStatusHubEnabled: false }, version: 4,
+    }));
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().interfaceMotionEnabled).toBe(false);
+    expect(useDesktopPrefsStore.getState().singleTabMode).toBe(true);
+    expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(false);
+    useDesktopPrefsStore.getState().setInterfaceMotionEnabled(true);
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().interfaceMotionEnabled).toBe(true);
+  });
 });

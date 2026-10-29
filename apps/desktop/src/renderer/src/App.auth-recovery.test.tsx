@@ -30,6 +30,7 @@ vi.mock("@multica/core/platform", () => ({
   CoreProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   setCurrentWorkspace: vi.fn(),
 }));
+vi.mock("@multica/core/realtime", () => ({ useWSEvent: () => {} }));
 
 vi.mock("@multica/core/i18n", () => ({
   pickLocale: () => "en",

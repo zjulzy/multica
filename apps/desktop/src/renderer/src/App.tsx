@@ -10,6 +10,8 @@ import { useHasOnboarded } from "@multica/core/paths";
 import { setCurrentWorkspace } from "@multica/core/platform";
 import { ThemeProvider } from "@multica/ui/components/common/theme-provider";
 import { TitleBarOverlaySync } from "@/platform/title-bar-overlay-sync";
+import { InterfaceMotionSync } from "@/platform/interface-motion-sync";
+import { NewItemMotionListener } from "@/platform/new-item-motion-listener";
 import { isSingleTabMode } from "@/stores/desktop-prefs-store";
 import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
 import { Toaster } from "@multica/ui/components/ui/sonner";
@@ -459,6 +461,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <InterfaceMotionSync />
       <TitleBarOverlaySync />
       {runtimeConfigResult.ok ? (
         <CoreProvider
@@ -476,6 +479,7 @@ export default function App() {
           localeAdapter={localeAdapter}
         >
           <DesktopAuthSessionBridge />
+          <NewItemMotionListener />
           {windowContext.kind === "main" && <DiagnosticRouteReporter />}
           {windowContext.kind === "main" && (
             <DesktopClientUsageReporter

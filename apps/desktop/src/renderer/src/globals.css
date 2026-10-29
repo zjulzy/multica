@@ -74,3 +74,50 @@ html[lang|="ja"] {
 [data-slot="sidebar-container"] {
   padding: 0 !important;
 }
+
+/* Desktop-only decorative motion. Status indicators and loading feedback are
+   intentionally outside these selectors. Portals inherit the root setting. */
+html[data-interface-motion="off"] :is(
+  [data-slot="dialog-overlay"], [data-slot="dialog-content"],
+  [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
+  [data-slot="popover-content"], [data-slot="tooltip-content"]
+) {
+  animation: none !important;
+}
+html[data-interface-motion="off"] :is([data-slot="button"], [data-sidebar="menu-button"]) {
+  transition: none !important;
+}
+html[data-interface-motion="off"] [data-slot="button"]:active {
+  translate: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-interface-motion] :is([data-slot="button"], [data-sidebar="menu-button"]) {
+    transition: none !important;
+  }
+  html[data-interface-motion] [data-slot="button"]:active {
+    translate: none !important;
+  }
+  html[data-interface-motion] :is(
+    [data-slot="dialog-overlay"], [data-slot="dialog-content"],
+    [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"],
+    [data-slot="popover-content"], [data-slot="tooltip-content"]
+  ) {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-interface-motion="on"] [data-slot="button"] {
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, scale 120ms ease;
+  }
+  html[data-interface-motion="on"] [data-slot="button"]:active:not(:disabled) {
+    scale: .97;
+  }
+  html[data-interface-motion="on"] [data-sidebar="menu-button"] {
+    transition: color 160ms ease, background-color 160ms ease;
+  }
+  html[data-interface-motion="on"] [data-dock-motion="on"] > [data-slot="resizable-panel"] {
+    transition: flex-grow 180ms ease-out;
+    overflow: hidden;
+  }
+}

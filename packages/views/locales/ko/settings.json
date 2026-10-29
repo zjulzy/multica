@@ -967,6 +967,8 @@
       "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off.",
       "inbox_dock_title": "하단 받은편지함 패널",
       "inbox_dock_description": "창 하단에 접을 수 있는 받은편지함을 고정하고 사이드바의 받은편지함 항목을 숨깁니다.",
+      "interface_motion_title": "인터페이스 애니메이션",
+      "interface_motion_description": "화면 상호작용에 애니메이션을 적용합니다. 에이전트 상태 표시는 영향을 받지 않습니다.",
       "agent_hub_title": "에이전트 상태 허브",
       "agent_hub_description": "사이드바 통계 위에 활성 에이전트와 읽지 않은 알림을 표시합니다."
     },

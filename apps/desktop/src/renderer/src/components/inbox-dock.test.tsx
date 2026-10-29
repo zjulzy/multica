@@ -20,12 +20,16 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
     children,
     orientation,
     onLayoutChanged,
+    "data-dock-motion": dockMotion,
+    onPointerDownCapture,
   }: {
     children: ReactNode;
     orientation: string;
     onLayoutChanged?: (layout: Record<string, number>) => void;
+    "data-dock-motion"?: string;
+    onPointerDownCapture?: () => void;
   }) => (
-    <div data-testid="dock-layout" data-orientation={orientation}>
+    <div data-testid="dock-layout" data-orientation={orientation} data-dock-motion={dockMotion} onPointerDownCapture={onPointerDownCapture}>
       <button type="button" onClick={() => onLayoutChanged?.({ content: 40, "inbox-dock": 60 })}>Finish drag</button>
       {children}
     </div>
@@ -181,6 +185,7 @@ describe("DesktopInboxDockLayout", () => {
       inboxDockEnabled: false,
       inboxDockOpen: false,
       inboxDockSize: 38,
+      interfaceMotionEnabled: false,
     });
     panelApi.collapse.mockClear();
     panelApi.expand.mockClear();
@@ -224,6 +229,45 @@ describe("DesktopInboxDockLayout", () => {
     expect(panelApi.expand).toHaveBeenCalled();
     expect(panelApi.resize).toHaveBeenCalledWith("38%");
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "false");
+  });
+
+  it("enables dock motion only for a header toggle and stops it when a drag starts", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: true });
+    renderDock();
+    const group = screen.getByTestId("dock-layout");
+    expect(group).not.toHaveAttribute("data-dock-motion", "on");
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(group).toHaveAttribute("data-dock-motion", "on");
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
+    expect(group).not.toHaveAttribute("data-dock-motion", "on");
+  });
+
+  it("ignores intermediate resize reports during a click animation", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: true, inboxDockOpen: true });
+    renderDock();
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+  });
+
+  it("keeps the main page outside the resizable overlay and releases the Inbox for dragging", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: true, inboxDockOpen: true });
+    renderDock();
+    const content = screen.getByTestId("dock-main-content");
+    const inbox = screen.getByTestId("dock-inbox-content");
+    expect(screen.getByTestId("dock-layout")).not.toContainElement(content);
+    expect(screen.getByTestId("dock-collapsed-spacer")).toHaveClass("h-9");
+    vi.spyOn(inbox, "getBoundingClientRect").mockReturnValue({ height: 220 } as DOMRect);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    expect(content.style.height).toBe("");
+    expect(inbox.style.height).toBe("220px");
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
+    expect(content.style.height).toBe("");
+    expect(inbox.style.height).toBe("");
   });
 
   it("passes an isolated dock surface configuration while expanded", () => {

@@ -64,6 +64,19 @@ export function DesktopInboxDockLayout({
   const inboxDockSize = useDesktopPrefsStore((state) => state.inboxDockSize);
   const setInboxDockOpen = useDesktopPrefsStore((state) => state.setInboxDockOpen);
   const setInboxDockSize = useDesktopPrefsStore((state) => state.setInboxDockSize);
+  const motionEnabled = useDesktopPrefsStore((state) => state.interfaceMotionEnabled);
+  const [animating, setAnimating] = useState(false);
+  const [frozenInboxHeight, setFrozenInboxHeight] = useState<number | null>(null);
+  const inboxContentRef = useRef<HTMLDivElement>(null);
+  const animatingRef = useRef(false);
+  const animationTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const stopDockMotion = useCallback(() => {
+    clearTimeout(animationTimer.current);
+    animatingRef.current = false;
+    setAnimating(false);
+    setFrozenInboxHeight(null);
+  }, []);
+  useEffect(() => () => clearTimeout(animationTimer.current), []);
   const dockPanelRef = usePanelRef();
   const initialDockSizeRef = useRef(`${inboxDockSize}%`);
   const inboxDockSizeRef = useRef(inboxDockSize);
@@ -86,7 +99,7 @@ export function DesktopInboxDockLayout({
       // react-resizable-panels reports a restored default layout on mount.
       // It is not a user resize and must not reopen a preference that was
       // deliberately persisted as collapsed.
-      if (!previousSize) return;
+      if (!previousSize || animatingRef.current) return;
       const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE;
       if (nextOpen !== inboxDockOpen) setInboxDockOpen(nextOpen);
     },
@@ -94,6 +107,7 @@ export function DesktopInboxDockLayout({
   );
 
   const handleLayoutChanged = useCallback(() => {
+    if (animatingRef.current) return;
     const size = dockPanelRef.current?.getSize();
     if (size && size.inPixels > DOCK_COLLAPSED_SIZE && useDesktopPrefsStore.getState().inboxDockOpen) {
       setInboxDockSize(size.asPercentage);
@@ -103,18 +117,21 @@ export function DesktopInboxDockLayout({
   if (!enabled || !workspaceId) return <>{children}</>;
 
   return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+    <div data-testid="dock-main-content" className="flex min-h-0 flex-1 flex-col">{children}</div>
+    <div aria-hidden data-testid="dock-collapsed-spacer" className="h-9 shrink-0" />
     <ResizablePanelGroup
       orientation="vertical"
-      className="min-h-0 flex-1 [&:has([data-separator=active])_*]:!cursor-row-resize [&:has([data-separator=active])]:!cursor-row-resize"
+      data-dock-motion={animating && motionEnabled ? "on" : undefined}
+      onPointerDownCapture={stopDockMotion}
+      className="pointer-events-none absolute inset-0 z-10 min-h-0 [&:has([data-separator=active])_*]:!cursor-row-resize [&:has([data-separator=active])]:!cursor-row-resize"
       onLayoutChanged={handleLayoutChanged}
     >
-      <ResizablePanel id="content" defaultSize="62%" minSize="30%">
-        <div className="flex h-full min-h-0 flex-col">{children}</div>
-      </ResizablePanel>
-      <ResizableHandle className="cursor-row-resize" />
+      <ResizablePanel id="content" defaultSize="62%" minSize="30%" />
+      <ResizableHandle className="pointer-events-auto cursor-row-resize" />
       <ResizablePanel
         id="inbox-dock"
-        className="h-full !overflow-hidden"
+        className="pointer-events-auto h-full !overflow-hidden bg-background"
         panelRef={dockPanelRef}
         defaultSize={initialDockSizeRef.current}
         minSize={DOCK_COLLAPSED_SIZE}
@@ -123,12 +140,26 @@ export function DesktopInboxDockLayout({
         collapsible
         onResize={handleDockResize}
       >
+        <div ref={inboxContentRef} data-testid="dock-inbox-content" className="h-full" style={frozenInboxHeight ? { height: frozenInboxHeight, flex: "none" } : undefined}>
         <DockInboxSurface
           key={workspaceId}
           open={inboxDockOpen}
-          onToggle={() => setInboxDockOpen(!inboxDockOpen)}
+          onToggle={() => {
+            clearTimeout(animationTimer.current);
+            if (motionEnabled) {
+              const inboxHeight = inboxContentRef.current?.getBoundingClientRect().height ?? 0;
+              const groupHeight = inboxContentRef.current?.closest('[data-slot="resizable-panel-group"]')?.getBoundingClientRect().height ?? 0;
+              if (inboxHeight) setFrozenInboxHeight(Math.max(inboxHeight, groupHeight * inboxDockSizeRef.current / 100));
+              animatingRef.current = true;
+              setAnimating(true);
+              animationTimer.current = setTimeout(stopDockMotion, 220);
+            }
+            setInboxDockOpen(!inboxDockOpen);
+          }}
         />
+        </div>
       </ResizablePanel>
     </ResizablePanelGroup>
+    </div>
   );
 }

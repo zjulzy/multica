@@ -11,6 +11,8 @@ const translations = {
       inbox_dock_description: "Keep Inbox at the bottom",
       agent_hub_title: "Agent status hub",
       agent_hub_description: "Show active agents in the sidebar",
+      interface_motion_title: "Interface motion",
+      interface_motion_description: "Animate interface interactions",
     },
   },
 };
@@ -31,6 +33,7 @@ describe("AppearanceSettingsTab", () => {
       inboxDockEnabled: false,
       inboxDockOpen: false,
       agentStatusHubEnabled: true,
+      interfaceMotionEnabled: false,
     });
   });
 
@@ -64,5 +67,14 @@ describe("AppearanceSettingsTab", () => {
     expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(false);
     expect(useDesktopPrefsStore.getState().inboxDockEnabled).toBe(true);
     expect(useDesktopPrefsStore.getState().singleTabMode).toBe(true);
+  });
+
+  it("toggles interface motion independently of the agent hub", () => {
+    render(<AppearanceSettingsTab />);
+    const toggle = screen.getByRole("switch", { name: "Interface motion" });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(useDesktopPrefsStore.getState().interfaceMotionEnabled).toBe(true);
+    expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(true);
   });
 });

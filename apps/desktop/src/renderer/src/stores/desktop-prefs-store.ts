@@ -16,11 +16,13 @@ interface DesktopPrefsStore {
   inboxDockSize: number;
   /** Show the active-agent status hub in the sidebar. */
   agentStatusHubEnabled: boolean;
+  interfaceMotionEnabled: boolean;
   setSingleTabMode: (enabled: boolean) => void;
   setInboxDockEnabled: (enabled: boolean) => void;
   setInboxDockOpen: (open: boolean) => void;
   setInboxDockSize: (size: number) => void;
   setAgentStatusHubEnabled: (enabled: boolean) => void;
+  setInterfaceMotionEnabled: (enabled: boolean) => void;
 }
 
 export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
@@ -31,6 +33,7 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       inboxDockOpen: false,
       inboxDockSize: 38,
       agentStatusHubEnabled: true,
+      interfaceMotionEnabled: false,
       setSingleTabMode: (enabled) => set({ singleTabMode: enabled }),
       setInboxDockEnabled: (enabled) =>
         set(enabled ? { inboxDockEnabled: true } : { inboxDockEnabled: false, inboxDockOpen: false }),
@@ -38,10 +41,11 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       setInboxDockSize: (size) =>
         set({ inboxDockSize: Math.min(70, Math.max(0, size)) }),
       setAgentStatusHubEnabled: (enabled) => set({ agentStatusHubEnabled: enabled }),
+      setInterfaceMotionEnabled: (enabled) => set({ interfaceMotionEnabled: enabled }),
     }),
     {
       name: "multica_desktop_prefs",
-      version: 4,
+      version: 5,
       migrate: (persistedState) => {
         const state = persistedState as Partial<DesktopPrefsStore>;
         return {
@@ -51,6 +55,7 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
           inboxDockOpen: state.inboxDockOpen ?? false,
           inboxDockSize: state.inboxDockSize ?? 38,
           agentStatusHubEnabled: state.agentStatusHubEnabled ?? true,
+          interfaceMotionEnabled: state.interfaceMotionEnabled ?? false,
         } as DesktopPrefsStore;
       },
     },

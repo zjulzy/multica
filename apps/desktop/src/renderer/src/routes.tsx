@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { createMemoryRouter, Outlet, useMatches } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { createMemoryRouter, Outlet, useLocation, useMatches } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { IssueDetailPage } from "./pages/issue-detail-page";
 import { ProjectDetailPage } from "./pages/project-detail-page";
@@ -38,6 +38,8 @@ import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
 import { WorkspaceRouteLayout } from "./components/workspace-route-layout";
 import { DesktopRouteErrorPage } from "./components/route-error-page";
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+import { usePageMotion } from "@/platform/page-motion";
 
 /**
  * Wraps `SettingsPage` so the desktop-only extra tabs can pull their labels
@@ -94,10 +96,14 @@ function TitleSync() {
 
 /** Wrapper that renders route children + TitleSync */
 function PageShell() {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  const enabled = useDesktopPrefsStore((state) => state.interfaceMotionEnabled);
+  usePageMotion(hostRef, pathname, enabled, true);
   return (
     <>
       <TitleSync />
-      <Outlet />
+      <div ref={hostRef} style={{ display: "contents" }}><Outlet /></div>
     </>
   );
 }

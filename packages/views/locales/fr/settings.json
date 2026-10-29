@@ -1233,6 +1233,8 @@
       "single_tab_mode_description": "Hide the tab strip. Links, Ctrl+click and pinned-tab navigation all open in the current page; back and forward keep working. Existing tabs are kept and return when you turn this off.",
       "inbox_dock_title": "Panneau inférieur de la boîte de réception",
       "inbox_dock_description": "Conservez une boîte de réception repliable en bas de la fenêtre et masquez son entrée dans la barre latérale.",
+      "interface_motion_title": "Animations de l’interface",
+      "interface_motion_description": "Animer les interactions de l’interface, indépendamment des indicateurs des agents.",
       "agent_hub_title": "Aperçu des agents",
       "agent_hub_description": "Afficher les agents actifs et les notifications non lues au-dessus des statistiques dans la barre latérale."
     },

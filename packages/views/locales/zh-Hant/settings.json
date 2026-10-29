@@ -1227,6 +1227,8 @@
       "single_tab_mode_description": "隱藏分頁列。連結、Ctrl+點擊和固定分頁的跳轉都在目前頁面開啟；上一頁 / 下一頁照常。既有分頁會保留，關閉此開關後恢復顯示。",
       "inbox_dock_title": "底部收件匣面板",
       "inbox_dock_description": "在視窗底部常駐可收合的收件匣，並隱藏側邊欄中的收件匣入口。",
+      "interface_motion_title": "介面動效",
+      "interface_motion_description": "為介面互動加入動效；智能體狀態提示不受影響。",
       "agent_hub_title": "智能體狀態 Hub",
       "agent_hub_description": "在側邊欄統計上方顯示活躍智能體和未讀通知。"
     },

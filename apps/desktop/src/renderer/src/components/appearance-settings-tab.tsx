@@ -11,10 +11,19 @@ export function AppearanceSettingsTab() {
   const setInboxDockEnabled = useDesktopPrefsStore((s) => s.setInboxDockEnabled);
   const agentStatusHubEnabled = useDesktopPrefsStore((s) => s.agentStatusHubEnabled);
   const setAgentStatusHubEnabled = useDesktopPrefsStore((s) => s.setAgentStatusHubEnabled);
+  const interfaceMotionEnabled = useDesktopPrefsStore((s) => s.interfaceMotionEnabled);
+  const setInterfaceMotionEnabled = useDesktopPrefsStore((s) => s.setInterfaceMotionEnabled);
 
   return (
     <SettingsTab title={t(($) => $.desktop.appearance.title)}>
       <SettingsCard>
+        <SettingsRow
+          label={t(($) => $.desktop.appearance.interface_motion_title)}
+          description={t(($) => $.desktop.appearance.interface_motion_description)}
+        >
+          <Switch checked={interfaceMotionEnabled} onCheckedChange={setInterfaceMotionEnabled}
+            aria-label={t(($) => $.desktop.appearance.interface_motion_title)} />
+        </SettingsRow>
         <SettingsRow
           label={t(($) => $.desktop.appearance.single_tab_mode_title)}
           description={t(($) => $.desktop.appearance.single_tab_mode_description)}
