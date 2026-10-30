@@ -12,8 +12,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
   // sometimes rendered light on a dark UI. Custom desktop themes need to be
   // mapped to Sonner's supported light/dark values as well.
   const { resolvedTheme = "system" } = useTheme()
-  const sonnerTheme = resolvedTheme === "graphite-copper" ? "dark"
-    : resolvedTheme === "mist-celadon" || resolvedTheme === "cream-gold" ? "light"
+  const sonnerTheme = resolvedTheme === "graphite-copper" || resolvedTheme === "deep-ocean" ? "dark"
+    : resolvedTheme === "mist-celadon" || resolvedTheme === "cream-gold" || resolvedTheme === "sakura-blush" || resolvedTheme === "moon-lavender" ? "light"
     : resolvedTheme
 
   return (

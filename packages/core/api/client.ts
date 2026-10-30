@@ -1094,7 +1094,7 @@ export class ApiClient {
   }
 
   // Issues
-  async listIssues(params?: ListIssuesParams): Promise<ListIssuesResponse> {
+  async listIssues(params?: ListIssuesParams, options?: { signal?: AbortSignal; strict?: boolean }): Promise<ListIssuesResponse> {
     const search = new URLSearchParams();
     if (params?.limit) search.set("limit", String(params.limit));
     if (params?.offset) search.set("offset", String(params.offset));
@@ -1146,13 +1146,22 @@ export class ApiClient {
       const raw = await this.fetch<unknown>("/api/issues/query", {
         method: "POST",
         body: JSON.stringify(Object.fromEntries(search)),
+        signal: options?.signal,
       });
+      if (options?.strict) {
+        if (!raw || typeof raw !== "object" || !Array.isArray((raw as { issues?: unknown }).issues) || typeof (raw as { total?: unknown }).total !== "number") throw new Error("Invalid issue list response");
+        return ListIssuesResponseSchema.parse(raw) as unknown as ListIssuesResponse;
+      }
       return parseWithFallback(raw, ListIssuesResponseSchema, EMPTY_LIST_ISSUES_RESPONSE, {
         endpoint: "POST /api/issues/query",
       });
     }
     const path = `/api/issues?${search}`;
-    const raw = await this.fetch<unknown>(path);
+    const raw = await this.fetch<unknown>(path, { signal: options?.signal });
+    if (options?.strict) {
+      if (!raw || typeof raw !== "object" || !Array.isArray((raw as { issues?: unknown }).issues) || typeof (raw as { total?: unknown }).total !== "number") throw new Error("Invalid issue list response");
+      return ListIssuesResponseSchema.parse(raw) as unknown as ListIssuesResponse;
+    }
     return parseWithFallback(raw, ListIssuesResponseSchema, EMPTY_LIST_ISSUES_RESPONSE, {
       endpoint: "GET /api/issues",
     });
@@ -1721,6 +1730,12 @@ export class ApiClient {
     return parseWithFallback(raw, TimelineEntriesSchema, EMPTY_TIMELINE_ENTRIES, {
       endpoint: "GET /api/issues/:id/timeline",
     });
+  }
+
+  async listTimelineForStats(issueId: string, signal?: AbortSignal): Promise<{ entries: TimelineEntry[]; truncated: boolean }> {
+    const response = await this.fetchRaw(`/api/issues/${issueId}/timeline`, { signal });
+    const entries = TimelineEntriesSchema.parse(await response.json()) as unknown as TimelineEntry[];
+    return { entries, truncated: !!response.headers.get("X-Timeline-Truncated") };
   }
 
   async getAssigneeFrequency(): Promise<AssigneeFrequencyEntry[]> {
@@ -4314,9 +4329,13 @@ export class ApiClient {
 
   // Issue status catalog (MUL-6243). Reads are open to any workspace member;
   // the mutations below are owner/admin only and return 403 otherwise.
-  async listIssueStatuses(includeArchived = false): Promise<ListIssueStatusesResponse> {
+  async listIssueStatuses(includeArchived = false, options?: { signal?: AbortSignal; strict?: boolean }): Promise<ListIssueStatusesResponse> {
     const query = includeArchived ? "?include_archived=true" : "";
-    const raw = await this.fetch<unknown>(`/api/issue-statuses${query}`);
+    const raw = await this.fetch<unknown>(`/api/issue-statuses${query}`, { signal: options?.signal });
+    if (options?.strict) {
+      if (!raw || typeof raw !== "object" || !Array.isArray((raw as { statuses?: unknown }).statuses)) throw new Error("Invalid issue status list response");
+      return ListIssueStatusesResponseSchema.parse(raw) as unknown as ListIssueStatusesResponse;
+    }
     return parseWithFallback(raw, ListIssueStatusesResponseSchema, EMPTY_LIST_ISSUE_STATUSES_RESPONSE, {
       endpoint: "GET /api/issue-statuses",
     });

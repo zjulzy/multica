@@ -16,7 +16,7 @@ function contrast(a: string, b: string) {
 
 describe("desktop theme colors", () => {
   afterEach(() => { document.head.querySelector("#theme-test")?.remove(); delete document.documentElement.dataset.desktopTheme; });
-  it.each(["graphite-copper", "mist-celadon", "cream-gold"])("keeps %s text and buttons readable", (theme) => {
+  it.each(["graphite-copper", "mist-celadon", "cream-gold", "sakura-blush", "moon-lavender", "deep-ocean"])("keeps %s text and buttons readable", (theme) => {
     const style = document.createElement("style");
     style.id = "theme-test";
     style.textContent = css;

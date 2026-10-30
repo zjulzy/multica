@@ -13,7 +13,7 @@ import {
 } from "@multica/ui/components/ui/number-flow";
 import { useWorkspaceId } from "@multica/core/hooks";
 import type { Agent } from "@multica/core/types";
-import { agentListOptions } from "@multica/core/workspace/queries";
+import { agentListOptions, workspaceKeys } from "@multica/core/workspace/queries";
 import { projectListOptions } from "@multica/core/projects/queries";
 import {
   dashboardKeys,
@@ -68,6 +68,7 @@ import { UsageTrendCard } from "./usage-trend-card";
 import { Leaderboard } from "./leaderboard";
 import { ErrorsTab } from "./errors-tab";
 import { WorkInsightsTab } from "./work-insights-tab";
+import { PersonalWorkTab } from "./personal-work-tab";
 import { cn } from "@multica/ui/lib/utils";
 
 // Stable references — `data ?? []` would create a new empty array on
@@ -82,7 +83,7 @@ const EMPTY_FAILURE_BY_AGENT: import("@multica/core/types").DashboardFailureByAg
   [];
 const EMPTY_AGENTS: Agent[] = [];
 
-type DashboardTab = "usage" | "errors" | "insights";
+type DashboardTab = "usage" | "errors" | "insights" | "personal";
 const TAB_QUERY_KEY = "tab";
 const DEFAULT_TAB: DashboardTab = "usage";
 
@@ -164,7 +165,7 @@ export function DashboardPage() {
   // flipping tabs does not stack up history entries. An unknown ?tab= value
   // falls back to Usage rather than rendering nothing.
   const tabFromUrl = navigation.searchParams.get(TAB_QUERY_KEY);
-  const tab: DashboardTab = tabFromUrl === "errors" || tabFromUrl === "insights" ? tabFromUrl : DEFAULT_TAB;
+  const tab: DashboardTab = tabFromUrl === "errors" || tabFromUrl === "insights" || tabFromUrl === "personal" ? tabFromUrl : DEFAULT_TAB;
   const handleTabChange = (next: string) => {
     const params = new URLSearchParams(navigation.searchParams);
     if (next === DEFAULT_TAB) params.delete(TAB_QUERY_KEY);
@@ -179,7 +180,8 @@ export function DashboardPage() {
 
   const { data: projects = [] } = useQuery(projectListOptions(wsId));
   const agentsQuery = useQuery(agentListOptions(wsId));
-  const agents = agentsQuery.data ?? EMPTY_AGENTS;
+  const invalidAgentResponse = agentsQuery.isSuccess && (!Array.isArray(agentsQuery.data) || agentsQuery.data.some((agent) => !agent || typeof agent.id !== "string" || !agent.id));
+  const agents = useMemo(() => Array.isArray(agentsQuery.data) ? agentsQuery.data.filter((agent) => agent && typeof agent.id === "string" && !!agent.id) : EMPTY_AGENTS, [agentsQuery.data]);
 
   // Validate the picked project against the current workspace's list. A
   // stale UUID — left over from a project that's been deleted, or from the
@@ -254,6 +256,8 @@ export function DashboardPage() {
   const handleRefresh = () => {
     void queryClient.invalidateQueries({ queryKey: dashboardKeys.all(wsId) });
     void queryClient.invalidateQueries({ queryKey: ["work-insights", wsId] });
+    void queryClient.invalidateQueries({ queryKey: ["personal-work", wsId] });
+    if (tab === "personal") void queryClient.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
   };
 
   const { tzLabel, updatedLabel } = useDataFreshness(
@@ -362,8 +366,8 @@ export function DashboardPage() {
   // rather than next to the leaderboard because the Errors aggregation below
   // needs it too — see anonymizeUnresolvedAgentRows.
   const knownAgentIds = useMemo(
-    () => (agentsQuery.isSuccess ? new Set(agents.map((a) => a.id)) : null),
-    [agentsQuery.isSuccess, agents],
+    () => (agentsQuery.isSuccess && !invalidAgentResponse ? new Set(agents.map((a) => a.id)) : null),
+    [agentsQuery.isSuccess, invalidAgentResponse, agents],
   );
 
   // The per-agent split has no date to trim on, so its window is closed
@@ -519,10 +523,13 @@ export function DashboardPage() {
             <TabsTrigger value="insights" className="h-full rounded-none px-2.5 text-label group-data-horizontal/tabs:after:bottom-0">
               {(i18n.resolvedLanguage ?? i18n.language).startsWith("zh") ? "工作概览" : "Work overview"}
             </TabsTrigger>
+            <TabsTrigger value="personal" className="h-full rounded-none px-2.5 text-label group-data-horizontal/tabs:after:bottom-0">
+              {(i18n.resolvedLanguage ?? i18n.language).startsWith("zh") ? "个人工作" : "My activity"}
+            </TabsTrigger>
           </TabsList>
           <div className="flex shrink-0 items-center gap-2">
-            {tab !== "insights" && <TimeRangeFilter days={days} onChange={setDays} />}
-            {tab === "insights" && <div ref={setInsightsFilterTarget} />}
+            {tab !== "insights" && tab !== "personal" && <TimeRangeFilter days={days} onChange={setDays} />}
+            {(tab === "insights" || tab === "personal") && <div ref={setInsightsFilterTarget} />}
             <ProjectFilter
               projects={projects}
               projectValue={projectValue}
@@ -644,6 +651,9 @@ export function DashboardPage() {
           </TabsContent>
           <TabsContent value="insights">
             {tab === "insights" && <WorkInsightsTab filterTarget={insightsFilterTarget} wsId={wsId} agents={agents} agentsLoading={agentsQuery.isLoading} agentsError={agentsQuery.isError} projectId={projectId} timeZone={viewTZ} />}
+          </TabsContent>
+          <TabsContent value="personal">
+            {tab === "personal" && <PersonalWorkTab filterTarget={insightsFilterTarget} wsId={wsId} projectId={projectId} timeZone={viewTZ} agents={agents} agentsLoading={agentsQuery.isLoading} agentsError={agentsQuery.isError || invalidAgentResponse} />}
           </TabsContent>
         </div>
       </div>

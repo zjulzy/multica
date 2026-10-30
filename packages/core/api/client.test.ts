@@ -25,6 +25,38 @@ describe("ApiClient status reorder", () => {
   });
 });
 
+describe("strict personal statistics reads", () => {
+  it("forwards cancellation and rejects malformed issue lists", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ issues: "bad", total: 1 }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("https://api.example.test");
+    const signal = new AbortController().signal;
+    await expect(client.listIssues({}, { signal, strict: true })).rejects.toThrow();
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(signal);
+  });
+  it("rejects an incomplete issue response in the POST query path", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
+    await expect(new ApiClient("https://api.example.test").listIssues({ ids: ["i"] }, { strict: true })).rejects.toThrow();
+  });
+  it("reports truncated timelines and rejects invalid timeline entries", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response("[]", { status: 200, headers: { "X-Timeline-Truncated": "activity" } })).mockResolvedValueOnce(new Response('[{"type":"comment"}]', { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new ApiClient("https://api.example.test");
+    const signal = new AbortController().signal;
+    await expect(client.listTimelineForStats("i", signal)).resolves.toEqual({ entries: [], truncated: true });
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(signal);
+    await expect(client.listTimelineForStats("i", signal)).rejects.toThrow();
+  });
+  it("rejects malformed status catalogs for statistics and forwards cancellation", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response('{"statuses":"bad"}', { status: 200 })).mockResolvedValueOnce(new Response('{}', { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const signal = new AbortController().signal;
+    await expect(new ApiClient("https://api.example.test").listIssueStatuses(true, { signal, strict: true })).rejects.toThrow();
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(signal);
+    await expect(new ApiClient("https://api.example.test").listIssueStatuses(true, { signal, strict: true })).rejects.toThrow();
+  });
+});
+
 describe("ApiClient agent conversation-starter compatibility", () => {
   const prompt = {
     label: "Review a PR",

@@ -120,7 +120,7 @@ interface NavPage {
   keywords: string[];
 }
 
-type ThemeValue = "light" | "dark" | "system" | "graphite-copper" | "mist-celadon" | "cream-gold";
+type ThemeValue = "light" | "dark" | "system" | "graphite-copper" | "mist-celadon" | "cream-gold" | "sakura-blush" | "moon-lavender" | "deep-ocean";
 
 function memberInitials(name: string) {
   return name
@@ -565,6 +565,9 @@ export function SearchCommand() {
       ["graphite-copper", t(($) => $.commands.switch_to_graphite_copper)],
       ["mist-celadon", t(($) => $.commands.switch_to_mist_celadon)],
       ["cream-gold", t(($) => $.commands.switch_to_cream_gold)],
+      ["sakura-blush", t(($) => $.commands.switch_to_sakura_blush)],
+      ["moon-lavender", t(($) => $.commands.switch_to_moon_lavender)],
+      ["deep-ocean", t(($) => $.commands.switch_to_deep_ocean)],
     ] as const) if (themes?.includes(value)) {
       items.push({
         key: `theme-${value}`,

@@ -132,6 +132,9 @@ function ThemeRow() {
     ["graphite-copper", t(($) => $.preferences.theme.graphite_copper)],
     ["mist-celadon", t(($) => $.preferences.theme.mist_celadon)],
     ["cream-gold", t(($) => $.preferences.theme.cream_gold)],
+    ["sakura-blush", t(($) => $.preferences.theme.sakura_blush)],
+    ["moon-lavender", t(($) => $.preferences.theme.moon_lavender)],
+    ["deep-ocean", t(($) => $.preferences.theme.deep_ocean)],
   ] as const;
   const value = theme && themes?.includes(theme) ? theme : "system";
   return (
@@ -147,14 +150,10 @@ function ThemeRow() {
             ["system", t(($) => $.preferences.theme.system)],
           ]}
         />
-        {extraThemes.some(([key]) => themes?.includes(key)) && (
-          <SegmentedToggle
-            value={value}
-            onChange={setTheme}
-            buttonClassName="px-3 py-1 text-label"
-            options={extraThemes.filter(([key]) => themes?.includes(key))}
-          />
-        )}
+        {[extraThemes.slice(0, 3), extraThemes.slice(3)].map((row) => {
+          const options = row.filter(([key]) => themes?.includes(key));
+          return options.length ? <SegmentedToggle key={options[0]![0]} value={value} onChange={setTheme} buttonClassName="px-3 py-1 text-label" options={options} /> : null;
+        })}
       </div>
     </SettingsRow>
   );

@@ -63,5 +63,6 @@ describe("agentListOptions", () => {
       ]),
     ).toBe(false);
     expect(queryState([])).toBe(false);
+    expect(queryState([null as unknown as Agent])).toBe(false);
   });
 });

@@ -41,6 +41,8 @@ import { TabContent } from "./tab-content";
 import { WindowOverlay } from "./window-overlay";
 import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
 import { DesktopInboxDockLayout } from "./inbox-dock";
+import { SakuraDecoration } from "./sakura-decoration";
+import { ThemeAmbience } from "./theme-ambience";
 import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop-os";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
@@ -191,6 +193,8 @@ function MainCanvas({
       initial={false}
       transition={toolbarMotion}
     >
+      <SakuraDecoration />
+      <ThemeAmbience />
       {children}
       {showWorkspaceLoading && (
         <div

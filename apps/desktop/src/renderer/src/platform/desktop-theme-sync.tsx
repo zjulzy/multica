@@ -5,7 +5,7 @@ export function DesktopThemeSync() {
   const { resolvedTheme, theme, setTheme } = useTheme();
   useLayoutEffect(() => {
     if (theme === "pink") setTheme("dark");
-    if (resolvedTheme && ["graphite-copper", "mist-celadon", "cream-gold"].includes(resolvedTheme)) document.documentElement.dataset.desktopTheme = resolvedTheme;
+    if (resolvedTheme && ["graphite-copper", "mist-celadon", "cream-gold", "sakura-blush", "moon-lavender", "deep-ocean"].includes(resolvedTheme)) document.documentElement.dataset.desktopTheme = resolvedTheme;
     else delete document.documentElement.dataset.desktopTheme;
     return () => { delete document.documentElement.dataset.desktopTheme; };
   }, [resolvedTheme, theme, setTheme]);

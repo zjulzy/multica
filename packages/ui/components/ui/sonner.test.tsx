@@ -7,7 +7,7 @@ vi.mock("next-themes", () => ({ useTheme: () => state }));
 import { Toaster } from "./sonner";
 
 describe("Toaster", () => {
-  it.each([["graphite-copper", "dark"], ["mist-celadon", "light"], ["cream-gold", "light"]])("uses Sonner's %s styling as %s", async (theme, base) => {
+  it.each([["graphite-copper", "dark"], ["mist-celadon", "light"], ["cream-gold", "light"], ["sakura-blush", "light"], ["moon-lavender", "light"], ["deep-ocean", "dark"]])("uses Sonner's %s styling as %s", async (theme, base) => {
     state.resolvedTheme = theme;
     const { container } = render(<Toaster />);
     act(() => { toast("Title", { description: "Details" }); });
