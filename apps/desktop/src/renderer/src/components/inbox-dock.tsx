@@ -33,6 +33,8 @@ function DockInboxSurface({
   openRequest,
   onRequestHandled,
   dockTabAction,
+  dockContentVisible,
+  dockContentReplacement,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -40,6 +42,8 @@ function DockInboxSurface({
   openRequest?: { workspaceId: string; key: string } | null;
   onRequestHandled?: (request: { workspaceId: string; key: string }) => void;
   dockTabAction?: ReactNode;
+  dockContentVisible: boolean;
+  dockContentReplacement?: ReactNode;
 }) {
   const [view, setViewState] = useState<InboxView>("inbox");
   const [selectedKey, setSelectedKeyState] = useState("");
@@ -86,6 +90,8 @@ function DockInboxSurface({
       contentInert={!open}
       onDockHeaderToggle={onToggle}
       dockTabAction={dockTabAction}
+      dockContentVisible={dockContentVisible}
+      dockContentReplacement={dockContentReplacement}
     />
   );
 }
@@ -275,6 +281,8 @@ export function DesktopInboxDockLayout({
           openRequest={openRequest}
           onRequestHandled={onRequestHandled}
           open={inboxDockOpen && effectiveTab === "inbox"}
+          dockContentVisible={effectiveTab === "inbox"}
+          dockContentReplacement={(inboxDockOpen || animating) && effectiveTab === "agents" ? <div inert={!inboxDockOpen || undefined} aria-hidden={!inboxDockOpen || undefined} className="min-h-0 flex-1 bg-background"><AgentDock key={workspaceId} workspaceId={workspaceId} requestedAgent={agentRequest?.workspaceId === workspaceId ? agentRequest : selectedAgent} /></div> : null}
           dockTabAction={<button type="button" aria-expanded={inboxDockOpen && effectiveTab === "agents"} onClick={() => {
             if (inboxDockOpen && effectiveTab === "agents") {
               toggleDock();
@@ -285,7 +293,6 @@ export function DesktopInboxDockLayout({
             toggleDock();
           }}
         />
-        {(inboxDockOpen || animating) && effectiveTab === "agents" && <div inert={!inboxDockOpen || undefined} aria-hidden={!inboxDockOpen || undefined} className="absolute inset-x-0 bottom-0 top-9 bg-background"><AgentDock key={workspaceId} workspaceId={workspaceId} requestedAgent={agentRequest?.workspaceId === workspaceId ? agentRequest : selectedAgent} /></div>}
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

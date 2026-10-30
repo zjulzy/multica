@@ -67,6 +67,7 @@ import { ProjectFilter, TimeRangeFilter } from "./dashboard-filters";
 import { UsageTrendCard } from "./usage-trend-card";
 import { Leaderboard } from "./leaderboard";
 import { ErrorsTab } from "./errors-tab";
+import { WorkInsightsTab } from "./work-insights-tab";
 import { cn } from "@multica/ui/lib/utils";
 
 // Stable references — `data ?? []` would create a new empty array on
@@ -81,7 +82,7 @@ const EMPTY_FAILURE_BY_AGENT: import("@multica/core/types").DashboardFailureByAg
   [];
 const EMPTY_AGENTS: Agent[] = [];
 
-type DashboardTab = "usage" | "errors";
+type DashboardTab = "usage" | "errors" | "insights";
 const TAB_QUERY_KEY = "tab";
 const DEFAULT_TAB: DashboardTab = "usage";
 
@@ -155,6 +156,7 @@ export function DashboardPage() {
   const locales = i18n.resolvedLanguage ?? i18n.language;
   const [days, setDays] = useState<TimeRange>(30);
   const [projectValue, setProjectValue] = useState<string>(ALL_PROJECTS);
+  const [insightsFilterTarget, setInsightsFilterTarget] = useState<HTMLDivElement | null>(null);
 
   // The tab lives in the URL because the Errors view is the half of this page
   // people paste at each other ("this agent failed 54 times, see for
@@ -162,7 +164,7 @@ export function DashboardPage() {
   // flipping tabs does not stack up history entries. An unknown ?tab= value
   // falls back to Usage rather than rendering nothing.
   const tabFromUrl = navigation.searchParams.get(TAB_QUERY_KEY);
-  const tab: DashboardTab = tabFromUrl === "errors" ? "errors" : DEFAULT_TAB;
+  const tab: DashboardTab = tabFromUrl === "errors" || tabFromUrl === "insights" ? tabFromUrl : DEFAULT_TAB;
   const handleTabChange = (next: string) => {
     const params = new URLSearchParams(navigation.searchParams);
     if (next === DEFAULT_TAB) params.delete(TAB_QUERY_KEY);
@@ -251,6 +253,7 @@ export function DashboardPage() {
     failuresByAgentQuery.isFetching;
   const handleRefresh = () => {
     void queryClient.invalidateQueries({ queryKey: dashboardKeys.all(wsId) });
+    void queryClient.invalidateQueries({ queryKey: ["work-insights", wsId] });
   };
 
   const { tzLabel, updatedLabel } = useDataFreshness(
@@ -513,9 +516,13 @@ export function DashboardPage() {
             >
               {t(($) => $.errors.title)}
             </TabsTrigger>
+            <TabsTrigger value="insights" className="h-full rounded-none px-2.5 text-label group-data-horizontal/tabs:after:bottom-0">
+              {(i18n.resolvedLanguage ?? i18n.language).startsWith("zh") ? "工作概览" : "Work overview"}
+            </TabsTrigger>
           </TabsList>
           <div className="flex shrink-0 items-center gap-2">
-            <TimeRangeFilter days={days} onChange={setDays} />
+            {tab !== "insights" && <TimeRangeFilter days={days} onChange={setDays} />}
+            {tab === "insights" && <div ref={setInsightsFilterTarget} />}
             <ProjectFilter
               projects={projects}
               projectValue={projectValue}
@@ -634,6 +641,9 @@ export function DashboardPage() {
                 locales={locales}
               />
             )}
+          </TabsContent>
+          <TabsContent value="insights">
+            {tab === "insights" && <WorkInsightsTab filterTarget={insightsFilterTarget} wsId={wsId} agents={agents} agentsLoading={agentsQuery.isLoading} agentsError={agentsQuery.isError} projectId={projectId} timeZone={viewTZ} />}
           </TabsContent>
         </div>
       </div>

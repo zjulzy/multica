@@ -998,6 +998,23 @@ const ContentEditor = forwardRef<ContentEditorRef, ContentEditorProps>(
 
     // Link hover card — disabled when BubbleMenu is active (has selection)
     const wrapperRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+      const flushScoped = (event: Event) => {
+        const root = (event as CustomEvent<HTMLElement>).detail;
+        if (!root?.contains(wrapperRef.current) || !debounceRef.current || !editor || editor.isDestroyed) return;
+        clearTimeout(debounceRef.current);
+        debounceRef.current = undefined;
+        const base = pendingBaseRef.current ?? documentBaseRef.current;
+        pendingBaseRef.current = null;
+        pendingFlushRef.current = null;
+        const md = normalizeEditorMarkdown(editor);
+        if (md === lastEmittedRef.current) return;
+        lastEmittedRef.current = md;
+        onUpdateRef.current?.(md, base);
+      };
+      window.addEventListener("multica:flush-scoped-editors", flushScoped);
+      return () => window.removeEventListener("multica:flush-scoped-editors", flushScoped);
+    }, [editor]);
     const hoverDisabled = !editor?.state.selection.empty;
     const hover = useLinkHover(wrapperRef, hoverDisabled);
 

@@ -118,6 +118,8 @@ vi.mock("@multica/views/inbox", () => ({
     contentInert,
     onDockHeaderToggle,
     dockTabAction,
+    dockContentVisible,
+    dockContentReplacement,
   }: {
     controller: {
       view: string;
@@ -131,6 +133,8 @@ vi.mock("@multica/views/inbox", () => ({
     contentInert: boolean;
     onDockHeaderToggle: () => void;
     dockTabAction?: ReactNode;
+    dockContentVisible?: boolean;
+    dockContentReplacement?: ReactNode;
   }) => {
     observedInbox.push({ key: controller.selectedKey, inert: contentInert });
     return (
@@ -147,6 +151,7 @@ vi.mock("@multica/views/inbox", () => ({
         {contentInert ? "Expand Inbox" : "Collapse Inbox"}
       </button>
       {dockTabAction}
+      {dockContentVisible ? <div data-testid="mock-inbox-content" /> : dockContentReplacement}
       <button type="button" onClick={() => controller.setView("archived")}>
         Show archive
       </button>
@@ -245,10 +250,12 @@ describe("DesktopInboxDockLayout", () => {
     renderDock();
     fireEvent.click(screen.getByRole("button", { name: "Agents" }));
     expect(screen.getByTestId("agent-dock")).toBeInTheDocument();
+    expect(screen.queryByTestId("mock-inbox-content")).not.toBeInTheDocument();
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "true");
     fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
     expect(screen.queryByTestId("agent-dock")).not.toBeInTheDocument();
+    expect(screen.getByTestId("mock-inbox-content")).toBeInTheDocument();
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
   });
 

@@ -284,6 +284,23 @@ describe("InboxSurface dock controller", () => {
     expect(agents).toHaveBeenCalledTimes(1);
   });
 
+  it("unmounts inbox content when another dock tab is active and restores the selection", () => {
+    state.items = [item()];
+    const value = controller({ selectedKey: "issue-1" });
+    const { rerender } = render(<InboxSurface controller={value} variant="dock" layoutId="test" dockContentVisible />);
+    expect(screen.getByTestId("issue-detail")).toBeInTheDocument();
+    const onFlush = vi.fn();
+    window.addEventListener("multica:flush-scoped-editors", onFlush);
+    rerender(<InboxSurface controller={value} variant="dock" layoutId="test" contentInert dockContentVisible={false} />);
+    expect(onFlush).toHaveBeenCalledTimes(1);
+    window.removeEventListener("multica:flush-scoped-editors", onFlush);
+    expect(screen.queryByTestId("issue-detail")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Inbox" })).toBeInTheDocument();
+    rerender(<InboxSurface controller={value} variant="dock" layoutId="test" dockContentVisible />);
+    expect(screen.getByTestId("issue-detail")).toBeInTheDocument();
+    expect(value.selectedKey).toBe("issue-1");
+  });
+
   it("does not register the global archive shortcut when disabled", () => {
     state.items = [item()];
     renderDock(controller({ selectedKey: "issue-1" }));

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
+import { DockInboxContent } from "./dock-inbox-content";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { ApiError, errorCode } from "@multica/core/api";
@@ -130,6 +131,8 @@ export interface InboxSurfaceProps {
   layoutId: string;
   headerAction?: ReactNode;
   dockTabAction?: ReactNode;
+  dockContentVisible?: boolean;
+  dockContentReplacement?: ReactNode;
   onDockHeaderToggle?: () => void;
   enableGlobalArchiveShortcut?: boolean;
   contentInert?: boolean;
@@ -143,6 +146,8 @@ export function InboxSurface({
   layoutId,
   headerAction,
   dockTabAction,
+  dockContentVisible = true,
+  dockContentReplacement,
   onDockHeaderToggle,
   enableGlobalArchiveShortcut,
   contentInert = false,
@@ -1095,16 +1100,9 @@ export function InboxSurface({
         className="flex h-full min-h-0 flex-1 flex-col"
       >
         {dockHeader}
-        <div
-          inert={contentInert || undefined}
-          aria-hidden={contentInert || undefined}
-          className={cn(
-            "flex min-h-0 flex-1 flex-col",
-            contentInert && "pointer-events-none",
-          )}
-        >
+        {dockContentVisible ? <DockInboxContent inert={contentInert}>
           {content}
-        </div>
+        </DockInboxContent> : dockContentReplacement}
       </div>
     );
   }

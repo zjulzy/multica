@@ -586,6 +586,35 @@ describe("ContentEditor", () => {
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
+  it("flushes a pending edit only when its containing dock content is replaced", () => {
+    vi.useFakeTimers();
+    const onUpdate = vi.fn();
+    editorState.markdown = "old";
+    const { container, unmount } = render(<ContentEditor defaultValue="old" onUpdate={onUpdate} debounceMs={100} />);
+    editorState.markdown = "new draft";
+    act(() => latestEditorOptions.current?.onUpdate?.({ editor: editorRef.current }));
+    act(() => window.dispatchEvent(new CustomEvent("multica:flush-scoped-editors", { detail: document.createElement("div") })));
+    expect(onUpdate).not.toHaveBeenCalled();
+    act(() => window.dispatchEvent(new CustomEvent("multica:flush-scoped-editors", { detail: container })));
+    expect(onUpdate).toHaveBeenCalledWith("new draft", "old");
+    unmount();
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("flushes a pending edit during actual dock content unmount", async () => {
+    vi.useFakeTimers();
+    const { DockInboxContent } = await import("../inbox/components/dock-inbox-content");
+    const onUpdate = vi.fn();
+    editorState.markdown = "old";
+    const { rerender } = render(<DockInboxContent inert={false}><ContentEditor defaultValue="old" onUpdate={onUpdate} debounceMs={100} /></DockInboxContent>);
+    editorState.markdown = "last keystrokes";
+    act(() => latestEditorOptions.current?.onUpdate?.({ editor: editorRef.current }));
+    rerender(<div>Agents</div>);
+    expect(onUpdate).toHaveBeenCalledWith("last keystrokes", "old");
+    act(() => vi.advanceTimersByTime(100));
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
   it("does not re-emit on unmount when the debounce already fired", () => {
     vi.useFakeTimers();
     const onUpdate = vi.fn();
