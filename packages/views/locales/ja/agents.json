@@ -1,4 +1,5 @@
 {
+  "dock": {"title": "エージェント", "active": "稼働中のエージェント", "running": "実行中", "queued": "待機中", "minutes": "{{count}} 分", "current_task": "現在のタスク", "open_agent": "エージェントを開く", "no_issue": "関連タスクなし", "loading": "読み込み中…", "empty": "実行中または待機中のエージェントはいません", "progress_hint": "エージェントのページで会話と実行履歴を確認できます。", "recent": "最近の進捗", "no_progress": "まだテキスト出力はありません。", "chat_task": "チャットタスク", "open_chat": "チャットを開く", "open_in_dock": "下部パネルで表示", "progress_error": "進捗を読み込めませんでした。", "load_error": "稼働中のエージェントを読み込めません。", "retry": "再試行"},
   "status_hub": { "title": "稼働中のエージェント", "counts": "実行中 {{running}} 件 · 待機中 {{queued}} 件", "unread": "未読通知 {{count}} 件", "open_inbox": "最新の未読通知を開く", "open_agent": "エージェントのページを開く" },
   "page": {
     "title": "エージェント",

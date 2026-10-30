@@ -129,6 +129,7 @@ export interface InboxSurfaceProps {
   variant: "page" | "dock";
   layoutId: string;
   headerAction?: ReactNode;
+  dockTabAction?: ReactNode;
   onDockHeaderToggle?: () => void;
   enableGlobalArchiveShortcut?: boolean;
   contentInert?: boolean;
@@ -141,6 +142,7 @@ export function InboxSurface({
   variant,
   layoutId,
   headerAction,
+  dockTabAction,
   onDockHeaderToggle,
   enableGlobalArchiveShortcut,
   contentInert = false,
@@ -616,6 +618,7 @@ export function InboxSurface({
       ) : (
         <div className="flex flex-1 items-center gap-2">{headerTitle}</div>
       )}
+      {variant === "dock" && dockTabAction}
       {variant === "dock" && <div className="flex-1" />}
       {(variant === "page" || !contentInert) && <InboxFilterMenu
         wsId={wsId}

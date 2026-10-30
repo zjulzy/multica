@@ -35,7 +35,7 @@ html[data-desktop-theme="cream-gold"] {
   --sidebar-accent:#f2e7d9; --sidebar-accent-foreground:#3f352e; --sidebar-border:#e1d5c7; --sidebar-ring:#965c2d;
   --brand:#965c2d; --brand-foreground:#ffffff; --tooltip:#4a382d; --theme-glow:rgba(191,136,75,.09);
 }
-html[data-desktop-theme] :is([data-slot="button"], [data-slot="input"], [data-slot="textarea"], [data-slot="dialog-content"], [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="select-trigger"], [data-slot="card"], [data-slot="inbox-dock-header"]) {
+html[data-desktop-theme] :is([data-slot="button"], [data-slot="input"], [data-slot="textarea"], [data-slot="dialog-content"], [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="select-trigger"], [data-slot="inbox-dock-header"]) {
   background-image:linear-gradient(140deg,var(--theme-glow),transparent 70%);
 }
 html[data-desktop-theme] [data-slot="sidebar-inner"] { background-image:radial-gradient(ellipse at 100% 0,var(--theme-glow),transparent 50%); }

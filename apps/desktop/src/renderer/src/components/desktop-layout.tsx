@@ -310,6 +310,7 @@ export function DesktopShell() {
   const setInboxDockOpen = useDesktopPrefsStore((s) => s.setInboxDockOpen);
   const [temporaryDockWorkspace, setTemporaryDockWorkspace] = useState<string | null>(null);
   const [dockRequest, setDockRequest] = useState<{ workspaceId: string; key: string } | null>(null);
+  const [agentDockRequest, setAgentDockRequest] = useState<{ workspaceId: string; agentId: string } | null>(null);
   const temporaryDockVisible = !inboxDockEnabled && temporaryDockWorkspace === resolvedWorkspace?.id;
   const openHubUnread = useCallback((workspaceId: string, key: string) => {
     if (!resolvedWorkspace || workspaceId !== resolvedWorkspace.id) return;
@@ -320,15 +321,26 @@ export function DesktopShell() {
   const closeTemporaryDock = useCallback(() => {
     setTemporaryDockWorkspace(null);
     setDockRequest(null);
+    setAgentDockRequest(null);
   }, []);
+  const openHubAgent = useCallback((workspaceId: string, agentId: string) => {
+    if (!resolvedWorkspace || workspaceId !== resolvedWorkspace.id) return;
+    setAgentDockRequest({ workspaceId, agentId });
+    if (!inboxDockEnabled) setTemporaryDockWorkspace(workspaceId);
+    else setInboxDockOpen(true);
+  }, [resolvedWorkspace, inboxDockEnabled, setInboxDockOpen]);
   const handleDockRequest = useCallback((request: { workspaceId: string; key: string }) => {
     setDockRequest((current) => current === request ? null : current);
+  }, []);
+  const handleAgentDockRequest = useCallback((request: { workspaceId: string; agentId: string }) => {
+    setAgentDockRequest((current) => current === request ? null : current);
   }, []);
   useEffect(() => {
     if (temporaryDockWorkspace && temporaryDockWorkspace !== resolvedWorkspace?.id) closeTemporaryDock();
   }, [temporaryDockWorkspace, resolvedWorkspace?.id, closeTemporaryDock]);
   useEffect(() => {
     setDockRequest((current) => current && current.workspaceId !== resolvedWorkspace?.id ? null : current);
+    setAgentDockRequest((current) => current && current.workspaceId !== resolvedWorkspace?.id ? null : current);
   }, [resolvedWorkspace?.id]);
   useEffect(() => {
     if (inboxDockEnabled && temporaryDockWorkspace) {
@@ -373,6 +385,7 @@ export function DesktopShell() {
               <AppSidebar
                 showAgentStatusHub={agentStatusHubEnabled}
                 onAgentUnreadOpen={openHubUnread}
+                onAgentDockOpen={openHubAgent}
                 hideInboxNav={inboxDockEnabled}
                 topSlot={<SidebarTopSpacer />}
                 searchSlot={<SearchTrigger />}
@@ -395,6 +408,8 @@ export function DesktopShell() {
                   enabled={inboxDockEnabled || temporaryDockVisible}
                   workspaceId={resolvedWorkspace?.id ?? null}
                   openRequest={dockRequest}
+                  agentRequest={agentDockRequest}
+                  onAgentRequestHandled={handleAgentDockRequest}
                   onRequestHandled={handleDockRequest}
                   onTemporaryClose={temporaryDockVisible ? closeTemporaryDock : undefined}
                 >

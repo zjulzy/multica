@@ -106,7 +106,7 @@ vi.mock("@multica/ui/components/ui/resizable", () => ({
       {children}
     </section>
   ),
-  ResizableHandle: ({ className }: { className?: string }) => <div data-testid="dock-resize-handle" className={className} />,
+  ResizableHandle: ({ className, elementRef, onPointerDownCapture, onKeyDownCapture }: { className?: string; elementRef?: React.Ref<HTMLDivElement>; onPointerDownCapture?: React.PointerEventHandler<HTMLDivElement>; onKeyDownCapture?: React.KeyboardEventHandler<HTMLDivElement> }) => <div ref={elementRef} data-testid="dock-resize-handle" className={className} onPointerDownCapture={onPointerDownCapture} onKeyDownCapture={onKeyDownCapture} />,
 }));
 
 vi.mock("@multica/views/inbox", () => ({
@@ -117,6 +117,7 @@ vi.mock("@multica/views/inbox", () => ({
     enableGlobalArchiveShortcut,
     contentInert,
     onDockHeaderToggle,
+    dockTabAction,
   }: {
     controller: {
       view: string;
@@ -129,6 +130,7 @@ vi.mock("@multica/views/inbox", () => ({
     enableGlobalArchiveShortcut: boolean;
     contentInert: boolean;
     onDockHeaderToggle: () => void;
+    dockTabAction?: ReactNode;
   }) => {
     observedInbox.push({ key: controller.selectedKey, inert: contentInert });
     return (
@@ -144,6 +146,7 @@ vi.mock("@multica/views/inbox", () => ({
       <button type="button" onClick={onDockHeaderToggle}>
         {contentInert ? "Expand Inbox" : "Collapse Inbox"}
       </button>
+      {dockTabAction}
       <button type="button" onClick={() => controller.setView("archived")}>
         Show archive
       </button>
@@ -156,8 +159,10 @@ vi.mock("@multica/views/inbox", () => ({
 }));
 
 const translations = {
-  dock: { expand: "Expand Inbox", collapse: "Collapse Inbox" },
+  dock: { expand: "Expand Inbox", collapse: "Collapse Inbox", title: "Agents" },
 };
+
+vi.mock("./agent-dock", () => ({ AgentDock: ({ requestedAgent }: { requestedAgent: { agentId: string } | null }) => <div data-testid="agent-dock">{requestedAgent?.agentId}</div> }));
 
 vi.mock("@multica/views/i18n", () => ({
   useT: () => ({
@@ -236,6 +241,26 @@ describe("DesktopInboxDockLayout", () => {
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "false");
   });
 
+  it("opens the agents tab and switches back to the Inbox without collapsing", () => {
+    renderDock();
+    fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+    expect(screen.getByTestId("agent-dock")).toBeInTheDocument();
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(screen.queryByTestId("agent-dock")).not.toBeInTheDocument();
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+  });
+
+  it("opens the requested agent and consumes the request", () => {
+    useDesktopPrefsStore.setState({ inboxDockOpen: true });
+    const request = { workspaceId: "workspace-1", agentId: "agent-7" };
+    const onHandled = vi.fn();
+    render(<DesktopInboxDockLayout enabled workspaceId="workspace-1" agentRequest={request} onAgentRequestHandled={onHandled}><main>Main</main></DesktopInboxDockLayout>);
+    expect(screen.getByTestId("agent-dock")).toHaveTextContent("agent-7");
+    expect(onHandled).toHaveBeenCalledWith(request);
+  });
+
   it("selects the Hub target in the current workspace and returns from archive to inbox", () => {
     const request = { workspaceId: "workspace-1", key: "issue-9" };
     const { rerender } = render(
@@ -275,6 +300,19 @@ describe("DesktopInboxDockLayout", () => {
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-selected-key", "issue-new");
   });
 
+  it("keeps the old inbox selection inert on the first render when opening an agent", () => {
+    useDesktopPrefsStore.setState({ inboxDockOpen: true });
+    const { rerender } = render(<DesktopInboxDockLayout enabled workspaceId="workspace-1"><main>Main</main></DesktopInboxDockLayout>);
+    fireEvent.click(screen.getByRole("button", { name: "Select issue" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    observedInbox.length = 0;
+    act(() => {
+      useDesktopPrefsStore.setState({ inboxDockOpen: true });
+      rerender(<DesktopInboxDockLayout enabled workspaceId="workspace-1" agentRequest={{ workspaceId: "workspace-1", agentId: "a" }}><main>Main</main></DesktopInboxDockLayout>);
+    });
+    expect(observedInbox.some((entry) => !entry.inert && entry.key === "issue-9")).toBe(false);
+  });
+
   it("reports a Hub request consumed so it cannot be replayed on a later remount", () => {
     const handled = vi.fn();
     const request = { workspaceId: "workspace-1", key: "issue-9" };
@@ -305,6 +343,7 @@ describe("DesktopInboxDockLayout", () => {
     useDesktopPrefsStore.setState({ inboxDockOpen: false });
     const dismiss = vi.fn();
     render(<DesktopInboxDockLayout enabled workspaceId="workspace-1" onTemporaryClose={dismiss}><main>Main content</main></DesktopInboxDockLayout>);
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag collapse" }));
     expect(dismiss).toHaveBeenCalledOnce();
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
@@ -321,6 +360,27 @@ describe("DesktopInboxDockLayout", () => {
     expect(group).not.toHaveAttribute("data-dock-motion", "on");
   });
 
+  it("animates opening and closing the agents panel while preserving its content during collapse", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: true });
+    renderDock();
+    const group = screen.getByTestId("dock-layout");
+    fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+    expect(group).toHaveAttribute("data-dock-motion", "on");
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
+    fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+    expect(group).toHaveAttribute("data-dock-motion", "on");
+    expect(screen.getByTestId("agent-dock")).toBeInTheDocument();
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+  });
+
+  it("switches from Inbox to agents without starting a dock size animation", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: true, inboxDockOpen: true });
+    renderDock();
+    fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+    expect(screen.getByTestId("dock-layout")).not.toHaveAttribute("data-dock-motion", "on");
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+  });
+
   it("ignores intermediate resize reports during a click animation", () => {
     useDesktopPrefsStore.setState({ interfaceMotionEnabled: true, inboxDockOpen: true });
     renderDock();
@@ -331,6 +391,49 @@ describe("DesktopInboxDockLayout", () => {
     fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+  });
+
+  it("does not reopen a closed dock on a delayed resize report without a drag", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: false, inboxDockOpen: true });
+    renderDock();
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
+  });
+
+  it("accepts keyboard resizing and ignores layout reports after the gesture ends", () => {
+    vi.useFakeTimers();
+    try {
+      renderDock();
+      fireEvent.keyDown(screen.getByTestId("dock-resize-handle"), { key: "ArrowUp" });
+      fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+      expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+      fireEvent.keyUp(window, { key: "ArrowUp" });
+      act(() => vi.advanceTimersByTime(100));
+      fireEvent.click(screen.getByRole("button", { name: "Simulate drag collapse" }));
+      expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("accepts drags that start in the library's larger separator hit area", async () => {
+    renderDock();
+    fireEvent.pointerDown(document.body, { button: 0, pointerId: 4 });
+    await act(async () => { screen.getByTestId("dock-resize-handle").setAttribute("data-separator", "active"); });
+    fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+  });
+
+  it("does not end a pointer drag when an unrelated key is released", () => {
+    vi.useFakeTimers();
+    try {
+      renderDock();
+      fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"), { button: 0, pointerId: 4 });
+      fireEvent.keyUp(window, { key: "Control" });
+      act(() => vi.advanceTimersByTime(150));
+      fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
+      expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    } finally { vi.useRealTimers(); }
   });
 
   it("keeps the main page outside the resizable overlay and releases the Inbox for dragging", () => {
@@ -344,9 +447,11 @@ describe("DesktopInboxDockLayout", () => {
     fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
     expect(content.style.height).toBe("");
     expect(inbox.style.height).toBe("220px");
+    expect(inbox.style.contain).toBe("layout paint");
     fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
     expect(content.style.height).toBe("");
     expect(inbox.style.height).toBe("");
+    expect(inbox.style.contain).toBe("");
   });
 
   it("passes an isolated dock surface configuration while expanded", () => {
@@ -385,6 +490,7 @@ describe("DesktopInboxDockLayout", () => {
     useDesktopPrefsStore.setState({ inboxDockOpen: true });
     renderDock();
 
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag collapse" }));
 
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(false);
@@ -395,6 +501,7 @@ describe("DesktopInboxDockLayout", () => {
     panelApi.isCollapsed.mockReturnValue(false);
     panelApi.resize.mockClear();
 
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
 
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
@@ -414,6 +521,7 @@ describe("DesktopInboxDockLayout", () => {
     useDesktopPrefsStore.setState({ inboxDockOpen: true });
     renderDock();
 
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
     fireEvent.click(screen.getByRole("button", { name: "Simulate drag expanded" }));
     expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(38);
     panelApi.getSize.mockReturnValue({ inPixels: 480, asPercentage: 60 });

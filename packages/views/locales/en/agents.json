@@ -1,4 +1,5 @@
 {
+  "dock": {"title": "Agents", "active": "Active agents", "running": "Running", "queued": "Queued", "minutes": "{{count}} min", "current_task": "Current task", "open_agent": "Open agent", "no_issue": "No linked issue", "loading": "Loading…", "empty": "No agents are running or queued", "progress_hint": "Open the agent page to see the full conversation and activity.", "recent": "Recent activity", "no_progress": "No text output yet.", "chat_task": "Chat task", "open_chat": "Open chat", "open_in_dock": "Open agent in dock", "progress_error": "Could not load activity.", "load_error": "Could not load active agents.", "retry": "Retry"},
   "status_hub": { "title": "Active agents", "counts": "Running: {{running}} · Queued: {{queued}}", "unread": "Unread notifications: {{count}}", "open_inbox": "Open latest unread notification", "open_agent": "Open agent profile" },
   "page": {
     "title": "Agents",

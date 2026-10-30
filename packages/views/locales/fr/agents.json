@@ -1,4 +1,5 @@
 {
+  "dock": {"title": "Agents", "active": "Agents actifs", "running": "En cours", "queued": "En attente", "minutes": "{{count}} min", "current_task": "Tâche actuelle", "open_agent": "Ouvrir l’agent", "no_issue": "Aucun ticket associé", "loading": "Chargement…", "empty": "Aucun agent actif ou en attente", "progress_hint": "Ouvrez la page de l’agent pour voir la conversation et l’activité.", "recent": "Activité récente", "no_progress": "Aucun texte pour le moment.", "chat_task": "Tâche de discussion", "open_chat": "Ouvrir la discussion", "open_in_dock": "Voir dans le panneau", "progress_error": "Impossible de charger l’activité.", "load_error": "Impossible de charger les agents actifs.", "retry": "Réessayer"},
   "status_hub": { "title": "Agents actifs", "counts": "En cours : {{running}} · En attente : {{queued}}", "unread": "Notifications non lues : {{count}}", "open_inbox": "Ouvrir la dernière notification non lue", "open_agent": "Ouvrir le profil de l’agent" },
   "page": {
     "title": "Agents",

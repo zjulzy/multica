@@ -15,7 +15,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/
 import { AppLink } from "../navigation";
 import { useT } from "../i18n";
 
-export function AgentStatusHub({ onOpenUnread }: { onOpenUnread?: (workspaceId: string, key: string) => void } = {}) {
+export function AgentStatusHub({ onOpenUnread, onOpenAgent }: { onOpenUnread?: (workspaceId: string, key: string) => void; onOpenAgent?: (workspaceId: string, agentId: string) => void } = {}) {
   const workspace = useCurrentWorkspace();
   const paths = useWorkspacePaths();
   const { t } = useT("agents");
@@ -54,14 +54,14 @@ export function AgentStatusHub({ onOpenUnread }: { onOpenUnread?: (workspaceId: 
         {active.map(({ agent, runningCount, queuedCount, unread }) => {
           const counts = t(($) => $.status_hub.counts, { running: runningCount, queued: queuedCount });
           const unreadLabel = unread ? t(($) => $.status_hub.unread, { count: unread.count }) : null;
-          const destination = unread ? t(($) => $.status_hub.open_inbox) : t(($) => $.status_hub.open_agent);
+          const destination = unread ? t(($) => $.status_hub.open_inbox) : onOpenAgent ? t(($) => $.dock.open_in_dock) : t(($) => $.status_hub.open_agent);
           const href = unread ? `${paths.inbox()}?${new URLSearchParams({ issue: unread.key })}` : paths.agentDetail(agent.id);
           return (
             <Tooltip key={agent.id}>
               <TooltipTrigger render={<AppLink href={href} onClick={(event) => {
-                if (!unread || !onOpenUnread || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                event.preventDefault();
-                onOpenUnread(workspaceId, unread.key);
+                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                if (unread && onOpenUnread) { event.preventDefault(); onOpenUnread(workspaceId, unread.key); }
+                else if (!unread && onOpenAgent) { event.preventDefault(); onOpenAgent(workspaceId, agent.id); }
               }} aria-label={`${agent.name}: ${counts}${unreadLabel ? ` · ${unreadLabel}` : ""} · ${destination}`} className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />}>
                 <span aria-hidden data-agent-workload={runningCount > 0 ? "running" : queuedCount > 0 ? "queued" : "idle"} className={runningCount > 0
                   ? "pointer-events-none absolute inset-0.5 rounded-full border-2 border-brand/30 border-t-brand border-r-brand motion-safe:animate-spin"
@@ -72,7 +72,7 @@ export function AgentStatusHub({ onOpenUnread }: { onOpenUnread?: (workspaceId: 
                 <ActorAvatar name={agent.name} initials={agent.name.slice(0, 2)} avatarUrl={resolvePublicFileUrl(agent.avatar_url)} isAgent size="md" />
                 {runningCount === 0 && queuedCount > 0 && <span aria-hidden className="absolute -top-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-warning text-background ring-1 ring-background"><Hourglass className="size-2.5" /></span>}
                 {unread && <span aria-hidden data-agent-unread className="pointer-events-none absolute -inset-0.5 rounded-full border border-brand/60 motion-safe:[animation:agent-hub-unread-ripple_2.4s_cubic-bezier(0.2,0.55,0.4,1)_infinite]" />}
-                {unread && (runningCount > 0 || queuedCount > 0) && <span aria-hidden className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-brand ring-1 ring-background" />}
+                {unread && (runningCount > 0 || queuedCount > 0) && <span aria-hidden className="absolute bottom-0 right-0 size-2.5 rounded-full bg-brand ring-1 ring-background" />}
               </TooltipTrigger>
               <TooltipContent side="right" className="flex-col items-start">
                 <span className="font-semibold">{agent.name}</span>

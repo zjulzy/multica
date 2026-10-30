@@ -8,6 +8,9 @@ import {
   type PanelSize,
 } from "@multica/ui/components/ui/resizable";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+import { useT } from "@multica/views/i18n";
+import { Bot } from "lucide-react";
+import { AgentDock } from "./agent-dock";
 
 const DOCK_COLLAPSED_SIZE = 36;
 type InboxView = InboxSurfaceController["view"];
@@ -17,6 +20,8 @@ interface DesktopInboxDockLayoutProps {
   enabled: boolean;
   workspaceId: string | null;
   openRequest?: { workspaceId: string; key: string } | null;
+  agentRequest?: { workspaceId: string; agentId: string } | null;
+  onAgentRequestHandled?: (request: { workspaceId: string; agentId: string }) => void;
   onRequestHandled?: (request: { workspaceId: string; key: string }) => void;
   onTemporaryClose?: () => void;
 }
@@ -27,12 +32,14 @@ function DockInboxSurface({
   workspaceId,
   openRequest,
   onRequestHandled,
+  dockTabAction,
 }: {
   open: boolean;
   onToggle: () => void;
   workspaceId: string;
   openRequest?: { workspaceId: string; key: string } | null;
   onRequestHandled?: (request: { workspaceId: string; key: string }) => void;
+  dockTabAction?: ReactNode;
 }) {
   const [view, setViewState] = useState<InboxView>("inbox");
   const [selectedKey, setSelectedKeyState] = useState("");
@@ -78,6 +85,7 @@ function DockInboxSurface({
       enableGlobalArchiveShortcut={false}
       contentInert={!open}
       onDockHeaderToggle={onToggle}
+      dockTabAction={dockTabAction}
     />
   );
 }
@@ -88,9 +96,24 @@ export function DesktopInboxDockLayout({
   workspaceId,
   openRequest,
   onRequestHandled,
+  agentRequest,
+  onAgentRequestHandled,
   onTemporaryClose,
 }: DesktopInboxDockLayoutProps): ReactElement {
   const persistedDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
+  const { t } = useT("agents");
+  const [activeTab, setActiveTab] = useState<"inbox" | "agents">("inbox");
+  const [selectedAgent, setSelectedAgent] = useState<{ agentId: string } | null>(null);
+  const effectiveTab = agentRequest?.workspaceId === workspaceId ? "agents" : openRequest?.workspaceId === workspaceId ? "inbox" : activeTab;
+  useEffect(() => { setSelectedAgent(null); }, [workspaceId]);
+  useEffect(() => {
+    if (agentRequest && agentRequest.workspaceId === workspaceId) {
+      setActiveTab("agents");
+      setSelectedAgent({ agentId: agentRequest.agentId });
+      onAgentRequestHandled?.(agentRequest);
+    }
+  }, [agentRequest, workspaceId, onAgentRequestHandled]);
+  useEffect(() => { if (openRequest && openRequest.workspaceId === workspaceId) setActiveTab("inbox"); }, [openRequest, workspaceId]);
   const inboxDockOpen = onTemporaryClose ? true : persistedDockOpen;
   const inboxDockSize = useDesktopPrefsStore((state) => state.inboxDockSize);
   const setInboxDockOpen = useDesktopPrefsStore((state) => state.setInboxDockOpen);
@@ -99,15 +122,62 @@ export function DesktopInboxDockLayout({
   const [animating, setAnimating] = useState(false);
   const [frozenInboxHeight, setFrozenInboxHeight] = useState<number | null>(null);
   const inboxContentRef = useRef<HTMLDivElement>(null);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
   const animatingRef = useRef(false);
   const animationTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const userResizingRef = useRef(false);
+  const resizeGestureRef = useRef<{ kind: "pointer"; id: number } | { kind: "keyboard"; key: string } | null>(null);
+  const lastPointerIdRef = useRef<number | null>(null);
+  const resizeEndTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const stopDockMotion = useCallback(() => {
     clearTimeout(animationTimer.current);
     animatingRef.current = false;
     setAnimating(false);
     setFrozenInboxHeight(null);
   }, []);
-  useEffect(() => () => clearTimeout(animationTimer.current), []);
+  useEffect(() => {
+    const finishResize = () => {
+      clearTimeout(resizeEndTimer.current);
+      resizeEndTimer.current = setTimeout(() => { userResizingRef.current = false; resizeGestureRef.current = null; }, 100);
+    };
+    const pointerEnd = (event: PointerEvent) => {
+      if (resizeGestureRef.current?.kind === "pointer" && resizeGestureRef.current.id === event.pointerId) finishResize();
+    };
+    const keyEnd = (event: KeyboardEvent) => {
+      if (resizeGestureRef.current?.kind === "keyboard" && resizeGestureRef.current.key === event.key) finishResize();
+    };
+    const blur = () => { clearTimeout(resizeEndTimer.current); userResizingRef.current = false; resizeGestureRef.current = null; };
+    window.addEventListener("pointerup", pointerEnd);
+    window.addEventListener("pointercancel", pointerEnd);
+    window.addEventListener("keyup", keyEnd);
+    window.addEventListener("blur", blur);
+    return () => {
+      clearTimeout(animationTimer.current);
+      clearTimeout(resizeEndTimer.current);
+      window.removeEventListener("pointerup", pointerEnd);
+      window.removeEventListener("pointercancel", pointerEnd);
+      window.removeEventListener("keyup", keyEnd);
+      window.removeEventListener("blur", blur);
+    };
+  }, []);
+  const beginUserResize = useCallback((gesture: { kind: "pointer"; id: number } | { kind: "keyboard"; key: string }) => {
+    clearTimeout(resizeEndTimer.current);
+    userResizingRef.current = true;
+    resizeGestureRef.current = gesture;
+    stopDockMotion();
+  }, [stopDockMotion]);
+  useEffect(() => {
+    if (!enabled || !workspaceId) return;
+    const handle = resizeHandleRef.current;
+    if (!handle) return;
+    const onPointerDown = (event: PointerEvent) => { if (event.button === 0) lastPointerIdRef.current = event.pointerId; };
+    const observer = new MutationObserver(() => {
+      if (handle.getAttribute("data-separator") === "active" && lastPointerIdRef.current !== null) beginUserResize({ kind: "pointer", id: lastPointerIdRef.current });
+    });
+    document.addEventListener("pointerdown", onPointerDown, true);
+    observer.observe(handle, { attributes: true, attributeFilter: ["data-separator"] });
+    return () => { observer.disconnect(); document.removeEventListener("pointerdown", onPointerDown, true); };
+  }, [enabled, workspaceId, beginUserResize]);
   const dockPanelRef = usePanelRef();
   const initialDockSizeRef = useRef(`${inboxDockSize}%`);
   const inboxDockSizeRef = useRef(inboxDockSize);
@@ -130,8 +200,8 @@ export function DesktopInboxDockLayout({
       // react-resizable-panels reports a restored default layout on mount.
       // It is not a user resize and must not reopen a preference that was
       // deliberately persisted as collapsed.
-      if (!previousSize || animatingRef.current) return;
-      const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE;
+      if (!previousSize || animatingRef.current || !userResizingRef.current) return;
+      const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE + 0.5;
       if (nextOpen !== inboxDockOpen) {
         if (!nextOpen && onTemporaryClose) onTemporaryClose();
         else setInboxDockOpen(nextOpen);
@@ -143,10 +213,34 @@ export function DesktopInboxDockLayout({
   const handleLayoutChanged = useCallback(() => {
     if (animatingRef.current) return;
     const size = dockPanelRef.current?.getSize();
+    if (size && userResizingRef.current) {
+      const nextOpen = size.inPixels > DOCK_COLLAPSED_SIZE + 0.5;
+      if (nextOpen !== inboxDockOpen) {
+        if (!nextOpen && onTemporaryClose) onTemporaryClose();
+        else setInboxDockOpen(nextOpen);
+      }
+    }
     if (size && size.inPixels > DOCK_COLLAPSED_SIZE && useDesktopPrefsStore.getState().inboxDockOpen) {
       setInboxDockSize(size.asPercentage);
     }
-  }, [dockPanelRef, setInboxDockSize]);
+  }, [dockPanelRef, inboxDockOpen, onTemporaryClose, setInboxDockOpen, setInboxDockSize]);
+
+  const toggleDock = () => {
+    userResizingRef.current = false;
+    resizeGestureRef.current = null;
+    clearTimeout(resizeEndTimer.current);
+    clearTimeout(animationTimer.current);
+    if (motionEnabled) {
+      const inboxHeight = inboxContentRef.current?.getBoundingClientRect().height ?? 0;
+      const groupHeight = inboxContentRef.current?.closest('[data-slot="resizable-panel-group"]')?.getBoundingClientRect().height ?? 0;
+      if (inboxHeight) setFrozenInboxHeight(Math.max(inboxHeight, groupHeight * inboxDockSizeRef.current / 100));
+      animatingRef.current = true;
+      setAnimating(true);
+      animationTimer.current = setTimeout(stopDockMotion, 220);
+    }
+    if (inboxDockOpen && onTemporaryClose) onTemporaryClose();
+    else setInboxDockOpen(!inboxDockOpen);
+  };
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
@@ -156,12 +250,13 @@ export function DesktopInboxDockLayout({
     <ResizablePanelGroup
       orientation="vertical"
       data-dock-motion={animating && motionEnabled ? "on" : undefined}
-      onPointerDownCapture={stopDockMotion}
       className="pointer-events-none absolute inset-0 z-10 min-h-0 [&:has([data-separator=active])_*]:!cursor-row-resize [&:has([data-separator=active])]:!cursor-row-resize"
       onLayoutChanged={handleLayoutChanged}
     >
       <ResizablePanel id="content" defaultSize="62%" minSize="30%" />
-      <ResizableHandle className="pointer-events-auto cursor-row-resize" />
+      <ResizableHandle elementRef={resizeHandleRef} className="pointer-events-auto cursor-row-resize" onPointerDownCapture={(event) => { if (event.button === 0) beginUserResize({ kind: "pointer", id: event.pointerId }); }} onKeyDownCapture={(event) => {
+        if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) beginUserResize({ kind: "keyboard", key: event.key });
+      }} />
       <ResizablePanel
         id="inbox-dock"
         className="pointer-events-auto h-full !overflow-hidden bg-background"
@@ -173,27 +268,24 @@ export function DesktopInboxDockLayout({
         collapsible
         onResize={handleDockResize}
       >
-        <div ref={inboxContentRef} data-testid="dock-inbox-content" className="h-full" style={frozenInboxHeight ? { height: frozenInboxHeight, flex: "none" } : undefined}>
+        <div ref={inboxContentRef} data-testid="dock-inbox-content" className="relative h-full" style={frozenInboxHeight ? { height: frozenInboxHeight, flex: "none", contain: "layout paint" } : undefined}>
         <DockInboxSurface
           key={workspaceId}
           workspaceId={workspaceId}
           openRequest={openRequest}
           onRequestHandled={onRequestHandled}
-          open={inboxDockOpen}
+          open={inboxDockOpen && effectiveTab === "inbox"}
+          dockTabAction={<button type="button" aria-expanded={inboxDockOpen && effectiveTab === "agents"} onClick={() => {
+            if (inboxDockOpen && effectiveTab === "agents") {
+              toggleDock();
+            } else { setActiveTab("agents"); if (!inboxDockOpen) toggleDock(); }
+          }} className={`inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${inboxDockOpen && effectiveTab === "agents" ? "border-primary/30 bg-accent text-foreground" : ""}`}><Bot aria-hidden className="size-4" /><span className="text-body font-semibold">{t(($) => $.dock.title)}</span></button>}
           onToggle={() => {
-            clearTimeout(animationTimer.current);
-            if (motionEnabled) {
-              const inboxHeight = inboxContentRef.current?.getBoundingClientRect().height ?? 0;
-              const groupHeight = inboxContentRef.current?.closest('[data-slot="resizable-panel-group"]')?.getBoundingClientRect().height ?? 0;
-              if (inboxHeight) setFrozenInboxHeight(Math.max(inboxHeight, groupHeight * inboxDockSizeRef.current / 100));
-              animatingRef.current = true;
-              setAnimating(true);
-              animationTimer.current = setTimeout(stopDockMotion, 220);
-            }
-            if (inboxDockOpen && onTemporaryClose) onTemporaryClose();
-            else setInboxDockOpen(!inboxDockOpen);
+            if (inboxDockOpen && effectiveTab === "agents") { setActiveTab("inbox"); return; }
+            toggleDock();
           }}
         />
+        {(inboxDockOpen || animating) && effectiveTab === "agents" && <div inert={!inboxDockOpen || undefined} aria-hidden={!inboxDockOpen || undefined} className="absolute inset-x-0 bottom-0 top-9 bg-background"><AgentDock key={workspaceId} workspaceId={workspaceId} requestedAgent={agentRequest?.workspaceId === workspaceId ? agentRequest : selectedAgent} /></div>}
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>

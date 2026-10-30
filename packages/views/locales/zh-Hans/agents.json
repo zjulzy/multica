@@ -1,4 +1,5 @@
 {
+  "dock": {"title": "智能体", "active": "活跃智能体", "running": "运行中", "queued": "排队中", "minutes": "{{count}} 分钟", "current_task": "当前任务", "open_agent": "打开智能体", "no_issue": "无关联任务", "loading": "加载中…", "empty": "当前没有运行或排队的智能体", "progress_hint": "打开智能体页面可查看完整对话和运行记录。", "recent": "最近进展", "no_progress": "暂无文字输出。", "chat_task": "对话任务", "open_chat": "打开对话", "open_in_dock": "在底部面板查看", "progress_error": "进展加载失败。", "load_error": "无法加载活跃智能体。", "retry": "重试"},
   "status_hub": { "title": "活跃智能体", "counts": "运行中 {{running}} 个 · 排队 {{queued}} 个", "unread": "未读通知 {{count}} 条", "open_inbox": "点击打开最新未读通知", "open_agent": "点击打开智能体页面" },
   "page": {
     "title": "智能体",

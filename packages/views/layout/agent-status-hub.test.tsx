@@ -106,6 +106,15 @@ describe("AgentStatusHub", () => {
     expect(openUnread).toHaveBeenCalledWith("ws-1", "issue-1");
   });
 
+  it("opens an active agent in the Dock when it has no unread notification", () => {
+    data.agents = [agent("a", "Alice")];
+    data.tasks = [task("a", "running", "1")];
+    const openAgent = vi.fn();
+    renderWithI18n(<AgentStatusHub onOpenAgent={openAgent} />);
+    expect(fireEvent.click(screen.getByRole("link", { name: /Alice/ }))).toBe(false);
+    expect(openAgent).toHaveBeenCalledWith("ws-1", "a");
+  });
+
   it("preserves modifier-click navigation for an unread notification", () => {
     data.agents = [agent("a", "Alice")];
     data.inbox = [notification()];

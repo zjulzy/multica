@@ -437,6 +437,7 @@ export interface AppSidebarProps {
   showAgentStatusHub?: boolean;
   /** Handle Hub unread clicks with a platform-specific inbox surface. */
   onAgentUnreadOpen?: (workspaceId: string, key: string) => void;
+  onAgentDockOpen?: (workspaceId: string, agentId: string) => void;
 }
 
 export function AppSidebar({
@@ -447,6 +448,7 @@ export function AppSidebar({
   hideInboxNav = false,
   showAgentStatusHub = false,
   onAgentUnreadOpen,
+  onAgentDockOpen,
 }: AppSidebarProps = {}) {
   const { t } = useT("layout");
   const { pathname, push } = useNavigation();
@@ -924,7 +926,7 @@ export function AppSidebar({
         </SidebarContent>
 
         <SidebarFooter className="p-2">
-          {showAgentStatusHub && <AgentStatusHub onOpenUnread={onAgentUnreadOpen} />}
+          {showAgentStatusHub && <AgentStatusHub onOpenUnread={onAgentUnreadOpen} onOpenAgent={onAgentDockOpen} />}
           <SidebarMenu className="gap-0.5">
             {utilityNav.map((item) => {
               const href = p[item.key]();

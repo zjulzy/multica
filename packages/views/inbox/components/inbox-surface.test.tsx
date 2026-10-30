@@ -274,6 +274,16 @@ describe("InboxSurface dock controller", () => {
     expect(screen.getByRole("heading", { name: "Inbox" }).closest("button")).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("keeps both dock header buttons independently clickable when inbox content is inert", () => {
+    const inbox = vi.fn();
+    const agents = vi.fn();
+    render(<InboxSurface controller={controller()} variant="dock" layoutId="test" onDockHeaderToggle={inbox} contentInert dockTabAction={<button type="button" onClick={agents}>Agents</button>} />);
+    fireEvent.click(screen.getByRole("button", { name: /Inbox/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+    expect(inbox).toHaveBeenCalledTimes(1);
+    expect(agents).toHaveBeenCalledTimes(1);
+  });
+
   it("does not register the global archive shortcut when disabled", () => {
     state.items = [item()];
     renderDock(controller({ selectedKey: "issue-1" }));
