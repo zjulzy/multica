@@ -117,8 +117,23 @@ html[data-interface-motion="off"] [data-slot="button"]:active {
   html[data-interface-motion="on"] [data-sidebar="menu-button"] {
     transition: color 160ms ease, background-color 160ms ease;
   }
-  html[data-interface-motion="on"] [data-dock-motion="on"] > [data-slot="resizable-panel"] {
-    transition: flex-grow 180ms ease-out;
+  html[data-interface-motion="on"] [data-dock-motion="on"] {
     overflow: hidden;
   }
+  html[data-interface-motion="on"] [data-dock-motion-phase="opening"] {
+    animation: dock-slide-open 180ms ease-out both;
+  }
+  html[data-interface-motion="on"] [data-dock-motion-phase="closing"] {
+    animation: dock-slide-close 180ms ease-out both;
+  }
+}
+
+@keyframes dock-slide-open {
+  from { transform: var(--dock-motion-start, translateY(calc(100% - 36px))); }
+  to { transform: translateY(0); }
+}
+
+@keyframes dock-slide-close {
+  from { transform: var(--dock-motion-start, translateY(0)); }
+  to { transform: translateY(calc(100% - 36px)); }
 }

@@ -250,7 +250,7 @@ vi.mock("./autopilot-quota-notice", () => ({
     </button>
   ),
 }));
-vi.mock("../../i18n", () => ({ useT: () => ({ t: () => "Inbox" }) }));
+vi.mock("../../i18n", () => ({ useT: () => ({ t: (selector: (v: unknown) => unknown) => String(selector).includes("mark_all_read") ? "Mark all as read" : "Inbox" }) }));
 
 function item(overrides: Partial<InboxItem> = {}): InboxItem {
   return {

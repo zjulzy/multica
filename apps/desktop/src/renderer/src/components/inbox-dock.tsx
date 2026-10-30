@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { InboxSurface, type InboxSurfaceController } from "@multica/views/inbox";
 import {
   ResizableHandle,
@@ -126,6 +126,8 @@ export function DesktopInboxDockLayout({
   const setInboxDockSize = useDesktopPrefsStore((state) => state.setInboxDockSize);
   const motionEnabled = useDesktopPrefsStore((state) => state.interfaceMotionEnabled);
   const [animating, setAnimating] = useState(false);
+  const [motionPhase, setMotionPhase] = useState<"opening" | "closing" | null>(null);
+  const [motionStart, setMotionStart] = useState<string | null>(null);
   const [frozenInboxHeight, setFrozenInboxHeight] = useState<number | null>(null);
   const inboxContentRef = useRef<HTMLDivElement>(null);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
@@ -139,6 +141,8 @@ export function DesktopInboxDockLayout({
     clearTimeout(animationTimer.current);
     animatingRef.current = false;
     setAnimating(false);
+    setMotionPhase(null);
+    setMotionStart(null);
     setFrozenInboxHeight(null);
   }, []);
   useEffect(() => {
@@ -236,13 +240,20 @@ export function DesktopInboxDockLayout({
     resizeGestureRef.current = null;
     clearTimeout(resizeEndTimer.current);
     clearTimeout(animationTimer.current);
-    if (motionEnabled) {
+    if (motionEnabled && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      const currentTransform = animatingRef.current && inboxContentRef.current
+        ? window.getComputedStyle(inboxContentRef.current).transform
+        : "";
+      setMotionStart(currentTransform && currentTransform !== "none" ? currentTransform : null);
       const inboxHeight = inboxContentRef.current?.getBoundingClientRect().height ?? 0;
       const groupHeight = inboxContentRef.current?.closest('[data-slot="resizable-panel-group"]')?.getBoundingClientRect().height ?? 0;
       if (inboxHeight) setFrozenInboxHeight(Math.max(inboxHeight, groupHeight * inboxDockSizeRef.current / 100));
       animatingRef.current = true;
+      setMotionPhase(inboxDockOpen ? "closing" : "opening");
       setAnimating(true);
       animationTimer.current = setTimeout(stopDockMotion, 220);
+    } else {
+      stopDockMotion();
     }
     if (inboxDockOpen && onTemporaryClose) onTemporaryClose();
     else setInboxDockOpen(!inboxDockOpen);
@@ -265,7 +276,7 @@ export function DesktopInboxDockLayout({
       }} />
       <ResizablePanel
         id="inbox-dock"
-        className="pointer-events-auto h-full !overflow-hidden bg-background"
+        className={animating && frozenInboxHeight ? "pointer-events-auto h-full !overflow-visible bg-transparent" : "pointer-events-auto h-full !overflow-hidden bg-background"}
         panelRef={dockPanelRef}
         defaultSize={initialDockSizeRef.current}
         minSize={DOCK_COLLAPSED_SIZE}
@@ -274,7 +285,7 @@ export function DesktopInboxDockLayout({
         collapsible
         onResize={handleDockResize}
       >
-        <div ref={inboxContentRef} data-testid="dock-inbox-content" className="relative h-full" style={frozenInboxHeight ? { height: frozenInboxHeight, flex: "none", contain: "layout paint" } : undefined}>
+        <div ref={inboxContentRef} data-testid="dock-inbox-content" data-dock-motion-phase={frozenInboxHeight ? motionPhase ?? undefined : undefined} className="relative h-full bg-background" style={frozenInboxHeight ? { height: frozenInboxHeight, flex: "none", contain: "layout paint", position: "absolute", bottom: 0, left: 0, right: 0, ...(motionStart ? { "--dock-motion-start": motionStart } : {}) } as CSSProperties : undefined}>
         <DockInboxSurface
           key={workspaceId}
           workspaceId={workspaceId}

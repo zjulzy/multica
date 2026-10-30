@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   replace: vi.fn(),
   archive: vi.fn(),
   markRead: vi.fn(),
+  markAllRead: vi.fn(),
   clearFilters: vi.fn(),
   filterOut: false,
 }));
@@ -70,7 +71,7 @@ vi.mock("@multica/core/inbox/mutations", () => {
     useMarkInboxUnread: mutation,
     useArchiveInbox: () => ({ mutate: state.archive }),
     useUnarchiveInbox: mutation,
-    useMarkAllInboxRead: mutation,
+    useMarkAllInboxRead: () => ({ mutate: state.markAllRead, isPending: false }),
     useArchiveAllInbox: mutation,
     useArchiveAllReadInbox: mutation,
     useArchiveCompletedInbox: mutation,
@@ -121,7 +122,7 @@ vi.mock("../../layout/page-header", () => ({
 vi.mock("../../modals/use-issue-limit-upgrade-prompt", () => ({
   useIssueLimitUpgradePrompt: () => vi.fn(),
 }));
-vi.mock("../../i18n", () => ({ useT: () => ({ t: () => "Inbox" }) }));
+vi.mock("../../i18n", () => ({ useT: () => ({ t: (selector: (v: unknown) => unknown) => String(selector).includes("mark_all_read") ? "Mark all as read" : "Inbox" }) }));
 
 vi.mock("@multica/ui/hooks/use-mobile", () => ({ useIsCompact: () => false }));
 vi.mock("@multica/ui/components/ui/resizable", () => ({
@@ -207,8 +208,24 @@ describe("InboxSurface dock controller", () => {
     state.replace.mockClear();
     state.archive.mockClear();
     state.markRead.mockClear();
+    state.markAllRead.mockClear();
     state.clearFilters.mockClear();
     state.filterOut = false;
+  });
+
+  it.each(["page", "dock"] as const)("marks the whole inbox read directly from the %s header even with filters", (variant) => {
+    state.filterOut = true;
+    render(<InboxSurface controller={controller()} variant={variant} layoutId="test" />);
+    fireEvent.click(screen.getByRole("button", { name: "Mark all as read" }));
+    expect(state.markAllRead).toHaveBeenCalledTimes(1);
+    expect(state.markAllRead).toHaveBeenCalledWith(undefined, expect.objectContaining({ onError: expect.any(Function) }));
+  });
+
+  it("does not show the action in the archive or collapsed dock", () => {
+    const { rerender } = renderDock(controller({ view: "archived" }));
+    expect(screen.queryByRole("button", { name: "Mark all as read" })).toBeNull();
+    rerender(<InboxSurface controller={controller()} variant="dock" layoutId="test" contentInert />);
+    expect(screen.queryByRole("button", { name: "Mark all as read" })).toBeNull();
   });
 
   it("selects through the supplied controller without calling navigation", () => {

@@ -92,7 +92,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from "@multica/ui/components/ui/dropdown-menu";
 import { useIsCompact } from "@multica/ui/hooks/use-mobile";
 import { cn } from "@multica/ui/lib/utils";
@@ -632,6 +631,12 @@ export function InboxSurface({
         activeIssueIds={activeIssueIds}
         archived={isArchivedView}
       />}
+      {!isArchivedView && (variant === "page" || !contentInert) && (
+        <Button variant="ghost" size="sm" onClick={handleMarkAllRead} disabled={markAllReadMutation.isPending}>
+          <CheckCheck className="size-4" />
+          {t(($) => $.menu.mark_all_read)}
+        </Button>
+      )}
       {/* Batch actions are main-view only. Every entry archives from the MAIN
           inbox, so offering them while the archived list is on screen reads as
           "archive all of these" and does the opposite of what it looks like. */}
@@ -649,11 +654,6 @@ export function InboxSurface({
           <MoreHorizontal className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">
-          <DropdownMenuItem onClick={handleMarkAllRead}>
-            <CheckCheck className="h-4 w-4" />
-            {t(($) => $.menu.mark_all_read)}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleArchiveAll}>
             <Archive className="h-4 w-4" />
             {t(($) => $.menu.archive_all)}

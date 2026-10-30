@@ -367,6 +367,48 @@ describe("DesktopInboxDockLayout", () => {
     expect(group).not.toHaveAttribute("data-dock-motion", "on");
   });
 
+  it("moves the frozen dock as a bottom-anchored layer during open and close", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: true });
+    renderDock();
+    const inbox = screen.getByTestId("dock-inbox-content");
+    vi.spyOn(inbox, "getBoundingClientRect").mockReturnValue({ height: 240 } as DOMRect);
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(inbox).toHaveAttribute("data-dock-motion-phase", "opening");
+    expect(inbox.style.position).toBe("absolute");
+    expect(inbox.style.bottom).toBe("0px");
+    fireEvent.pointerDown(screen.getByTestId("dock-resize-handle"));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    expect(inbox).toHaveAttribute("data-dock-motion-phase", "closing");
+    expect(inbox.style.position).toBe("absolute");
+  });
+
+  it("continues from the current visual position when reversed during motion", () => {
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: true });
+    renderDock();
+    const inbox = screen.getByTestId("dock-inbox-content");
+    vi.spyOn(inbox, "getBoundingClientRect").mockReturnValue({ height: 240 } as DOMRect);
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    const closeButton = screen.getByRole("button", { name: "Collapse Inbox" });
+    const style = vi.spyOn(window, "getComputedStyle").mockReturnValue({ transform: "matrix(1, 0, 0, 1, 0, 70)" } as CSSStyleDeclaration);
+    try {
+      fireEvent.click(closeButton);
+      expect(inbox.style.getPropertyValue("--dock-motion-start")).toBe("matrix(1, 0, 0, 1, 0, 70)");
+      expect(inbox).toHaveAttribute("data-dock-motion-phase", "closing");
+    } finally { style.mockRestore(); }
+  });
+
+  it("does not freeze or animate the dock when reduced motion is requested", () => {
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+    try {
+      useDesktopPrefsStore.setState({ interfaceMotionEnabled: true });
+      renderDock();
+      fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+      expect(screen.getByTestId("dock-layout")).not.toHaveAttribute("data-dock-motion", "on");
+      expect(screen.getByTestId("dock-inbox-content")).not.toHaveAttribute("data-dock-motion-phase");
+    } finally { window.matchMedia = original; }
+  });
+
   it("animates opening and closing the agents panel while preserving its content during collapse", () => {
     useDesktopPrefsStore.setState({ interfaceMotionEnabled: true });
     renderDock();
