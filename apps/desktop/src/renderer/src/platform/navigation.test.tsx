@@ -401,44 +401,55 @@ describe("existing reserved workspace navigation", () => {
   });
 });
 
-import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+describe("workspaces shown in another window", () => {
+  function withOtherWindow(slug: string) {
+    const focusWorkspaceWindow = vi.fn(
+      (target: string, _path?: string) => target === slug,
+    );
+    Object.defineProperty(window, "desktopAPI", {
+      configurable: true,
+      value: {
+        runtimeConfig: { ok: true, config: { appUrl: "https://app.example" } },
+        windowContext: { kind: "main" },
+        focusWorkspaceWindow,
+      },
+    });
+    return focusWorkspaceWindow;
+  }
 
-describe("single-tab mode", () => {
-  beforeEach(() => {
-    useDesktopPrefsStore.setState({ singleTabMode: true });
-  });
-  afterEach(() => {
-    useDesktopPrefsStore.setState({ singleTabMode: false });
+  it.each(["push", "replace", "openInNewTab", "content"])(
+    "hands %s to the window that shows the workspace",
+    (action) => {
+      const focusWorkspaceWindow = withOtherWindow("butter");
+      const adapter = renderProvider();
+      act(() => {
+        if (action === "content") routeContentLinkPath("/butter/issues/BUT-1");
+        else if (action === "openInNewTab") adapter().openInNewTab!("/butter/issues/BUT-1");
+        else if (action === "replace") adapter().replace("/butter/issues/BUT-1");
+        else adapter().push("/butter/issues/BUT-1");
+      });
+
+      expect(focusWorkspaceWindow).toHaveBeenCalledWith("butter", "/butter/issues/BUT-1");
+      expect(useTabStore.getState().activeWorkspaceSlug).toBe("acme");
+      expect(useTabStore.getState().byWorkspace.butter).toBeUndefined();
+    },
+  );
+
+  it("focuses that window without a path for a workspace switcher click", () => {
+    const focusWorkspaceWindow = withOtherWindow("butter");
+    const adapter = renderProvider();
+    act(() => adapter().push("/butter/issues"));
+
+    expect(focusWorkspaceWindow).toHaveBeenCalledWith("butter", undefined);
+    expect(useTabStore.getState().activeWorkspaceSlug).toBe("acme");
   });
 
-  it("openInNewTab navigates the active session instead of adding a tab", () => {
-    const getAdapter = renderProvider();
-    getAdapter().openInNewTab!("/acme/agents", "Agents", { activate: true });
-    const group = acmeGroup();
-    expect(group.tabs).toHaveLength(1);
-    expect(getActiveTab(useTabStore.getState())?.url).toBe("/acme/agents");
-  });
+  it("switches in place when no other window shows the workspace", () => {
+    const focusWorkspaceWindow = withOtherWindow("butter");
+    const adapter = renderProvider();
+    act(() => adapter().push("/zebra/issues"));
 
-  it("openInNewTab still switches workspace for a cross-workspace path", () => {
-    const getAdapter = renderProvider();
-    getAdapter().openInNewTab!("/butter/inbox");
-    expect(useTabStore.getState().activeWorkspaceSlug).toBe("butter");
-  });
-
-  it("push from a pinned tab stays in that tab", () => {
-    const store = useTabStore.getState();
-    store.togglePin(getActiveTab(store)!.id);
-    const getAdapter = renderProvider();
-    getAdapter().push("/acme/projects");
-    const group = acmeGroup();
-    expect(group.tabs).toHaveLength(1);
-    expect(group.tabs[0].url).toBe("/acme/projects");
-  });
-
-  it("content links with a modifier disposition navigate in place", () => {
-    renderProvider();
-    routeContentLinkPath("/acme/agents", "background-tab");
-    expect(acmeGroup().tabs).toHaveLength(1);
-    expect(getActiveTab(useTabStore.getState())?.url).toBe("/acme/agents");
+    expect(focusWorkspaceWindow).toHaveBeenCalledWith("zebra", undefined);
+    expect(useTabStore.getState().activeWorkspaceSlug).toBe("zebra");
   });
 });

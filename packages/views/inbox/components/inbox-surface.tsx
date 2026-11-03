@@ -92,6 +92,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@multica/ui/components/ui/dropdown-menu";
 import { useIsCompact } from "@multica/ui/hooks/use-mobile";
 import { cn } from "@multica/ui/lib/utils";
@@ -654,6 +655,11 @@ export function InboxSurface({
           <MoreHorizontal className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto">
+          <DropdownMenuItem onClick={openArchived}>
+            <Archive className="h-4 w-4" />
+            {t(($) => $.list.archived_title)}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleArchiveAll}>
             <Archive className="h-4 w-4" />
             {t(($) => $.menu.archive_all)}
@@ -727,7 +733,6 @@ export function InboxSurface({
         loadMoreError={archiveQuery.isFetchNextPageError}
         onSelect={handleSelect}
         onAction={isArchivedView ? handleUnarchive : handleArchive}
-        onOpenArchived={openArchived}
         emptyLabel={
           hasActiveFilters && visibleItems.length === 0
             ? t(($) => $.filters.empty)

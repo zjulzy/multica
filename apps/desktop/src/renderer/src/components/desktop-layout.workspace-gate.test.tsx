@@ -79,14 +79,20 @@ vi.mock("@multica/views/platform", () => ({
 // Each workspace-scoped component gets a marker so the assertions can tell
 // which of them the shell decided to mount.
 vi.mock("@multica/views/layout", () => ({
-  AppSidebar: ({ hideInboxNav }: { hideInboxNav?: boolean }) => (
-    <div data-testid="app-sidebar" data-hide-inbox={hideInboxNav} />
-  ),
+  AppRail: () => <div data-testid="app-rail" />,
+  AgentStatusHub: () => null,
+  PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  AppShellProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  CompactNavSheet: () => null,
   GlobalShortcuts: () => <div data-testid="global-shortcuts" />,
   NavigationProgress: () => <div data-testid="navigation-progress" />,
-  PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  NewIssueButton: () => <div data-testid="title-bar-new-issue" />,
+  SearchButton: () => <div data-testid="title-bar-search" />,
+  ShellRouteDataPrefetch: ({ children }: { children: ReactNode }) => <>{children}</>,
+  SpacePanel: () => <div data-testid="space-panel" />,
+  useAppShell: () => ({ hasPanel: true }),
+  useTabPresentation: () => ({ visual: { kind: "icon", icon: "Inbox" }, title: "" }),
   ResourceLeadingVisual: () => null,
-  useTabPresentation: () => ({ visual: { kind: "icon", icon: "issues" }, title: "" }),
 }));
 
 vi.mock("@multica/views/modals/registry", () => ({
@@ -106,7 +112,6 @@ vi.mock("@multica/views/search", () => ({
     }
     return <div data-testid="search-command" />;
   },
-  SearchTrigger: () => null,
 }));
 
 vi.mock("@multica/views/chat", () => ({
@@ -115,30 +120,11 @@ vi.mock("@multica/views/chat", () => ({
 
 vi.mock("./tab-bar", () => ({ TabBar: () => null }));
 vi.mock("./window-overlay", () => ({ WindowOverlay: () => null }));
-vi.mock("./inbox-dock", () => ({
-  DesktopInboxDockLayout: ({
-    children,
-    enabled,
-    workspaceId,
-  }: {
-    children: ReactNode;
-    enabled: boolean;
-    workspaceId: string | null;
-  }) =>
-    enabled && workspaceId ? (
-      <div data-testid="inbox-dock-layout" data-workspace-id={workspaceId}>
-        {children}
-      </div>
-    ) : (
-      <>{children}</>
-    ),
-}));
 vi.mock("./tab-content", () => ({
   TabContent: () => <div data-testid="tab-content" />,
 }));
 
 const { DesktopShell } = await import("./desktop-layout");
-const { useDesktopPrefsStore } = await import("@/stores/desktop-prefs-store");
 
 function renderShell() {
   (
@@ -170,19 +156,17 @@ beforeEach(() => {
   localStorage.clear();
   state.currentSlug = "acme";
   state.wsList = [{ id: "ws-1", slug: "acme" }];
-  useDesktopPrefsStore.setState({
-    singleTabMode: false,
-    inboxDockEnabled: false,
-    inboxDockOpen: false,
-  });
 });
 
 describe("DesktopShell workspace gating", () => {
   it("mounts workspace-scoped chrome while the slug resolves", () => {
     const { queryByRole, queryByTestId } = renderShell();
 
-    expect(queryByTestId("app-sidebar")).not.toBeNull();
+    expect(queryByTestId("app-rail")).not.toBeNull();
+    expect(queryByTestId("space-panel")).not.toBeNull();
     expect(queryByTestId("search-command")).not.toBeNull();
+    expect(queryByTestId("title-bar-new-issue")).not.toBeNull();
+    expect(queryByTestId("title-bar-search")).not.toBeNull();
     expect(queryByTestId("global-shortcuts")).not.toBeNull();
     expect(queryByTestId("modal-registry")).not.toBeNull();
     expect(queryByTestId("floating-chat")).not.toBeNull();
@@ -194,7 +178,7 @@ describe("DesktopShell workspace gating", () => {
 
     const { container, getByRole, getByTestId, queryByTestId } = renderShell();
 
-    expect(queryByTestId("app-sidebar")).toBeNull();
+    expect(queryByTestId("app-rail")).toBeNull();
     expect(
       container.querySelectorAll("[data-slot='sidebar-trigger']"),
     ).toHaveLength(0);
@@ -214,8 +198,10 @@ describe("DesktopShell workspace gating", () => {
 
     const { queryByTestId } = renderShell();
 
-    expect(queryByTestId("app-sidebar")).toBeNull();
+    expect(queryByTestId("app-rail")).toBeNull();
+    expect(queryByTestId("space-panel")).toBeNull();
     expect(queryByTestId("search-command")).toBeNull();
+    expect(queryByTestId("title-bar-new-issue")).toBeNull();
     expect(queryByTestId("global-shortcuts")).toBeNull();
     expect(queryByTestId("modal-registry")).toBeNull();
     expect(queryByTestId("floating-chat")).toBeNull();
@@ -224,25 +210,10 @@ describe("DesktopShell workspace gating", () => {
 
   it("keeps TabContent mounted with no workspace so the tab router can still resolve one", () => {
     state.wsList = [];
-    useDesktopPrefsStore.setState({ inboxDockEnabled: true });
 
     const { queryByTestId } = renderShell();
 
     expect(queryByTestId("tab-content")).not.toBeNull();
-    expect(queryByTestId("inbox-dock-layout")).toBeNull();
-  });
-
-  it("mounts the Inbox dock only after a workspace resolves", () => {
-    useDesktopPrefsStore.setState({ inboxDockEnabled: true });
-
-    const { getByTestId } = renderShell();
-
-    expect(getByTestId("inbox-dock-layout")).toHaveAttribute(
-      "data-workspace-id",
-      "ws-1",
-    );
-    expect(getByTestId("app-sidebar")).toHaveAttribute("data-hide-inbox", "true");
-    expect(getByTestId("tab-content")).toBeInTheDocument();
   });
 
   // The shell had no navigation feedback at all before MUL-6404 — the bar
@@ -264,7 +235,8 @@ describe("DesktopShell workspace gating", () => {
 
     const { queryByTestId } = renderShell();
 
-    expect(queryByTestId("app-sidebar")).toBeNull();
+    expect(queryByTestId("app-rail")).toBeNull();
     expect(queryByTestId("search-command")).toBeNull();
+    expect(queryByTestId("title-bar-new-issue")).toBeNull();
   });
 });

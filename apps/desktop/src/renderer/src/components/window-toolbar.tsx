@@ -6,12 +6,9 @@ import {
   useState,
   type PointerEventHandler,
 } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "@multica/ui/icons";
 import { cn } from "@multica/ui/lib/utils";
-import {
-  SidebarTrigger,
-  useSidebar,
-} from "@multica/ui/components/ui/sidebar";
+import { SidebarTrigger } from "@multica/ui/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +21,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@multica/ui/components/ui/tooltip";
+import { TruncatedTooltip } from "@multica/ui/components/common/truncated-tooltip";
 import {
   ResourceLeadingVisual,
+  useAppShell,
   useTabPresentation,
 } from "@multica/views/layout";
 import { ActionShortcutKeycaps } from "@multica/views/common/shortcut-keycaps";
@@ -37,16 +36,13 @@ import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
 // Controls sit left-aligned just past the macOS traffic lights, which end
 // around x=76 with trafficLightPosition { x: 16 }. The clearance covers that
-// inset plus Back, Forward and the sidebar toggle (3 × 28px, 2 × 8px gaps) and
-// a 12px trailing pad, and matches the sidebar's minimum width so the
-// controls always fit inside the expanded sidebar column.
-// macOS: leave room for the traffic lights; Windows: plain left padding.
+// macOS traffic lights are on the left; Windows window buttons are on the right.
 function leadingClearance(): number {
   return isWindowsDesktop() ? 12 : 88;
 }
-// Total width of the toolbar (clearance + back/forward/sidebar buttons).
+export const WINDOW_TOOLBAR_CLEARANCE = 200;
 export function windowToolbarClearance(): number {
-  return isWindowsDesktop() ? 124 : 200;
+  return isWindowsDesktop() ? 124 : WINDOW_TOOLBAR_CLEARANCE;
 }
 const LONG_PRESS_DURATION_MS = 500;
 const LONG_PRESS_MOVE_TOLERANCE_PX = 8;
@@ -176,23 +172,20 @@ function HistoryMenuItem({
       onClick={onSelect}
     >
       <ResourceLeadingVisual visual={visual} />
-      <span className="min-w-0 flex-1 truncate" title={title}>
-        {title}
-      </span>
+      <TruncatedTooltip content={title}>
+        <span className="min-w-0 flex-1 truncate">
+          {title}
+        </span>
+      </TruncatedTooltip>
     </DropdownMenuItem>
   );
 }
 
 export function WindowToolbar() {
   const { t } = useT("layout");
-  const { state: sidebarState, isCompact } = useSidebar();
-  const sidebarHidden = sidebarState === "collapsed" || isCompact;
-  const clearance = windowToolbarClearance();
-  // Single-tab mode runs a taller (48px) top bar; keep the nav buttons centered.
+  const shell = useAppShell();
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
-  const toolbarWidth: React.CSSProperties["width"] = sidebarHidden
-    ? clearance
-    : `max(var(--sidebar-live-width, var(--sidebar-width)), ${clearance}px)`;
+  const toolbarWidth = windowToolbarClearance();
   const {
     canGoBack,
     canGoForward,
@@ -268,7 +261,6 @@ export function WindowToolbar() {
   return (
     <div
       data-slot="window-toolbar"
-      data-sidebar-resize-consumer
       className={cn(
         "fixed left-0 top-0 z-30 flex shrink-0 items-center pr-3",
         singleTabMode ? "h-12" : "h-10",
@@ -379,6 +371,14 @@ export function WindowToolbar() {
         <SidebarTrigger
           className="size-7 text-faint-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           shortcut={<ActionShortcutKeycaps action="toggleSidebar" />}
+          onClick={
+            shell
+              ? (event) => {
+                  event.preventDefault();
+                  shell.toggleNav();
+                }
+              : undefined
+          }
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         />
       </div>

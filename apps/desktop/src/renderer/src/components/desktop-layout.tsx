@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@multica/ui/lib/utils";
 import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
@@ -13,15 +12,21 @@ import {
 } from "@multica/ui/components/ui/sidebar";
 import { ModalRegistry } from "@multica/views/modals/registry";
 import {
-  AppSidebar,
-  GlobalShortcuts,
-  NavigationProgress,
+  AppRail,
+  AgentStatusHub,
   PageHeaderPortalProvider,
   ResourceLeadingVisual,
   useTabPresentation,
+  AppShellProvider,
+  CompactNavSheet,
+  GlobalShortcuts,
+  NavigationProgress,
+  NewIssueButton,
+  SearchButton,
+  ShellRouteDataPrefetch,
+  SpacePanel,
 } from "@multica/views/layout";
-import { useActiveTabUrl } from "@/stores/tab-store";
-import { SearchCommand, SearchTrigger } from "@multica/views/search";
+import { SearchCommand } from "@multica/views/search";
 import { FloatingChat } from "@multica/views/chat";
 import { WorkspaceSlugProvider, paths, useCurrentWorkspace } from "@multica/core/paths";
 import { workspaceListOptions } from "@multica/core/workspace";
@@ -36,31 +41,26 @@ import {
   DesktopNavigationProvider,
   routeContentLinkPath,
 } from "@/platform/navigation";
+import { useRenderedRouteStore } from "@/stores/rendered-route-store";
+import { useActiveTabUrl } from "@/stores/tab-store";
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+import { DesktopInboxDockLayout } from "./inbox-dock";
+import { SakuraDecoration } from "./sakura-decoration";
+import { ThemeAmbience } from "./theme-ambience";
 import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
 import { WindowOverlay } from "./window-overlay";
 import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
-import { DesktopInboxDockLayout } from "./inbox-dock";
-import { SakuraDecoration } from "./sakura-decoration";
-import { ThemeAmbience } from "./theme-ambience";
 import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop-os";
-import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 
-// Tabbed: 40px; single-tab mode: 48px (page-header height). Keep in sync with
-// TOP_BAR_HEIGHT_* in platform/title-bar-overlay-sync.tsx and window-toolbar.tsx.
-function useTopBarHeightClass(): string {
+const TOP_BAR_HEIGHT_CLASS = "h-10";
+const RAIL_WIDTH = 64;
+const TITLE_BAR_ACTION_CLASS =
+  "flex size-7 items-center justify-center rounded-md text-faint-foreground transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 [&_svg]:size-4";
+
+function RailTopSpacer() {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
-  return singleTabMode ? "h-12" : "h-10";
-}
-const toolbarMotion = {
-  type: "spring",
-  stiffness: 420,
-  damping: 38,
-  mass: 0.8,
-} as const;
-
-function SidebarTopSpacer() {
-  return <div className={cn("shrink-0", useTopBarHeightClass())} />;
+  return <div className={cn("shrink-0", singleTabMode ? "h-12" : TOP_BAR_HEIGHT_CLASS)} />;
 }
 
 function useNativeNavigationGestures() {
@@ -78,44 +78,25 @@ function useNativeNavigationGestures() {
 }
 
 
-// The main area's top bar doubles as a window drag region. When the sidebar
-// is not occupying enough main-flow width, leave the remainder here so tabs
-// do not land beneath the traffic lights / navigation controls. The matching
-// 200ms transition cancels the sidebar gap's movement during toggle; live
-// resize previews disable it through data-sidebar-resize-consumer.
-function MainTopBar({
-  sidebarMounted,
-  headerSlotRef,
-}: {
-  sidebarMounted: boolean;
-  /** Single-tab mode: where page headers portal their breadcrumb/actions. */
-  headerSlotRef: (el: HTMLDivElement | null) => void;
-}) {
-  const { state, isCompact } = useSidebar();
-  const sidebarHidden = !sidebarMounted || state === "collapsed" || isCompact;
-  const clearance = windowToolbarClearance();
-  const toolbarClearance: React.CSSProperties["paddingLeft"] = sidebarHidden
-    ? clearance
-    : `max(0px, calc(${clearance}px - var(--sidebar-live-width, var(--sidebar-width))))`;
-  // Windows draws the native window buttons over the top-right corner; keep
-  // tabs and the "+" button out from under them. The drag region still
-  // extends to the edge so the strip stays grabbable.
-  const controlsClearance = isWindowsDesktop() ? WINDOWS_CONTROLS_CLEARANCE : 0;
-  // Single-tab mode keeps the bar (drag region, nav buttons, Windows window
-  // controls) and drops only the strip itself.
+// The main area's top bar doubles as a window drag region. The window
+// toolbar (traffic lights, history, panel toggle) floats over the rail and
+// the start of this bar, so the tabs start past whatever the rail leaves of
+// its width. New issue and search hold the far end; the tabs give way to
+// them.
+function MainTopBar({ railMounted, headerSlotRef }: { railMounted: boolean; headerSlotRef: (el: HTMLDivElement | null) => void }) {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
-  const topBarHeightClass = useTopBarHeightClass();
+  const { isCompact } = useSidebar();
+  const clearance = windowToolbarClearance();
+  const toolbarClearance =
+    railMounted && !isCompact
+      ? clearance - RAIL_WIDTH
+      : clearance;
 
   return (
     <header
       data-slot="main-top-bar"
-      data-testid="main-top-bar"
-      data-sidebar-resize-consumer
-      className={cn(
-        "relative shrink-0 flex items-center gap-2 transition-[padding-left] duration-200 ease-out motion-reduce:transition-none",
-        topBarHeightClass,
-      )}
-      style={{ paddingLeft: toolbarClearance, paddingRight: controlsClearance }}
+      className={cn("relative shrink-0 flex items-center gap-2", singleTabMode ? "h-12" : TOP_BAR_HEIGHT_CLASS)}
+      style={{ paddingLeft: toolbarClearance, paddingRight: isWindowsDesktop() ? WINDOWS_CONTROLS_CLEARANCE : 0 }}
     >
       <div
         aria-hidden
@@ -131,20 +112,22 @@ function MainTopBar({
         data-slot="main-top-bar-content"
         className="relative z-10 flex h-full min-w-0 max-w-full flex-1 items-center"
       >
-        {singleTabMode ? (
-          <SingleTabHeaderSlot headerSlotRef={headerSlotRef} />
-        ) : (
-          <TabBar />
-        )}
+        {singleTabMode ? <SingleTabHeaderSlot headerSlotRef={headerSlotRef} /> : <TabBar />}
       </div>
+      {railMounted && (
+        <div
+          data-slot="title-bar-actions"
+          className="relative z-10 ml-auto flex shrink-0 items-center gap-2 pr-3"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          <NewIssueButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
+          <SearchButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
+        </div>
+      )}
     </header>
   );
 }
 
-// Single-tab mode: the top bar hosts the page header (breadcrumb + actions)
-// through a portal. A leading visual derived from the active URL — the same
-// icon/status the tab strip would show — makes it read as a title bar rather
-// than a bare breadcrumb.
 function SingleTabHeaderSlot({
   headerSlotRef,
 }: {
@@ -171,31 +154,36 @@ function SingleTabHeaderSlot({
   );
 }
 
-// The canvas hugs the expanded sidebar with a hairline gap. When the sidebar
-// leaves the main flow, the left margin must grow to mirror the fixed mr-2 so
-// the floating canvas sits symmetrically inside the window frame.
+// The content card: the space panel and the tab content share one surface,
+// split by a single hairline. It hugs the rail; without one (compact, or no
+// workspace yet) it mirrors the fixed mr-2 so it sits centred in the frame.
 function MainCanvas({
   children,
+  railMounted,
   showWorkspaceLoading,
 }: {
   children: React.ReactNode;
+  railMounted: boolean;
   showWorkspaceLoading: boolean;
 }) {
-  const { state, isCompact } = useSidebar();
+  const { isCompact } = useSidebar();
   const { t } = useT("layout");
-  const sidebarHidden = state === "collapsed" || isCompact;
   const loadingLabel = t(($) => $.workspace_loader.loading_workspace);
 
   return (
-    <motion.div
-      animate={{ marginLeft: sidebarHidden ? 8 : 2 }}
-      className="relative flex flex-1 min-h-0 flex-col overflow-hidden mr-2 mb-2 rounded-xl bg-page-canvas ring-1 ring-surface-border shadow-[var(--surface-shadow)]"
-      initial={false}
-      transition={toolbarMotion}
+    <div
+      data-slot="main-canvas"
+      className={cn(
+        "relative mr-2 mb-2 flex min-h-0 flex-1 flex-row overflow-hidden rounded-xl bg-page-canvas shadow-[var(--surface-shadow)] ring-1 ring-surface-border",
+        railMounted && !isCompact ? "ml-0" : "ml-2",
+      )}
     >
       <SakuraDecoration />
       <ThemeAmbience />
-      {children}
+      {railMounted && <SpacePanel />}
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
       {showWorkspaceLoading && (
         <div
           aria-label={loadingLabel}
@@ -204,12 +192,12 @@ function MainCanvas({
           role="status"
         >
           <div className="flex flex-col items-center gap-4">
-            <MulticaIcon className="size-8 animate-pulse" />
+            <MulticaIcon mode="think" size={40} />
             <p className="text-body text-muted-foreground">{loadingLabel}</p>
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
@@ -278,7 +266,7 @@ export function DesktopShell() {
 
   // Reactive read of current workspace slug from the platform singleton.
   // On first mount, it is null until WorkspaceRouteLayout (inside the tab
-  // router) sets it. Once set, the sidebar and other shell-level components
+  // router) sets it. Once set, the rail and other shell-level components
   // can resolve workspace-scoped paths via useWorkspacePaths().
   const currentSlug = useSyncExternalStore(
     subscribeToCurrentSlug,
@@ -354,13 +342,15 @@ export function DesktopShell() {
   }, [inboxDockEnabled, temporaryDockWorkspace, setInboxDockOpen]);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
+  const renderedPathname = useRenderedRouteStore((s) => s.pathname);
+
   return (
     <DesktopNavigationProvider>
       {/* WorkspaceSlugProvider accepts null — components that need slug
           use useWorkspaceSlug() (nullable) or useRequiredWorkspaceSlug()
           (throws). TabContent MUST always render so the tab router can
           mount WorkspaceRouteLayout, which calls setCurrentWorkspace()
-          to populate the slug. The sidebar gates on the resolved slug
+          to populate the slug. The rail gates on the resolved slug
           (see above) to avoid the useRequiredWorkspaceSlug and
           useWorkspaceId throws. Zero-workspace users see the
           window-level overlay (new-workspace flow) triggered by
@@ -376,54 +366,55 @@ export function DesktopShell() {
           {/* hasExternalTrigger: WindowToolbar below parks a SidebarTrigger
               beside the traffic lights, where it is always reachable. Page
               headers inside the canvas must not add their own fallback one on
-              top of it — desktop windows sit below `xl`, exactly where that
+              top of it — desktop windows often sit in the band where that
               fallback renders, so every page showed a second identical icon
               50px under this one (MUL-6218). */}
           <SidebarProvider
             hasExternalTrigger
             className="flex-1 bg-app-shell [--sidebar-wrapper-fill:var(--app-shell)]"
           >
-            {slug && <GlobalShortcuts />}
-            {slug && <WindowToolbar />}
-            {slug && (
-              <AppSidebar
-                showAgentStatusHub={agentStatusHubEnabled}
-                onAgentUnreadOpen={openHubUnread}
-                onAgentDockOpen={openHubAgent}
-                hideInboxNav={inboxDockEnabled}
-                topSlot={<SidebarTopSpacer />}
-                searchSlot={<SearchTrigger />}
-              />
-            )}
-            {/* Right side: header + content container */}
-            <div className="flex flex-1 min-w-0 flex-col">
-              <MainTopBar
-                sidebarMounted={Boolean(slug)}
-                headerSlotRef={setHeaderSlot}
-              />
-              <MainCanvas showWorkspaceLoading={!slug}>
-                {/* Same indicator, same anchor as web: DashboardLayout puts it
-                    at the top of SidebarInset, and MainCanvas is desktop's
-                    equivalent relative/overflow-hidden content box. Desktop
-                    used to have no navigation feedback at all — a click just
-                    froze until the destination committed (MUL-6404). */}
-                <NavigationProgress />
-                <DesktopInboxDockLayout
-                  enabled={inboxDockEnabled || temporaryDockVisible}
-                  workspaceId={resolvedWorkspace?.id ?? null}
-                  openRequest={dockRequest}
-                  agentRequest={agentDockRequest}
-                  onAgentRequestHandled={handleAgentDockRequest}
-                  onRequestHandled={handleDockRequest}
-                  onTemporaryClose={temporaryDockVisible ? closeTemporaryDock : undefined}
-                >
-                  <PageHeaderPortalProvider value={singleTabMode ? headerSlot : null}>
-                    <TabContent />
-                  </PageHeaderPortalProvider>
-                </DesktopInboxDockLayout>
-                {slug && <FloatingChat />}
-              </MainCanvas>
-            </div>
+            <AppShellProvider renderedPathname={renderedPathname}>
+              <ShellRouteDataPrefetch>
+                {slug && <GlobalShortcuts />}
+                {slug && <WindowToolbar />}
+                {slug && (
+                  <AppRail
+                    topSlot={<RailTopSpacer />}
+                    globalActions={false}
+                    bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null}
+                    className="hidden pt-0 md:flex"
+                  />
+                )}
+                {slug && <CompactNavSheet globalActions={false} />}
+                {/* Right side: header + content card */}
+                <div className="flex flex-1 min-w-0 flex-col">
+                  <MainTopBar railMounted={Boolean(slug)} headerSlotRef={setHeaderSlot} />
+                  <MainCanvas railMounted={Boolean(slug)} showWorkspaceLoading={!slug}>
+                    {/* Same indicator, same anchor as web: DashboardLayout puts
+                        it at the top of the content column, and this is
+                        desktop's equivalent relative/overflow-hidden box.
+                        Desktop used to have no navigation feedback at all — a
+                        click just froze until the destination committed
+                        (MUL-6404). */}
+                    <NavigationProgress />
+                    <DesktopInboxDockLayout
+                      enabled={inboxDockEnabled || temporaryDockVisible}
+                      workspaceId={resolvedWorkspace?.id ?? null}
+                      openRequest={dockRequest}
+                      agentRequest={agentDockRequest}
+                      onAgentRequestHandled={handleAgentDockRequest}
+                      onRequestHandled={handleDockRequest}
+                      onTemporaryClose={temporaryDockVisible ? closeTemporaryDock : undefined}
+                    >
+                      <PageHeaderPortalProvider value={singleTabMode ? headerSlot : null}>
+                        <TabContent />
+                      </PageHeaderPortalProvider>
+                      {slug && <FloatingChat />}
+                    </DesktopInboxDockLayout>
+                  </MainCanvas>
+                </div>
+              </ShellRouteDataPrefetch>
+            </AppShellProvider>
           </SidebarProvider>
         </div>
         {slug && <ModalRegistry />}

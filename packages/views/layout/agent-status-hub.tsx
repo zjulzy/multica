@@ -15,7 +15,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/
 import { AppLink } from "../navigation";
 import { useT } from "../i18n";
 
-export function AgentStatusHub({ onOpenUnread, onOpenAgent }: { onOpenUnread?: (workspaceId: string, key: string) => void; onOpenAgent?: (workspaceId: string, agentId: string) => void } = {}) {
+export function AgentStatusHub({ onOpenUnread, onOpenAgent, compact = false }: { onOpenUnread?: (workspaceId: string, key: string) => void; onOpenAgent?: (workspaceId: string, agentId: string) => void; compact?: boolean } = {}) {
   const workspace = useCurrentWorkspace();
   const paths = useWorkspacePaths();
   const { t } = useT("agents");
@@ -47,10 +47,10 @@ export function AgentStatusHub({ onOpenUnread, onOpenAgent }: { onOpenUnread?: (
 
   if (!workspace || active.length === 0) return null;
   return (
-    <section aria-label={t(($) => $.status_hub.title)} className="border-t border-sidebar-border px-2 pt-2 pb-1">
+    <section aria-label={t(($) => $.status_hub.title)} className={compact ? "w-16 border-t border-sidebar-border px-1 pt-2 pb-1" : "border-t border-sidebar-border px-2 pt-2 pb-1"}>
       <style>{`@keyframes agent-hub-unread-ripple { 0% { opacity: .7; transform: scale(1); } 75%, 100% { opacity: 0; transform: scale(1.4); } }`}</style>
-      <p className="px-1 text-caption text-muted-foreground">{t(($) => $.status_hub.title)}</p>
-      <div className="mt-2 flex flex-wrap gap-1.5 p-1">
+      <p className={compact ? "sr-only" : "px-1 text-caption text-muted-foreground"}>{t(($) => $.status_hub.title)}</p>
+      <div className={compact ? "flex flex-wrap justify-center gap-1.5 p-1" : "mt-2 flex flex-wrap gap-1.5 p-1"}>
         {active.map(({ agent, runningCount, queuedCount, unread }) => {
           const counts = t(($) => $.status_hub.counts, { running: runningCount, queued: queuedCount });
           const unreadLabel = unread ? t(($) => $.status_hub.unread, { count: unread.count }) : null;

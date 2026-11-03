@@ -14,6 +14,11 @@ import {
 } from "@/stores/tab-store";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
 import { isSingleTabMode } from "@/stores/desktop-prefs-store";
+import {
+  handOffToWorkspaceWindow,
+  openWorkspaceInNewWindow,
+  otherWindowWorkspaces,
+} from "./workspace-windows";
 
 function requireRuntimeAppUrl(scope: string): string {
   const runtimeConfig = window.desktopAPI.runtimeConfig;
@@ -79,7 +84,8 @@ function tryRouteToOverlay(path: string): boolean {
  *
  * The target's bare Issues root (what the workspace switchers send, and where
  * web lands) resumes the workspace's last active tab instead, or Issues if it
- * has none. Any deeper path opens exactly that path.
+ * has none. Any deeper path opens exactly that path. When another window
+ * already shows the target workspace, that window takes the navigation.
  */
 function tryRouteToOtherWorkspace(path: string): boolean {
   const targetSlug = workspaceSlugForPath(path);
@@ -87,7 +93,9 @@ function tryRouteToOtherWorkspace(path: string): boolean {
   const { activeWorkspaceSlug, switchWorkspace } = useTabStore.getState();
   if (targetSlug === activeWorkspaceSlug) return false;
   const resume = path === paths.workspace(targetSlug).issues();
-  switchWorkspace(targetSlug, resume ? undefined : path);
+  const openPath = resume ? undefined : path;
+  if (handOffToWorkspaceWindow(targetSlug, openPath)) return true;
+  switchWorkspace(targetSlug, openPath);
   return true;
 }
 
@@ -110,7 +118,7 @@ export function routeContentLinkPath(
   const store = useTabStore.getState();
   const slug = workspaceSlugForPath(path);
   if (slug && slug !== store.activeWorkspaceSlug) {
-    store.switchWorkspace(slug, path);
+    if (!handOffToWorkspaceWindow(slug, path)) store.switchWorkspace(slug, path);
     return;
   }
   // Single-tab mode: there is nowhere else to open; every disposition is a push.
@@ -237,7 +245,9 @@ export function DesktopNavigationProvider({
         const slug = workspaceSlugForPath(path);
         const store = useTabStore.getState();
         if (slug && slug !== store.activeWorkspaceSlug) {
-          store.switchWorkspace(slug, path);
+          if (!handOffToWorkspaceWindow(slug, path)) {
+            store.switchWorkspace(slug, path);
+          }
           return;
         }
         if (isSingleTabMode()) {
@@ -250,6 +260,8 @@ export function DesktopNavigationProvider({
         }
         store.openTab(path, title ?? "", { activate: opts?.activate });
       },
+      openWorkspaceInNewWindow,
+      workspacesInOtherWindows: () => [...otherWindowWorkspaces()],
       getShareableUrl: (path: string) => `${appUrl}${path}`,
     }),
     [appUrl, location],

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { createMemoryRouter, Outlet, useLocation, useMatches } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { IssueDetailPage } from "./pages/issue-detail-page";
@@ -28,11 +28,13 @@ import {
 import { DesktopChooseRuntimePage } from "./components/desktop-choose-runtime-page";
 import { AgentCreatedPage } from "./pages/agent-created-page";
 import { SquadsPage, SquadDetailPage as SquadDetailPageView } from "@multica/views/squads/components";
+import { AllViewsPage } from "@multica/views/issue-views";
 import { InboxPage } from "@multica/views/inbox";
 import { ChatPage } from "@multica/views/chat";
 import { SettingsPage } from "@multica/views/settings";
 import { useT } from "@multica/views/i18n";
-import { Download, PanelTop, Server } from "lucide-react";
+import { Download, Server } from "@multica/ui/icons";
+import { PanelTop } from "lucide-react";
 import { AppearanceSettingsTab } from "./components/appearance-settings-tab";
 import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
@@ -40,6 +42,11 @@ import { WorkspaceRouteLayout } from "./components/workspace-route-layout";
 import { DesktopRouteErrorPage } from "./components/route-error-page";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 import { usePageMotion } from "@/platform/page-motion";
+import { IssueViewUrlSync } from "./platform/issue-view-tabs";
+import { useRenderedRouteStore } from "./stores/rendered-route-store";
+
+const WORKSPACE_VIEW_SCOPE = { scope_type: "workspace" } as const;
+const MY_VIEW_SCOPE = { scope_type: "my" } as const;
 
 /**
  * Wraps `SettingsPage` so the desktop-only extra tabs can pull their labels
@@ -94,6 +101,19 @@ function TitleSync() {
   return null;
 }
 
+/**
+ * Publishes the committed pathname. A layout effect, so the shell's update
+ * lands in the same frame as the page it describes.
+ */
+function RenderedPathnameSync() {
+  const { pathname } = useLocation();
+  const setPathname = useRenderedRouteStore((s) => s.setPathname);
+  useLayoutEffect(() => {
+    setPathname(pathname);
+  }, [pathname, setPathname]);
+  return null;
+}
+
 /** Wrapper that renders route children + TitleSync */
 function PageShell() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -103,6 +123,7 @@ function PageShell() {
   return (
     <>
       <TitleSync />
+      <RenderedPathnameSync />
       <div ref={hostRef} style={{ display: "contents" }}><Outlet /></div>
     </>
   );
@@ -143,7 +164,11 @@ export const appRoutes: RouteObject[] = [
           { index: true, element: null },
           {
             path: "issues",
-            element: <IssuesPage />,
+            element: (
+              <IssueViewUrlSync scope={WORKSPACE_VIEW_SCOPE}>
+                <IssuesPage />
+              </IssueViewUrlSync>
+            ),
             handle: { title: "Issues" },
           },
           {
@@ -173,7 +198,11 @@ export const appRoutes: RouteObject[] = [
           },
           {
             path: "my-issues",
-            element: <MyIssuesPage />,
+            element: (
+              <IssueViewUrlSync scope={MY_VIEW_SCOPE}>
+                <MyIssuesPage />
+              </IssueViewUrlSync>
+            ),
             handle: { title: "My Issues" },
           },
           {
@@ -234,6 +263,7 @@ export const appRoutes: RouteObject[] = [
             handle: { title: "Member" },
           },
           { path: "squads", element: <SquadsPage />, handle: { title: "Squads" } },
+          { path: "views", element: <AllViewsPage />, handle: { title: "Views" } },
           {
             path: "squads/:id",
             element: <SquadDetailPageView />,

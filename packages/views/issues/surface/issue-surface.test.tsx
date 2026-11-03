@@ -189,6 +189,26 @@ describe("IssueSurface — scope switch loading semantics", () => {
     vi.restoreAllMocks();
   });
 
+  it("does not display unfiltered issues if the server rejects an extended filter", async () => {
+    const listIssues = vi.fn(async () => ({ issues: [makeIssue("i1", "Must not show", "p1")], total: 1 }));
+    const legacy = statusTableMethodsFromLegacy(listIssues);
+    setApiInstance({
+      listIssueStatuses: async () => ({ statuses: [], categories: [], total: 0 }),
+      listIssues, ...legacy,
+      listIssueTableGroups: vi.fn(async () => { throw Object.assign(new Error("unknown field"), { status: 400 }); }),
+      listGroupedIssues: vi.fn(() => never()), listProjects: vi.fn(() => never()),
+      getAgentTaskSnapshot: vi.fn(() => never()), getChildIssueProgress: vi.fn(() => never()),
+    } as unknown as ApiClient);
+    const store = createIssueStatusListStore("todo");
+    store.setState({ relationFilters: ["assigned"] });
+    const { container } = render(<QueryClientProvider client={qc}>
+      <IssueSurfaceWithStore store={store} baseline={baselineFromQuery({})}
+        scope={{ type: "workspace", actorKind: "all" }} modes={["list"]} renderHeader={() => null} batchToolbar="never" />
+    </QueryClientProvider>);
+    await waitFor(() => expect(container.querySelector('[data-slot="extended-filter-error"]')).not.toBeNull());
+    expect(screen.queryByText("Must not show")).not.toBeInTheDocument();
+  });
+
   it("renders an exact-status transient list without reading or changing the active saved view", async () => {
     const stored = getIssueSurfaceViewStore("workspace:all");
     stored.setState({ statusFilters: ["cancelled"], showSubIssues: false });
