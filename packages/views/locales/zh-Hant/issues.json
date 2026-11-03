@@ -148,8 +148,8 @@
   "scope": {
     "all_label": "全部",
     "all_description": "工作區內的全部任務",
-    "mine_label": "????",
-    "mine_description": "????????????",
+    "mine_label": "指派給我",
+    "mine_description": "目前專案中由我負責的任務",
     "members_label": "成員",
     "members_description": "分配給成員的任務",
     "agents_label": "智慧體",
