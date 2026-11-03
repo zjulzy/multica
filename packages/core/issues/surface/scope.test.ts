@@ -80,6 +80,15 @@ describe("issue surface scope", () => {
     });
   });
 
+  it("restricts the project assigned-to-me tab to the current member", () => {
+    const scope = { type: "project" as const, projectId: "p1", actorKind: "mine" as const, userId: "u1" };
+    expect(buildIssueSurfaceQueryPlan(scope)).toEqual({
+      scopeKey: "project:p1:mine:u1",
+      queryFilter: { project_id: "p1", assignee_id: "u1", assignee_types: ["member"] },
+      createDefaults: { project_id: "p1", assignee_type: "member", assignee_id: "u1" },
+    });
+  });
+
   it("throws for team until the issue API has a team filter", () => {
     const scope = { type: "team" as const, teamId: "t1" };
     expect(() => buildIssueSurfaceQueryPlan(scope)).toThrow(

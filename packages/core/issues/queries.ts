@@ -120,11 +120,13 @@ export const issueKeys = {
     wsId: string,
     projectId: string,
     assigneeTypes?: IssueAssigneeType[],
+    assigneeId?: string,
   ) =>
     [
       ...issueKeys.projectGanttAll(wsId),
       projectId,
       assigneeTypes ?? null,
+      ...(assigneeId ? [assigneeId] : []),
     ] as const,
   detail: (wsId: string, id: string) =>
     [...issueKeys.all(wsId), "detail", id] as const,
@@ -398,6 +400,7 @@ export const PROJECT_GANTT_MAX_ISSUES = 10_000;
 async function fetchProjectGanttIssues(
   projectId: string,
   assigneeTypes?: IssueAssigneeType[],
+  assigneeId?: string,
 ) {
   const issues = [];
   let offset = 0;
@@ -406,6 +409,7 @@ async function fetchProjectGanttIssues(
       project_id: projectId,
       scheduled: true,
       ...(assigneeTypes?.length ? { assignee_types: assigneeTypes } : {}),
+      ...(assigneeId ? { assignee_id: assigneeId } : {}),
       limit: PROJECT_GANTT_PAGE_LIMIT,
       offset,
     });
@@ -441,10 +445,11 @@ export function projectGanttIssuesOptions(
   // The page's assignee-type tab narrows the Gantt exactly like every
   // other mode — same scope, same single mapping upstream.
   assigneeTypes?: IssueAssigneeType[],
+  assigneeId?: string,
 ) {
   return queryOptions({
-    queryKey: issueKeys.projectGantt(wsId, projectId, assigneeTypes),
-    queryFn: () => fetchProjectGanttIssues(projectId, assigneeTypes),
+    queryKey: issueKeys.projectGantt(wsId, projectId, assigneeTypes, assigneeId),
+    queryFn: () => fetchProjectGanttIssues(projectId, assigneeTypes, assigneeId),
   });
 }
 

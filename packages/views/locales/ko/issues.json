@@ -148,6 +148,8 @@
   "scope": {
     "all_label": "전체",
     "all_description": "이 워크스페이스의 모든 태스크",
+    "mine_label": "??? ???",
+    "mine_description": "? ?????? ?? ???? ??",
     "members_label": "멤버",
     "members_description": "팀 멤버에게 할당된 태스크",
     "agents_label": "에이전트",

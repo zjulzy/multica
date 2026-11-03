@@ -504,6 +504,16 @@ describe("projectGanttIssuesOptions", () => {
     expect(options.queryKey).toEqual(issueKeys.projectGantt(WS_ID, PROJECT_ID));
   });
 
+  it("restricts the project Gantt query and cache to the assigned member", async () => {
+    const listIssues = vi.fn<(params?: ListIssuesParams) => Promise<ListIssuesResponse>>()
+      .mockResolvedValue({ issues: [], total: 0 });
+    installFakeApi(listIssues);
+    const options = projectGanttIssuesOptions(WS_ID, PROJECT_ID, undefined, "u1");
+    await qc.fetchQuery(options);
+    expect(listIssues).toHaveBeenCalledWith(expect.objectContaining({ project_id: PROJECT_ID, assignee_id: "u1" }));
+    expect(options.queryKey).not.toEqual(projectGanttIssuesOptions(WS_ID, PROJECT_ID).queryKey);
+  });
+
   it("threads the assignee-type tab into the request and the cache key", async () => {
     const listIssues = vi
       .fn<(params?: ListIssuesParams) => Promise<ListIssuesResponse>>()

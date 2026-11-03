@@ -150,6 +150,8 @@
   "scope": {
     "all_label": "Toutes",
     "all_description": "Toutes les tâches de cet espace de travail",
+    "mine_label": "Assign?es ? moi",
+    "mine_description": "T?ches du projet qui me sont assign?es",
     "members_label": "Membres",
     "members_description": "Tâches assignées aux membres de l'équipe",
     "agents_label": "Agents",

@@ -150,6 +150,8 @@
   "scope": {
     "all_label": "All",
     "all_description": "All issues in this workspace",
+    "mine_label": "Assigned to me",
+    "mine_description": "Project issues assigned to me",
     "members_label": "Members",
     "members_description": "Issues assigned to team members",
     "agents_label": "Agents",

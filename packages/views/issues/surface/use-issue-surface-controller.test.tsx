@@ -349,6 +349,20 @@ describe("useIssueSurfaceController", () => {
     expect(result.current.tableQuerySpec).toBe(afterSort);
   });
 
+  it("restricts the assigned-to-me tab to the selected project and member", async () => {
+    const { result } = renderHook(
+      () => useIssueSurfaceController({
+        scope: { type: "project", projectId: "p1", actorKind: "mine", userId: "u1" },
+        modes: ["board", "list", "table", "gantt"],
+      }),
+      { wrapper: makeWrapper(qc, "project:p1:mine:u1") },
+    );
+    expect(result.current.tableQuerySpec.scope).toEqual({ kind: "assignee", actor: { type: "member", id: "u1" } });
+    expect(result.current.tableQuerySpec.filters.project_ids).toEqual(["p1"]);
+    act(() => getIssueSurfaceViewStore("project:p1:mine:u1").getState().toggleNoProject());
+    await waitFor(() => expect(result.current.tableQuerySpec.filters.include_no_project).toBeUndefined());
+  });
+
   it("uses the unified workspace query for workspace scope", async () => {
     const { result } = renderHook(
       () =>

@@ -148,6 +148,8 @@
   "scope": {
     "all_label": "全部",
     "all_description": "工作区内的全部任务",
+    "mine_label": "????",
+    "mine_description": "????????????",
     "members_label": "成员",
     "members_description": "分配给成员的任务",
     "agents_label": "智能体",

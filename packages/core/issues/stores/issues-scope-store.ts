@@ -5,7 +5,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { createWorkspaceAwareStorage, registerForWorkspaceRehydration } from "../../platform/workspace-storage";
 import { defaultStorage } from "../../platform/storage";
 
-export type IssuesScope = "all" | "members" | "agents";
+export type IssuesScope = "all" | "members" | "agents" | "mine";
 
 /**
  * Page identity for the assignee-type tab. Every surface remembers its own

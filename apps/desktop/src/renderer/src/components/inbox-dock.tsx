@@ -196,9 +196,14 @@ export function DesktopInboxDockLayout({
   useEffect(() => {
     if (!enabled || !workspaceId) return;
     if (inboxDockOpen) {
-      if (dockPanelRef.current?.isCollapsed()) {
-        dockPanelRef.current.expand();
-        dockPanelRef.current.resize(`${inboxDockSizeRef.current}%`);
+      const panel = dockPanelRef.current;
+      const size = panel?.getSize();
+      // The visual height can still be at the collapsed boundary even when
+      // the panel library no longer reports its collapsed state. Without
+      // restoring the height, the opening animation ends back at the bar.
+      if (panel && (panel.isCollapsed() || (size && size.inPixels <= DOCK_COLLAPSED_SIZE + 0.5))) {
+        panel.expand();
+        panel.resize(`${inboxDockSizeRef.current}%`);
       }
     } else {
       dockPanelRef.current?.collapse();

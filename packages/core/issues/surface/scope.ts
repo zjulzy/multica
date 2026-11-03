@@ -9,7 +9,7 @@ export type IssueScope =
       relation: "all" | "assigned" | "created" | "involved";
       userId: string;
     }
-  | { type: "project"; projectId: string; actorKind?: WorkspaceIssueActorKind }
+  | { type: "project"; projectId: string; actorKind?: WorkspaceIssueActorKind | "mine"; userId?: string }
   | {
       type: "actor";
       actorType: Extract<IssueAssigneeType, "member" | "agent">;
@@ -70,6 +70,7 @@ export function issueScopeKey(scope: IssueScope): string {
       // The unrestricted tab keeps the historical key so existing persisted
       // display state survives; Members/Agents get their own key (and thus
       // their own per-tab display state), matching the workspace tabs.
+      if (scope.actorKind === "mine") return `project:${scope.projectId}:mine:${scope.userId ?? "anonymous"}`;
       return scope.actorKind === "members" || scope.actorKind === "agents"
         ? `project:${scope.projectId}:${scope.actorKind}`
         : `project:${scope.projectId}`;

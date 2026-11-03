@@ -148,6 +148,8 @@
   "scope": {
     "all_label": "すべて",
     "all_description": "このワークスペースのすべてのタスク",
+    "mine_label": "???????",
+    "mine_description": "???????????????????",
     "members_label": "メンバー",
     "members_description": "チームメンバーに割り当てられたタスク",
     "agents_label": "エージェント",

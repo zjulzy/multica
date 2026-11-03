@@ -1256,7 +1256,7 @@ export function IssuesHeader({
   // silently widen to the page tab); otherwise the page tab applies.
   const dialogActorKind = activeView
     ? actorKindForViewVariant(activeView.scope_variant)
-    : scope;
+    : scope === "mine" ? "all" : scope;
   const dialogProjectId =
     saveViewScope?.kind === "project" ? saveViewScope.projectId : null;
   const dialogMyVariant =
@@ -1268,11 +1268,12 @@ export function IssuesHeader({
         kind: "project",
         projectId: dialogProjectId,
         actorKind: dialogActorKind,
+        ...(scope === "mine" && !activeView && currentUserId ? { assignedUserId: currentUserId } : {}),
       };
     if (saveViewScope) return { kind: "workspace", actorKind: dialogActorKind };
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- identity keyed on the primitive projections
-  }, [dialogMyVariant, dialogProjectId, dialogActorKind, !!saveViewScope]);
+  }, [dialogMyVariant, dialogProjectId, dialogActorKind, !!saveViewScope, scope, activeView, currentUserId]);
   // Bind the workspace agents-working chip to the active view store so
   // shared IssuesHeader consumers (/issues and project detail) toggle the
   // same filter state as the rest of the display controls. /my-issues keeps
@@ -1281,16 +1282,19 @@ export function IssuesHeader({
   const toggleAgentRunningFilter = useViewStore(
     (s) => s.toggleAgentRunningFilter,
   );
-  const SCOPE_LABEL_KEY: Record<IssuesScope, "all_label" | "members_label" | "agents_label"> = {
+  const SCOPE_LABEL_KEY: Record<IssuesScope, "all_label" | "members_label" | "agents_label" | "mine_label"> = {
     all: "all_label",
     members: "members_label",
     agents: "agents_label",
+    mine: "mine_label",
   };
-  const SCOPE_DESC_KEY: Record<IssuesScope, "all_description" | "members_description" | "agents_description"> = {
+  const SCOPE_DESC_KEY: Record<IssuesScope, "all_description" | "members_description" | "agents_description" | "mine_description"> = {
     all: "all_description",
     members: "members_description",
     agents: "agents_description",
+    mine: "mine_description",
   };
+  const scopeValues: IssuesScope[] = scopePage.startsWith("project:") ? [...SCOPE_VALUES, "mine"] : SCOPE_VALUES;
 
   const scopeLabel = t(($) => $.scope[SCOPE_LABEL_KEY[scope]]);
 
@@ -1305,7 +1309,7 @@ export function IssuesHeader({
             <ViewBar
               wsId={headerWsId}
               scope={viewListScope}
-              builtins={SCOPE_VALUES.map((s) => ({
+              builtins={scopeValues.map((s) => ({
                 key: s,
                 label: t(($) => $.scope[SCOPE_LABEL_KEY[s]]),
                 description: t(($) => $.scope[SCOPE_DESC_KEY[s]]),
@@ -1348,7 +1352,7 @@ export function IssuesHeader({
           />
           <DropdownMenuContent align="start" className="w-auto">
             <DropdownMenuRadioGroup value={scope} onValueChange={(value) => setScope(value as IssuesScope)}>
-              {SCOPE_VALUES.map((s) => (
+              {scopeValues.map((s) => (
                 <DropdownMenuRadioItem key={s} value={s}>
                   {t(($) => $.scope[SCOPE_LABEL_KEY[s]])}
                 </DropdownMenuRadioItem>

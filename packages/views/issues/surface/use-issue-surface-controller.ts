@@ -455,6 +455,10 @@ export function useIssueSurfaceController({
         break;
       }
       case "project": {
+        if (scope.actorKind === "mine") {
+          queryScope = { kind: "assignee", actor: { type: "member", id: scope.userId ?? "00000000-0000-0000-0000-000000000000" } };
+          break;
+        }
         const assigneeTypes = assigneeTypesForActorKind(scope.actorKind);
         queryScope = {
           kind: "project",
@@ -495,9 +499,11 @@ export function useIssueSurfaceController({
         ...(assigneeFilters.length > 0 ? { assignees: assigneeFilters } : {}),
         ...(includeNoAssignee ? { include_no_assignee: true } : {}),
         ...(creatorFilters.length > 0 ? { creators: creatorFilters } : {}),
-        ...(viewProjectFilters.length > 0
-          ? { project_ids: viewProjectFilters }
-          : {}),
+        ...(scope.type === "project" && scope.actorKind === "mine"
+          ? { project_ids: viewProjectFilters.length === 0 || viewProjectFilters.includes(scope.projectId)
+              ? [scope.projectId]
+              : ["00000000-0000-0000-0000-000000000000"] }
+          : viewProjectFilters.length > 0 ? { project_ids: viewProjectFilters } : {}),
         ...(viewIncludeNoProject ? { include_no_project: true } : {}),
         ...(projectStatusFilters.length > 0
           ? { project_statuses: projectStatusFilters }

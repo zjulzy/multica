@@ -134,8 +134,8 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
   }, [project?.id, project?.title, project?.description, project?.icon, project?.status, recordRecentContext, wsId]);
   const issueTab = useIssuesScope(`project:${projectId}`);
   const issueScope = useMemo(
-    () => ({ type: "project" as const, projectId, actorKind: issueTab }),
-    [projectId, issueTab],
+    () => ({ type: "project" as const, projectId, actorKind: issueTab, userId }),
+    [projectId, issueTab, userId],
   );
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));

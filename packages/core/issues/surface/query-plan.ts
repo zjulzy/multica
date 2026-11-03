@@ -71,6 +71,14 @@ export function buildIssueSurfaceQueryPlan(
       };
     }
     case "project": {
+      if (scope.actorKind === "mine") {
+        const userId = scope.userId ?? "00000000-0000-0000-0000-000000000000";
+        return {
+          scopeKey,
+          queryFilter: { project_id: scope.projectId, assignee_id: userId, assignee_types: ["member"] },
+          createDefaults: { project_id: scope.projectId, assignee_type: "member", assignee_id: userId },
+        };
+      }
       const assigneeTypes = assigneeTypesForActorKind(scope.actorKind);
       return {
         scopeKey,

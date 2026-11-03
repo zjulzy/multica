@@ -73,6 +73,7 @@ export type SaveViewScope =
       kind: "project";
       projectId: string;
       actorKind?: "all" | "members" | "agents";
+      assignedUserId?: string;
     };
 
 const WORKSPACE_VARIANTS = ["all", "members", "agents"] as const;
@@ -507,6 +508,9 @@ export function SaveViewDialog({
       );
     } else {
       store.setState(snapshotState(liveStore.getState()));
+      if (!editView && scope.kind === "project" && scope.assignedUserId) {
+        store.setState({ assigneeFilters: [{ type: "member", id: scope.assignedUserId }], includeNoAssignee: false });
+      }
     }
     setDraftStore(store);
     setName(editView?.name ?? "");
