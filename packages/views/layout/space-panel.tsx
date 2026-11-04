@@ -39,7 +39,7 @@ export function SpacePanelContent({ space }: { space: AppSpaceId | null }) {
  * width instead, so nothing mounts for them. While collapsed, hovering a rail space previews
  * its panel over the page.
  */
-export function SpacePanel() {
+export function SpacePanel({ bottomSlot }: { bottomSlot?: React.ReactNode } = {}) {
   const shell = useAppShell();
   const { open, isCompact } = useSidebar();
   const panelRef = useRef<HTMLElement>(null);
@@ -70,6 +70,7 @@ export function SpacePanel() {
         >
           <div className="flex h-full w-(--sidebar-width) shrink-0 flex-col overflow-hidden border-r">
             <SpacePanelContent space={space} />
+            {bottomSlot && <div className="shrink-0">{bottomSlot}</div>}
           </div>
         </aside>
       )}

@@ -13,6 +13,13 @@ const translations = {
       agent_hub_description: "Show active agents in the sidebar",
       interface_motion_title: "Interface motion",
       interface_motion_description: "Animate interface interactions",
+      sidebar_font_title: "Sidebar text size",
+      sidebar_font_description: "Adjust sidebar text",
+      sidebar_font_small: "Small",
+      sidebar_font_standard: "Standard",
+      sidebar_font_large: "Large",
+      liwork_title: "LiWork monitor",
+      liwork_description: "Show LiWork",
     },
   },
 };
@@ -34,6 +41,7 @@ describe("AppearanceSettingsTab", () => {
       inboxDockOpen: false,
       agentStatusHubEnabled: true,
       interfaceMotionEnabled: false,
+      sidebarFontSize: "standard",
     });
   });
 
@@ -45,6 +53,13 @@ describe("AppearanceSettingsTab", () => {
     expect(
       screen.getByRole("switch", { name: "Bottom inbox panel" }),
     ).toBeChecked();
+  });
+
+  it("changes sidebar text size without changing the other settings", () => {
+    render(<AppearanceSettingsTab />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Sidebar text size" }), { target: { value: "large" } });
+    expect(useDesktopPrefsStore.getState().sidebarFontSize).toBe("large");
+    expect(useDesktopPrefsStore.getState().agentStatusHubEnabled).toBe(true);
   });
 
   it("toggles only the Inbox dock preference", () => {

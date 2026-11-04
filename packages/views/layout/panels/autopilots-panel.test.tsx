@@ -7,6 +7,9 @@ import type { Autopilot } from "@multica/core/types";
 import { NavigationProvider, type NavigationAdapter } from "../../navigation";
 import { renderWithI18n } from "../../test/i18n";
 import { AutopilotsPanel } from "./autopilots-panel";
+import { PersistentPinsProvider } from "../persistent-pins-context";
+
+vi.mock("./shared-pinned-section", () => ({ SharedPinnedSection: () => <section data-testid="shared-pins">Pinned</section> }));
 
 vi.mock("@multica/core/api", () => ({
   api: { listAutopilots: vi.fn(), listWorkspaceWakeups: vi.fn() },
@@ -23,7 +26,7 @@ function autopilot(id: string, title: string, status: Autopilot["status"]): Auto
   return { id, title, status, trigger_kinds: ["schedule"] } as unknown as Autopilot;
 }
 
-function mount(path: string, push = vi.fn()) {
+function mount(path: string, push = vi.fn(), persistentPins = false) {
   const url = new URL(path, "https://example.test");
   const adapter: NavigationAdapter = {
     pathname: url.pathname,
@@ -38,7 +41,7 @@ function mount(path: string, push = vi.fn()) {
   return renderWithI18n(
     <QueryClientProvider client={client}>
       <NavigationProvider value={adapter}>
-        <AutopilotsPanel />
+        {persistentPins ? <PersistentPinsProvider><AutopilotsPanel /></PersistentPinsProvider> : <AutopilotsPanel />}
       </NavigationProvider>
     </QueryClientProvider>,
   );
@@ -66,9 +69,16 @@ beforeEach(() => {
 });
 
 describe("AutopilotsPanel", () => {
+  it("places pins within the same scrolling navigation as the automation links", () => {
+    mount("/ws/autopilots", vi.fn(), true);
+    const pins = screen.getByTestId("shared-pins");
+    expect(pins.closest(".overflow-y-auto")).toContainElement(allRow());
+  });
   it("links the list and the wakeups with their counts, the list active", async () => {
     mount("/ws/autopilots");
-    await screen.findByRole("link", { name: /Daily sync/ });
+    await within(allRow()).findByText("2");
+    expect(screen.queryByRole("link", { name: /Daily sync/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Weekly report/ })).not.toBeInTheDocument();
 
     expect(allRow()).toHaveAttribute("href", "/ws/autopilots");
     expect(allRow()).toHaveAttribute("aria-current", "page");
@@ -81,7 +91,7 @@ describe("AutopilotsPanel", () => {
 
   it("marks only the wakeups row on ?tab=wakeups", async () => {
     mount("/ws/autopilots?tab=wakeups");
-    await screen.findByRole("link", { name: /Daily sync/ });
+    await within(allRow()).findByText("2");
 
     expect(wakeupsRow()).toHaveAttribute("aria-current", "page");
     expect(allRow()).not.toHaveAttribute("aria-current");
@@ -89,9 +99,7 @@ describe("AutopilotsPanel", () => {
 
   it("leaves both top rows inactive on an autopilot's page", async () => {
     mount("/ws/autopilots/a1");
-    const detailRow = await screen.findByRole("link", { name: /Daily sync/ });
-
-    expect(detailRow).toHaveAttribute("aria-current", "page");
+    await within(allRow()).findByText("2");
     expect(allRow()).not.toHaveAttribute("aria-current");
     expect(wakeupsRow()).not.toHaveAttribute("aria-current");
   });
@@ -100,7 +108,7 @@ describe("AutopilotsPanel", () => {
     useAutopilotsViewStore.setState({ scope: "paused" });
     const push = vi.fn();
     mount("/ws/autopilots?tab=wakeups", push);
-    await screen.findByRole("link", { name: /Daily sync/ });
+    await within(allRow()).findByText("2");
 
     fireEvent.click(allRow());
     expect(useAutopilotsViewStore.getState().scope).toBe("all");

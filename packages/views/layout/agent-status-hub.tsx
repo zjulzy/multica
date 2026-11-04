@@ -15,7 +15,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/
 import { AppLink } from "../navigation";
 import { useT } from "../i18n";
 
-export function AgentStatusHub({ onOpenUnread, onOpenAgent, compact = false }: { onOpenUnread?: (workspaceId: string, key: string) => void; onOpenAgent?: (workspaceId: string, agentId: string) => void; compact?: boolean } = {}) {
+export function AgentStatusHub({ onOpenUnread, onOpenAgent, compact = false, preview = process.env.NODE_ENV === "development" }: { onOpenUnread?: (workspaceId: string, key: string) => void; onOpenAgent?: (workspaceId: string, agentId: string) => void; compact?: boolean; preview?: boolean } = {}) {
   const workspace = useCurrentWorkspace();
   const paths = useWorkspacePaths();
   const { t } = useT("agents");
@@ -38,20 +38,29 @@ export function AgentStatusHub({ onOpenUnread, onOpenAgent, compact = false }: {
       if (previous) previous.count += 1;
       else unreadByAgent.set(item.actor_id, { count: 1, key: item.issue_id ?? item.id });
     }
-    return agents.flatMap((agent) => {
+    const real = agents.flatMap((agent) => {
       const counts = deriveWorkloadDetail(grouped.get(agent.id) ?? []);
       const unread = unreadByAgent.get(agent.id);
-      return counts.workload === "idle" && !unread ? [] : [{ agent, ...counts, unread }];
+      return counts.workload === "idle" && !unread ? [] : [{ agent, ...counts, unread, demo: false }];
     }).sort((a, b) => Number(b.runningCount > 0) - Number(a.runningCount > 0));
-  }, [agents, tasks, inbox]);
+    if (!preview || real.some((item) => item.runningCount > 0 || item.queuedCount > 0)) return real;
+    const existing = new Set(real.map((item) => item.agent.id));
+    const examples = agents.filter((agent) => !agent.archived_at && !existing.has(agent.id)).slice(0, 4).map((agent, index) => ({
+      agent,
+      ...deriveWorkloadDetail([{ status: index % 2 === 0 ? "running" : "queued" } as AgentTask]),
+      unread: undefined,
+      demo: true,
+    }));
+    return [...real, ...examples];
+  }, [agents, tasks, inbox, preview]);
 
   if (!workspace || active.length === 0) return null;
   return (
-    <section aria-label={t(($) => $.status_hub.title)} className={compact ? "w-16 border-t border-sidebar-border px-1 pt-2 pb-1" : "border-t border-sidebar-border px-2 pt-2 pb-1"}>
+    <section aria-label={t(($) => $.status_hub.title)} className={compact ? "w-16 shrink-0 border-t border-sidebar-border px-1 pt-2 pb-1" : "max-h-[35vh] shrink-0 overflow-y-auto border-t border-sidebar-border px-2 pt-2 pb-1"}>
       <style>{`@keyframes agent-hub-unread-ripple { 0% { opacity: .7; transform: scale(1); } 75%, 100% { opacity: 0; transform: scale(1.4); } }`}</style>
-      <p className={compact ? "sr-only" : "px-1 text-caption text-muted-foreground"}>{t(($) => $.status_hub.title)}</p>
+      <p className={compact ? "text-center text-[10px] text-muted-foreground" : "px-1 text-caption text-muted-foreground"}>{compact ? null : t(($) => $.status_hub.title)}{active.some((item) => item.demo) && <span className="ml-1 text-caption text-muted-foreground">示例</span>}</p>
       <div className={compact ? "flex flex-wrap justify-center gap-1.5 p-1" : "mt-2 flex flex-wrap gap-1.5 p-1"}>
-        {active.map(({ agent, runningCount, queuedCount, unread }) => {
+        {active.map(({ agent, runningCount, queuedCount, unread, demo }) => {
           const counts = t(($) => $.status_hub.counts, { running: runningCount, queued: queuedCount });
           const unreadLabel = unread ? t(($) => $.status_hub.unread, { count: unread.count }) : null;
           const destination = unread ? t(($) => $.status_hub.open_inbox) : onOpenAgent ? t(($) => $.dock.open_in_dock) : t(($) => $.status_hub.open_agent);
@@ -60,6 +69,7 @@ export function AgentStatusHub({ onOpenUnread, onOpenAgent, compact = false }: {
             <Tooltip key={agent.id}>
               <TooltipTrigger render={<AppLink href={href} onClick={(event) => {
                 if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                if (demo) { event.preventDefault(); return; }
                 if (unread && onOpenUnread) { event.preventDefault(); onOpenUnread(workspaceId, unread.key); }
                 else if (!unread && onOpenAgent) { event.preventDefault(); onOpenAgent(workspaceId, agent.id); }
               }} aria-label={`${agent.name}: ${counts}${unreadLabel ? ` · ${unreadLabel}` : ""} · ${destination}`} className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />}>
@@ -78,6 +88,7 @@ export function AgentStatusHub({ onOpenUnread, onOpenAgent, compact = false }: {
                 <span className="font-semibold">{agent.name}</span>
                 <span>{counts}</span>
                 {unreadLabel && <span>{unreadLabel}</span>}
+                {demo && <span>示例数据</span>}
                 <span>{destination}</span>
               </TooltipContent>
             </Tooltip>

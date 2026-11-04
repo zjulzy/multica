@@ -1,9 +1,12 @@
-import { act, fireEvent } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SidebarProvider } from "@multica/ui/components/ui/sidebar";
 import { renderWithI18n } from "../test/i18n";
 import { AppShellProvider, useAppShell } from "./app-shell-context";
 import { ListColumn } from "./list-column";
+import { PersistentPinsProvider } from "./persistent-pins-context";
+
+vi.mock("./panels/shared-pinned-section", () => ({ SharedPinnedSection: () => <div data-testid="shared-pins">Pinned</div> }));
 
 vi.mock("../navigation", () => ({
   useNavigation: () => ({ pathname: "/acme/inbox" }),
@@ -16,6 +19,10 @@ function Reader() {
 }
 
 describe("ListColumn", () => {
+  it("does not add a separate pinned area outside the page list", () => {
+    renderWithI18n(<PersistentPinsProvider><ListColumn>list</ListColumn></PersistentPinsProvider>);
+    expect(screen.queryByTestId("shared-pins")).not.toBeInTheDocument();
+  });
   it("collapses the list column from its edge, like the space panel", () => {
     const { container } = renderWithI18n(
       <SidebarProvider>

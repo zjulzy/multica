@@ -1,9 +1,12 @@
 export { AppRail } from "./app-rail";
 export { AgentStatusHub } from "./agent-status-hub";
-export { AppShellProvider, useAppShell } from "./app-shell-context";
+export { AppShellProvider, useAppShell, useListColumnCollapsed } from "./app-shell-context";
+export { ListColumn } from "./list-column";
+export { SharedPinnedSection } from "./panels/shared-pinned-section";
 export { CompactNavSheet } from "./compact-nav-sheet";
 export { ShellRouteDataPrefetch } from "./route-data-prefetch";
 export { SpacePanel } from "./space-panel";
+export { PersistentPinsProvider } from "./persistent-pins-context";
 export {
   CollectionCreateButton,
   CollectionDisplayButton,
@@ -38,6 +41,6 @@ export { useDashboardGuard } from "./use-dashboard-guard";
 export { WorkspaceLoader } from "./workspace-loader";
 export { WorkspacePresencePrefetch } from "./workspace-presence-prefetch";
 export { GlobalShortcuts } from "./global-shortcuts";
-export { PageHeaderPortalProvider } from "./page-header";
+export { PageHeaderPortalProvider, PageHeader } from "./page-header";
 export { NewIssueButton, SearchButton } from "./global-actions";
 export { NavigationProgress } from "./navigation-progress";

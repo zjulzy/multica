@@ -26,6 +26,7 @@ import { useModalStore } from "@multica/core/modals";
 import { useIntentNavigate, useRowLink } from "../../navigation";
 import { useT } from "../../i18n";
 import { CollectionRowContext, type RowMenuState } from "./row-context";
+import { isDesktopShell } from "../../platform/local-directory";
 
 export type CollectionSortDirection = "asc" | "desc";
 
@@ -108,6 +109,8 @@ export interface CollectionListProps<T> {
   /** J/K and arrows reach the list while nothing else has focus. */
   pageShortcuts?: boolean;
   className?: string;
+  /** Use a slightly roomier list in the desktop client. */
+  comfortableOnDesktop?: boolean;
 }
 
 const EDGE = 4;
@@ -180,7 +183,9 @@ export function CollectionList<T>({
   embedded = false,
   pageShortcuts = !embedded,
   className,
+  comfortableOnDesktop = false,
 }: CollectionListProps<T>) {
+  const comfortable = comfortableOnDesktop && isDesktopShell();
   const { t } = useT("layout");
   const listId = useId();
   const rowLink = useRowLink();
@@ -232,13 +237,14 @@ export function CollectionList<T>({
     "--cl-wide": wideTracks.join(" "),
     "--cl-narrow": narrowTracks.join(" "),
     "--cl-minw": `${minWidth(wideTracks)}px`,
+    ...(comfortable ? { "--text-body": "15px", "--text-body--line-height": "22px", "--text-caption": "13px", "--text-caption--line-height": "18px" } : {}),
   } as CSSProperties;
 
   const virtualize = !embedded && !loading && items.length > VIRTUALIZE_AFTER;
   const virtualizer = useVirtualizer({
     count: virtualize ? items.length : 0,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => (items[i]?.kind === "group" ? GROUP_HEIGHT : ROW_HEIGHT),
+    estimateSize: (i) => (items[i]?.kind === "group" ? GROUP_HEIGHT : comfortable ? 40 : ROW_HEIGHT),
     paddingStart: HEADER_HEIGHT,
     scrollPaddingStart: HEADER_HEIGHT,
     overscan: 12,
@@ -468,7 +474,7 @@ export function CollectionList<T>({
         onOpen={onRowOpen}
         menu={rowMenu ? rowMenu(row) : undefined}
         hasMenuSlot={hasMenu}
-        className={getRowClassName?.(row)}
+        className={cn(comfortable && "h-10", getRowClassName?.(row))}
         rowLink={rowLink}
         selection={
           selection
@@ -523,7 +529,7 @@ export function CollectionList<T>({
   let body: ReactNode;
   if (loading) {
     body = Array.from({ length: 6 }).map((_, i) => (
-      <SkeletonRow key={i} columns={columns} selectable={selectable} menu={hasMenu} />
+      <SkeletonRow key={i} columns={columns} selectable={selectable} menu={hasMenu} comfortable={comfortable} />
     ));
   } else if (flatRows.length === 0 && !groups?.length) {
     body = empty ? <div className="col-span-full">{empty}</div> : null;
@@ -878,13 +884,15 @@ function SkeletonRow<T>({
   columns,
   selectable,
   menu,
+  comfortable,
 }: {
   columns: readonly CollectionColumn<T>[];
   selectable: boolean;
   menu: boolean;
+  comfortable: boolean;
 }) {
   return (
-    <div aria-hidden className="col-span-full grid h-9 grid-cols-subgrid items-center">
+    <div aria-hidden className={cn("col-span-full grid h-9 grid-cols-subgrid items-center", comfortable && "h-10")}>
       <span />
       {selectable ? <span className="hidden @2xl:block" /> : null}
       {columns.map((col, i) => (

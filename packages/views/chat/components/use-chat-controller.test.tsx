@@ -889,6 +889,14 @@ describe("useChatController auto mark-read", () => {
     act(() => vi.advanceTimersByTime(1));
     expect(h.markReadMutate).not.toHaveBeenCalled();
   });
+
+  it("does not mark unread chat read after its dock is hidden", () => {
+    h.store.activeSessionId = "sA";
+    const { rerender } = renderHook(({ active }) => useChatController({ isActive: active }), { initialProps: { active: true } });
+    rerender({ active: false });
+    act(() => vi.advanceTimersByTime(1));
+    expect(h.markReadMutate).not.toHaveBeenCalled();
+  });
 });
 
 // Foreground gating (MUL-4485): a reply that lands while the app is backgrounded

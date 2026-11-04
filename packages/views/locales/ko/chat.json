@@ -5,6 +5,10 @@
     "no_agent_description": "에이전트를 만들면 여기서 요청을 이야기하고 태스크로 나누게 할 수 있습니다.",
     "no_agent_action": "새 에이전트",
     "select_prompt": "대화를 선택하거나 +로 새로 시작하세요",
+    "session_link_loading": "대화 확인 중…",
+    "session_link_retry_hint": "대화를 확인할 수 없습니다. 다시 시도해 주세요.",
+    "session_link_retry": "다시 시도",
+    "session_link_unavailable": "이 대화를 사용할 수 없거나 접근 권한이 없습니다.",
     "agent_link_no_access": "이 에이전트와 채팅할 권한이 없습니다."
   },
   "fab": {

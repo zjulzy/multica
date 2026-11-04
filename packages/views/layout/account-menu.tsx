@@ -73,12 +73,24 @@ function ExternalItem({ href, icon, label }: { href: string; icon: React.ReactNo
 /** The signed-in user's menu at the foot of the rail. */
 export function AccountMenu() {
   const { t, i18n } = useT("layout");
+  const { t: tSettings } = useT("settings");
   const user = useAuthStore((s) => s.user);
   const p = useWorkspacePaths();
   const logout = useLogout();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, themes } = useTheme();
   const language = useLanguageSwitch();
-  const themeValue = (theme ?? "system") as (typeof THEMES)[number]["value"];
+  const themeValue = theme ?? "system";
+  const themeOptions = [
+    ...THEMES.map((option) => ({ ...option, label: t(($) => $.account.themes[option.value]) })),
+    ...[
+      { value: "graphite-copper", icon: Moon, label: tSettings(($) => $.preferences.theme.graphite_copper) },
+      { value: "mist-celadon", icon: Sun, label: tSettings(($) => $.preferences.theme.mist_celadon) },
+      { value: "cream-gold", icon: Sun, label: tSettings(($) => $.preferences.theme.cream_gold) },
+      { value: "sakura-blush", icon: Sun, label: tSettings(($) => $.preferences.theme.sakura_blush) },
+      { value: "moon-lavender", icon: Moon, label: tSettings(($) => $.preferences.theme.moon_lavender) },
+      { value: "deep-ocean", icon: Moon, label: tSettings(($) => $.preferences.theme.deep_ocean) },
+    ].filter((option) => themes?.includes(option.value)),
+  ];
   const name = user?.name ?? "";
   const avatar = (size: "md" | "lg") => (
     <ActorAvatar
@@ -120,15 +132,15 @@ export function AccountMenu() {
               <Palette />
               <SubmenuLabel
                 label={t(($) => $.account.theme)}
-                value={t(($) => $.account.themes[themeValue])}
+                value={themeOptions.find((option) => option.value === themeValue)?.label}
               />
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
               <DropdownMenuRadioGroup value={themeValue} onValueChange={setTheme}>
-                {THEMES.map(({ value, icon: Icon }) => (
+                {themeOptions.map(({ value, icon: Icon, label }) => (
                   <DropdownMenuRadioItem key={value} value={value}>
                     <Icon />
-                    {t(($) => $.account.themes[value])}
+                    {label}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>

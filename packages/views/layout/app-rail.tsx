@@ -165,11 +165,15 @@ function RailSpaceLink({
 export function AppRail({
   topSlot,
   bottomSlot,
+  extraItems,
+  hiddenSpaces = [],
   globalActions = true,
   className,
 }: {
   topSlot?: React.ReactNode;
   bottomSlot?: React.ReactNode;
+  extraItems?: React.ReactNode;
+  hiddenSpaces?: readonly RailSpaceId[];
   globalActions?: boolean;
   className?: string;
 }) {
@@ -218,11 +222,12 @@ export function AppRail({
       aria-label={t(($) => $.rail.label)}
       data-slot="app-rail"
       className={cn(
-        "flex h-full w-16 shrink-0 flex-col items-center overflow-y-auto overflow-x-hidden pt-3 pb-2.5 [scrollbar-width:none]",
+        "relative flex h-full w-16 shrink-0 flex-col items-center overflow-hidden pt-3 pb-2.5 after:pointer-events-none after:absolute after:bottom-0 after:right-0 after:top-[var(--rail-divider-offset,0px)] after:w-px after:bg-sidebar-border",
         className,
       )}
     >
       {topSlot}
+      <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden [scrollbar-width:none]">
       <RailWorkspaces />
       {globalActions ? (
         <div className="my-2 flex flex-col items-center gap-1">
@@ -233,7 +238,7 @@ export function AppRail({
         <div className="h-2 shrink-0" />
       )}
       <ul className="flex flex-col items-center gap-0.5">
-        {RAIL_SPACES.map((id) => (
+        {RAIL_SPACES.filter((id) => !hiddenSpaces.includes(id)).map((id) => (
           <RailSpaceLink
             key={id}
             space={id}
@@ -243,9 +248,11 @@ export function AppRail({
             badge={badges[id]}
           />
         ))}
+        {extraItems}
       </ul>
-      <div className="mt-auto flex flex-col items-center gap-1 pt-2">
-        {bottomSlot}
+      </div>
+      <div className="flex max-h-[calc(100%-3rem)] min-h-0 shrink-0 flex-col items-center gap-1 pt-2">
+        {bottomSlot && <div data-slot="rail-agent-region" className="min-h-0 max-h-[35vh] overflow-y-auto overscroll-contain [scrollbar-width:none] hover:[scrollbar-width:thin]">{bottomSlot}</div>}
         <HelpLauncher />
         <TooltipHint label={t(($) => $.nav.settings)} side="right">
           <AppLink

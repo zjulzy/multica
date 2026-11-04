@@ -81,7 +81,7 @@ const savedPrefs = (prefs: Record<string, unknown>): IssueViewPreference => ({
   prefs: { hidden: [], order: [], ...prefs },
 });
 
-function renderSection() {
+function renderSection(listOnly = false) {
   const qc = new QueryClient({ defaultOptions: { queries: { enabled: false } } });
   qc.setQueryData(
     issueViewPreferenceOptions("ws-1", SIDEBAR_PROJECTS_SCOPE).queryKey,
@@ -101,12 +101,20 @@ function renderSection() {
         totalProjects={4}
         plainRowsLit
         activeIssueId={null}
+        listOnly={listOnly}
       />
     </QueryClientProvider>,
   );
 }
 
 describe("ProjectsSection", () => {
+  it("offers the full projects page without listing individual projects in desktop mode", () => {
+    renderSection(true);
+    expect(screen.getByRole("link", { name: /All 4 projects/ })).toHaveAttribute("href", "/acme/projects");
+    expect(screen.queryByText("Desktop")).not.toBeInTheDocument();
+    expect(screen.queryByText("Mobile")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New project" })).toBeInTheDocument();
+  });
   it("expands a project in place, keeping its count", () => {
     renderSection();
     expect(screen.getAllByText("3")).toHaveLength(3);

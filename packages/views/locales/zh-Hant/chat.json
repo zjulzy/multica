@@ -5,6 +5,10 @@
     "no_agent_description": "建立一個 AI 代理後，就能在這裡和它聊需求，讓它拆成任務。",
     "no_agent_action": "新建 AI 代理",
     "select_prompt": "選擇一個對話，或點 + 新建",
+    "session_link_loading": "正在確認對話…",
+    "session_link_retry_hint": "無法確認對話，請檢查連線後重試。",
+    "session_link_retry": "重試",
+    "session_link_unavailable": "該對話無法使用，或你已沒有存取權限。",
     "agent_link_no_access": "你沒有權限與該 AI 代理聊天。"
   },
   "fab": {

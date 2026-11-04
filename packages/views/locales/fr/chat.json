@@ -5,6 +5,10 @@
     "no_agent_description": "Créez un agent, puis décrivez-lui une demande ici pour qu'il la transforme en tâches.",
     "no_agent_action": "Nouvel agent",
     "select_prompt": "Choisissez une conversation, ou démarrez-en une nouvelle avec +",
+    "session_link_loading": "Vérification de la conversation…",
+    "session_link_retry_hint": "Impossible de vérifier cette conversation. Réessayez.",
+    "session_link_retry": "Réessayer",
+    "session_link_unavailable": "Cette conversation est indisponible ou vous n’y avez plus accès.",
     "agent_link_no_access": "Vous n'avez pas accès à la discussion avec cet agent."
   },
   "fab": {

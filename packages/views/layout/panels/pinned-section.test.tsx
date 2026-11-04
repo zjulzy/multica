@@ -8,6 +8,7 @@ import { useSidebarTreeStore } from "@multica/core/issues/stores/sidebar-tree-st
 import { renderWithI18n } from "../../test/i18n";
 import { IssueContextMenuProvider } from "../../issues/actions";
 import { PinnedSection, usePanelPins } from "./pinned-section";
+import { PersistentPinsProvider } from "../persistent-pins-context";
 
 vi.mock("../../issues/actions/issue-actions-menu-items", () => ({
   contextPrimitives: {},
@@ -20,6 +21,7 @@ vi.mock("../../issues/actions/use-issue-actions", () => ({ useIssueActions: () =
 const state = vi.hoisted(() => ({
   pins: [] as PinnedItem[],
   detail: { isPending: false, isError: false, data: null as unknown, error: null as unknown },
+  project: { isPending: false, isError: false, data: null as unknown, error: null as unknown },
   deletePin: vi.fn(),
 }));
 
@@ -70,6 +72,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
   useQuery: ({ queryKey }: { queryKey: readonly unknown[] }) => {
     if (queryKey[0] === "pins") return { data: state.pins };
     if (queryKey[0] === "issue") return state.detail;
+    if (queryKey[0] === "project") return state.project;
     return { isPending: true, isError: false, data: undefined, error: null };
   },
 }));
@@ -98,12 +101,46 @@ function Harness({ pathname, currentIssueId = null }: { pathname: string; curren
 beforeEach(() => {
   state.pins = [pin(1)];
   state.detail = { isPending: false, isError: false, data: null, error: null };
+  state.project = { isPending: false, isError: false, data: null, error: null };
   state.deletePin.mockReset();
   activePinnedRoute = false;
   useSidebarTreeStore.setState({ pinnedCollapsed: false });
 });
 
 describe("PinnedSection", () => {
+  it.each([
+    ["MUL-123 修复加载问题", "修复加载问题", "MUL-123 修复加载问题"],
+    ["mul-123：修复加载问题", "修复加载问题", "mul-123：修复加载问题"],
+    ["MUL-1234 是另一个编号", "MUL-1234 是另一个编号", "MUL-123 · MUL-1234 是另一个编号"],
+    ["MUL-123", "MUL-123", "MUL-123"],
+    ["7141782723 外部缺陷编号", "7141782723 外部缺陷编号", "MUL-123 · 7141782723 外部缺陷编号"],
+    ["【CL507334】【多人不同步】从远处来队友领地", "【多人不同步】从远处来队友领地", "MUL-123 · 【CL507334】【多人不同步】从远处来队友领地"],
+    ["【cl442360】【交互表现】出现两个按钮", "【交互表现】出现两个按钮", "MUL-123 · 【cl442360】【交互表现】出现两个按钮"],
+    ["【CL507334】", "【CL507334】", "MUL-123 · 【CL507334】"],
+    ["【CLIENT问题】连接失败", "【CLIENT问题】连接失败", "MUL-123 · 【CLIENT问题】连接失败"],
+  ])("only hides this issue's own prefix in the pinned label", (title, expected, tooltip) => {
+    state.detail = { isPending: false, isError: false, data: { identifier: "MUL-123", title, status: "todo" }, error: null };
+    renderWithI18n(<PersistentPinsProvider><Harness pathname="/acme/issues" /></PersistentPinsProvider>);
+    const link = screen.getByRole("link", { name: expected });
+    expect(link).toHaveAttribute("title", tooltip);
+  });
+  it.each([["🚀", "🚀"], [null, "📁"]])("shows a pinned project's icon with a fallback", (icon, expected) => {
+    state.pins = [{ ...pin(1), item_type: "project", item_id: "project-1" }];
+    state.project = { isPending: false, isError: false, data: { title: "Project", icon }, error: null };
+    renderWithI18n(<Harness pathname="/acme/projects" />);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Project" })).toHaveAttribute("href", "/acme/projects/project-1");
+  });
+  it("shows every pin and the active state even if an old collapsed setting exists", () => {
+    state.pins = Array.from({ length: 6 }, (_, i) => pin(i + 1));
+    state.detail = { isPending: false, isError: false, data: { identifier: "MUL-1", title: "Pinned issue", status: "todo" }, error: null };
+    useSidebarTreeStore.setState({ pinnedCollapsed: true });
+    renderWithI18n(<PersistentPinsProvider><Harness pathname="/acme/issues/MUL-6" currentIssueId="issue-6" /></PersistentPinsProvider>);
+    expect(document.querySelector('a[href="/acme/issues/issue-6"]')).toHaveAttribute("aria-current", "page");
+    expect(activePinnedRoute).toBe(true);
+    expect(screen.queryByRole("button", { name: "Pinned" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show 1 more…" })).not.toBeInTheDocument();
+  });
   it("unpins items whose detail is gone", async () => {
     state.detail = { isPending: false, isError: true, data: null, error: new ApiError("missing", 404, "Not Found") };
     renderWithI18n(<Harness pathname="/acme/issues" />);

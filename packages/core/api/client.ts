@@ -1426,10 +1426,10 @@ export class ApiClient {
     await this.fetch(`/api/issues/${encodeURIComponent(issueId)}/wakeups/${encodeURIComponent(wakeupId)}/disable`, { method: "POST" });
   }
 
-  async getIssue(id: string, options?: { signal?: AbortSignal }): Promise<Issue> {
+  async getIssue(id: string, options?: { signal?: AbortSignal; workspaceSlug?: string }): Promise<Issue> {
     const raw = await this.fetch<unknown>(
       `/api/issues/${encodeURIComponent(id)}`,
-      options?.signal ? { signal: options.signal } : undefined,
+      options?.signal || options?.workspaceSlug ? { signal: options.signal, headers: options.workspaceSlug ? { "X-Workspace-Slug": options.workspaceSlug } : undefined } : undefined,
     );
     const issue = parseWithFallback<Issue | null>(raw, IssueSchema, null, {
       endpoint: "GET /api/issues/:id",
@@ -3782,8 +3782,8 @@ export class ApiClient {
     });
   }
 
-  async getChatSession(id: string): Promise<ChatSession> {
-    const raw: unknown = await this.fetch(`/api/chat/sessions/${id}`);
+  async getChatSession(id: string, workspaceSlug?: string): Promise<ChatSession> {
+    const raw: unknown = await this.fetch(`/api/chat/sessions/${id}`, workspaceSlug ? { headers: workspaceHeader(workspaceSlug) } : undefined);
     return parseWithFallback(raw, ChatSessionSchema, EMPTY_CHAT_SESSION, {
       endpoint: "GET /api/chat/sessions/:id",
     });
@@ -4143,8 +4143,8 @@ export class ApiClient {
     return this.fetch(`/api/projects?${search}`, { headers: workspaceHeader(workspaceSlug) });
   }
 
-  async getProject(id: string): Promise<Project> {
-    return this.fetch(`/api/projects/${id}`);
+  async getProject(id: string, workspaceSlug?: string): Promise<Project> {
+    return this.fetch(`/api/projects/${encodeURIComponent(id)}`, workspaceSlug ? { headers: { "X-Workspace-Slug": workspaceSlug } } : undefined);
   }
 
   async createProject(data: CreateProjectRequest): Promise<Project> {

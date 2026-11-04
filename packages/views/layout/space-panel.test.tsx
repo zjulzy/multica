@@ -4,6 +4,7 @@ import { SidebarProvider, useSidebar } from "@multica/ui/components/ui/sidebar";
 import { renderWithI18n } from "../test/i18n";
 import { AppShellProvider, useAppShell } from "./app-shell-context";
 import { SpacePanel } from "./space-panel";
+import { PersistentPinsProvider } from "./persistent-pins-context";
 
 const navigation = vi.hoisted(() => ({ pathname: "/acme/issues" }));
 
@@ -22,6 +23,7 @@ vi.mock("./panels/list-space-peeks", () => ({
   InboxPeek: () => <div data-testid="inbox-peek" />,
   ChatPeek: () => <div data-testid="chat-peek" />,
 }));
+vi.mock("./panels/shared-pinned-section", () => ({ SharedPinnedSection: () => <div data-testid="shared-pins">Pinned</div> }));
 
 let shell: ReturnType<typeof useAppShell> = null;
 let sidebar: ReturnType<typeof useSidebar> | null = null;
@@ -31,12 +33,12 @@ function Reader() {
   return null;
 }
 
-function renderPanel() {
+function renderPanel(bottomSlot?: React.ReactNode) {
   return renderWithI18n(
     <SidebarProvider>
       <AppShellProvider>
         <Reader />
-        <SpacePanel />
+        <PersistentPinsProvider><SpacePanel bottomSlot={bottomSlot} /></PersistentPinsProvider>
       </AppShellProvider>
     </SidebarProvider>,
   );
@@ -55,6 +57,20 @@ describe("SpacePanel", () => {
     renderPanel();
     expect(panel()).toHaveAttribute("data-state", "expanded");
     expect(screen.getByTestId("work-panel")).toBeInTheDocument();
+  });
+
+  it("does not add a separate pinned area outside the automation panel", () => {
+    navigation.pathname = "/acme/autopilots";
+    renderPanel();
+    expect(panel()).toContainElement(screen.getByTestId("autopilots-panel"));
+    expect(screen.queryByTestId("shared-pins")).not.toBeInTheDocument();
+  });
+
+  it("keeps the bottom slot in the wide panel and makes it inert when collapsed", () => {
+    renderPanel(<div data-testid="agent-hub">Active agents</div>);
+    expect(panel()).toContainElement(screen.getByTestId("agent-hub"));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle left sidebar" }));
+    expect(panel()).toHaveAttribute("inert");
   });
 
   // Inbox, Chat and Settings render their own list column in the card.

@@ -23,6 +23,7 @@ export type TabSubject =
   | { kind: "page"; page: WorkspacePageKey }
   /** My agents' work: the My issues route's `?scope=agents`. */
   | { kind: "myAgents" }
+  | { kind: "liwork" }
   /** A single issue detail. */
   | { kind: "issue"; id: string }
   /** A single project detail. */
@@ -79,6 +80,8 @@ export function parseTabSubject(url: string): TabSubject {
   const id = segments[2] ?? "";
 
   switch (segment) {
+    case "liwork":
+      return { kind: "liwork" };
     case "issues":
       return id ? { kind: "issue", id } : { kind: "page", page: "issues" };
     case "my-issues":
@@ -144,6 +147,8 @@ export function parseTabSubject(url: string): TabSubject {
  */
 export function tabSubjectKey(subject: TabSubject): string {
   switch (subject.kind) {
+    case "liwork":
+      return "liwork";
     case "page":
       return `page:${subject.page}`;
     case "myAgents":

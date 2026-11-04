@@ -1,5 +1,8 @@
 "use client";
 
+import { usePersistentPins } from "../layout/persistent-pins-context";
+import { SharedPinnedSection } from "../layout/panels/shared-pinned-section";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Bot, MessageSquare, Plus } from "@multica/ui/icons";
 import { toast } from "sonner";
@@ -36,6 +39,7 @@ import { ArchivedAgentBanner } from "./components/archived-agent-banner";
 import { AgentAccessRevokedBanner } from "./components/agent-access-revoked-banner";
 import { RuntimeRequiredBanner } from "./components/runtime-required-banner";
 import { useRegisterCommandBarContext } from "../search/register-context";
+import { useChatDockVisible } from "./chat-dock-visibility";
 
 /**
  * Chat tab — the first-class two-pane surface (thread list on the left,
@@ -56,7 +60,8 @@ import { useRegisterCommandBarContext } from "../search/register-context";
  * `ChatInput`, so its `@` mentions fall back to manual search (issue-comment
  * style).
  */
-export function ChatPage() {
+export function ChatPage({ dock = false, visible = true }: { dock?: boolean; visible?: boolean } = {}) {
+  const persistentPins = usePersistentPins();
   const { t } = useT("chat");
   const { pathname, searchParams, push, replace } = useNavigation();
   const workspaceSlug = useRequiredWorkspaceSlug();
@@ -65,7 +70,8 @@ export function ChatPage() {
   // to another route, this instance must stop reconciling shared chat state.
   // Also check the live workspace mirror in each effect: the incoming layout
   // can rehydrate the store before this page observes the destination URL.
-  const isCurrentChatRoute = pathname === wsPaths.chat();
+  const dockVisible = useChatDockVisible();
+  const isCurrentChatRoute = visible && (dock || !dockVisible) && pathname === wsPaths.chat();
   const isCompact = useIsCompact();
 
   const c = useChatController({
@@ -128,7 +134,8 @@ export function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reconcile store/route changes, not URL updates
   }, [isCurrentChatRoute, workspaceSlug, c.activeSessionId]);
 
-  const listCollapsed = useListColumnCollapsed();
+  const shellListCollapsed = useListColumnCollapsed();
+  const listCollapsed = dock ? false : shellListCollapsed;
 
   // `?agent=` intent bookkeeping. The ref holds the param value already
   // consumed (or superseded) so the effect below fires at most once per deep
@@ -195,7 +202,7 @@ export function ChatPage() {
   useRegisterCommandBarContext(
     useMemo(
       () =>
-        commandBarSession
+        commandBarSession && isCurrentChatRoute
           ? {
               kind: "chat",
               session: commandBarSession,
@@ -204,7 +211,7 @@ export function ChatPage() {
                 commandBarHandlersRef.current.changeProjectContext(projectId),
             }
           : null,
-      [commandBarSession],
+      [commandBarSession, isCurrentChatRoute],
     ),
   );
 
@@ -250,7 +257,7 @@ export function ChatPage() {
   );
 
   const listHeader = (
-    <PanelHeader as="h1" title={t(($) => $.page.title)} leading={<CollapsedNavTrigger />}>
+    <PanelHeader as="h1" title={t(($) => $.page.title)} leading={dock ? undefined : <CollapsedNavTrigger />}>
       {newChatButton}
     </PanelHeader>
   );
@@ -457,12 +464,15 @@ export function ChatPage() {
   // prompt instead of an orphaned compose box. -------------------------------
   const hasTarget = !!c.activeSessionId || composingNew;
   return (
-    <div className="flex min-h-0 flex-1">
-      <ListColumn collapsed={listCollapsed}>
+    <div data-slot={dock ? undefined : "desktop-list-page"} className="flex min-h-0 flex-1">
+      {dock ? <aside className="flex h-full w-56 shrink-0 flex-col overflow-hidden border-r">
         {listHeader}
         <div className="flex-1 min-h-0 overflow-y-auto">{listBody}</div>
-      </ListColumn>
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      </aside> : <ListColumn collapsed={listCollapsed}>
+        {listHeader}
+        <div className="flex-1 min-h-0 overflow-y-auto">{listBody}{persistentPins && <div className="px-2"><SharedPinnedSection /></div>}</div>
+      </ListColumn>}
+      <div data-slot={dock ? undefined : "list-page-main"} className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         {listCollapsed && !c.currentSession && <PageHeader>{newChatButton}</PageHeader>}
         {hasTarget ? (
           conversation

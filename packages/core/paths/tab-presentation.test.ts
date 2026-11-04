@@ -14,6 +14,9 @@ function present(url: string, data: TabEntityData = {}) {
 }
 
 describe("resolveTabPresentation — pages", () => {
+  it("names the LiWork monitor without presenting it as an unknown route", () => {
+    expect(present("/acme/liwork")).toEqual({ visual: { kind: "icon", icon: "Monitor" }, title: { kind: "text", text: "LiWork" } });
+  });
   it("uses the page icon and localized page name", () => {
     expect(present("/acme/issues")).toEqual({
       visual: { kind: "icon", icon: "ListTodo" },

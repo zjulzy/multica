@@ -26,6 +26,7 @@ describe("CollectionPageHeader", () => {
     );
 
     const header = screen.getByRole("banner");
+    expect(header.querySelector("[data-page-header-icon]")).toBeInTheDocument();
     expect(within(header).getByRole("heading", { name: "All teams", level: 1 })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "Filter" })).toBeInTheDocument();
     expect(within(header).getByRole("button", { name: "New team" })).toBeInTheDocument();

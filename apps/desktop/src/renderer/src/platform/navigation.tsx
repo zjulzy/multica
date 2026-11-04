@@ -13,7 +13,8 @@ import {
   useActiveTabUrl,
 } from "@/stores/tab-store";
 import { useWindowOverlayStore } from "@/stores/window-overlay-store";
-import { isSingleTabMode } from "@/stores/desktop-prefs-store";
+import { isSingleTabMode, useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+import { useChatDockRequestStore } from "@/stores/chat-dock-request-store";
 import {
   handOffToWorkspaceWindow,
   openWorkspaceInNewWindow,
@@ -99,6 +100,21 @@ function tryRouteToOtherWorkspace(path: string): boolean {
   return true;
 }
 
+/** Route normal chat intents to the dock without replacing the active page. */
+export function tryRouteToChatDock(path: string): boolean {
+  if (!useDesktopPrefsStore.getState().inboxDockEnabled || !path.startsWith("/")) return false;
+  const slug = workspaceSlugForPath(path);
+  if (!slug) return false;
+  const url = new URL(path, "https://multica.invalid");
+  if (url.pathname !== paths.workspace(slug).chat()) return false;
+  const store = useTabStore.getState();
+  if (slug !== store.activeWorkspaceSlug && handOffToWorkspaceWindow(slug, path)) return true;
+  useChatDockRequestStore.getState().open(slug, path);
+  useDesktopPrefsStore.getState().setInboxDockOpen(true);
+  if (slug !== store.activeWorkspaceSlug) store.switchWorkspace(slug);
+  return true;
+}
+
 /**
  * Execute a content link (the `multica:navigate` event fired by the shared
  * editor/markdown link handler) with the disposition the click resolved to:
@@ -115,6 +131,7 @@ export function routeContentLinkPath(
   path: string,
   disposition: LinkClickIntent = "push",
 ): void {
+  if ((disposition === "push" || isSingleTabMode()) && tryRouteToChatDock(path)) return;
   const store = useTabStore.getState();
   const slug = workspaceSlugForPath(path);
   if (slug && slug !== store.activeWorkspaceSlug) {
@@ -197,6 +214,7 @@ export function DesktopNavigationProvider({
           return;
         }
         if (tryRouteToOverlay(path)) return;
+        if (tryRouteToChatDock(path)) return;
         const store = useTabStore.getState();
         const active = getActiveTab(store);
         if (active && active.url === path) return;

@@ -121,6 +121,18 @@ describe("AppRail global actions", () => {
 });
 
 describe("AppRail spaces", () => {
+  it("hides only the requested spaces and keeps footer controls outside the scrolling agent area", () => {
+    renderRail(undefined, <AppRail hiddenSpaces={["inbox", "chat"]} bottomSlot={<div data-testid="agent-hub">Agents</div>} />);
+    expect(link("/acme/inbox")).toBeNull();
+    expect(link("/acme/chat")).toBeNull();
+    expect(link("/acme/issues")).not.toBeNull();
+    const hubRegion = screen.getByTestId("agent-hub").parentElement;
+    expect(hubRegion).toHaveAttribute("data-slot", "rail-agent-region");
+    expect(hubRegion).toHaveClass("overflow-y-auto");
+    expect(hubRegion).toHaveClass("[scrollbar-width:none]", "hover:[scrollbar-width:thin]");
+    expect(hubRegion?.closest("nav")).toHaveClass("after:top-[var(--rail-divider-offset,0px)]", "after:bg-sidebar-border");
+    expect(hubRegion).not.toContainElement(screen.getByRole("link", { name: "Settings" }));
+  });
   it("links each space and marks the current route's space", () => {
     state.pathname = "/acme/projects/p-1";
     renderRail();

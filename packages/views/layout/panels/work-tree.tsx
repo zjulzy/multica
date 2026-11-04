@@ -99,6 +99,7 @@ interface ProjectsSectionProps {
   totalProjects: number;
   plainRowsLit: boolean;
   activeIssueId: string | null;
+  listOnly?: boolean;
 }
 
 export function ProjectsSection({
@@ -109,6 +110,7 @@ export function ProjectsSection({
   totalProjects,
   plainRowsLit,
   activeIssueId,
+  listOnly = false,
 }: ProjectsSectionProps) {
   const { t } = useT("layout");
   const p = useWorkspacePaths();
@@ -134,6 +136,24 @@ export function ProjectsSection({
     },
     [projects, projectOrder, updatePrefs],
   );
+
+  if (listOnly) {
+    return (
+      <PanelSection
+        label={t(($) => $.nav.projects)}
+        action={<IconButton label={t(($) => $.panels.work.new_project)} size="icon-xs" className="text-muted-foreground" onClick={() => useModalStore.getState().open("create-project")}><Plus /></IconButton>}
+      >
+        <PanelList>
+          <PanelLink
+            href={p.projects()}
+            icon={<Folder />}
+            label={t(($) => $.panels.work.all_projects, { count: totalProjects })}
+            active={plainRowsLit && isPathWithin(pathname, p.projects())}
+          />
+        </PanelList>
+      </PanelSection>
+    );
+  }
 
   return (
     <PanelSection

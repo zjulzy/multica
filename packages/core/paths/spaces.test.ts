@@ -28,6 +28,7 @@ describe("spaceForPath", () => {
     [ws.usage(), "team"],
     [ws.chatSession("c-1"), "chat"],
     [ws.autopilotDetail("ap-1"), "autopilots"],
+    ["/acme/liwork", "liwork"],
     [`${ws.settings()}?tab=members`, "settings"],
   ])("maps %s to %s", (path, space) => {
     expect(spaceForPath(path)).toBe(space);

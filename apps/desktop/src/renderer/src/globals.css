@@ -7,6 +7,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* List-based pages own their navigation column; keep it on the shell while
+   their detail pane retains the same card treatment as other pages. */
+@media (min-width: 768px) {
+  [data-slot="desktop-content-card"]:has([data-slot="desktop-list-page"]) {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  [data-slot="desktop-content-card"] [data-slot="desktop-list-page"] {
+    background: transparent;
+  }
+  [data-slot="desktop-content-card"] [data-slot="list-page-main"] {
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: var(--page-canvas);
+    box-shadow: var(--surface-shadow), 0 0 0 1px var(--surface-border);
+  }
+}
+
 /* Font stack: Inter for Latin UI text + system CJK fonts for localized content.
    Web app uses the same stack via next/font/google in apps/web/app/layout.tsx —
    keep the CJK fallback tail in sync across both files. The Inter primary family
@@ -133,4 +152,24 @@ html[data-interface-motion="off"] [data-slot="button"]:active {
 @keyframes dock-slide-close {
   from { transform: var(--dock-motion-start, translateY(0)); }
   to { transform: translateY(calc(100% - 36px)); }
+}
+/* Scope font preferences to the navigational sidebars, including their peeks. */
+html[data-sidebar-font-size="small"] :is([data-slot="space-panel"], [data-slot="space-panel-peek"], [data-slot="list-column"], [data-slot="compact-nav-sheet"]) {
+  --text-body: 13px; --text-body--line-height: 19px;
+  --text-caption: 11px; --text-caption--line-height: 16px;
+  --text-label: 12px; --text-label--line-height: 17px;
+}
+html[data-sidebar-font-size="large"] :is([data-slot="space-panel"], [data-slot="space-panel-peek"], [data-slot="list-column"], [data-slot="compact-nav-sheet"]) {
+  --text-body: 15px; --text-body--line-height: 22px;
+  --text-caption: 13px; --text-caption--line-height: 18px;
+  --text-label: 14px; --text-label--line-height: 20px;
+}
+
+/* Desktop project cards use the same more readable scale as the lists. */
+html[data-sidebar-font-size] [data-slot="project-card"] {
+  --text-body: 15px; --text-body--line-height: 22px;
+  --text-caption: 13px; --text-caption--line-height: 18px;
+}
+html[data-sidebar-font-size] [data-slot="project-card"] > :first-child {
+  padding-top: 14px; padding-left: 14px; padding-right: 14px;
 }

@@ -288,7 +288,7 @@ function ProjectCard({
       : 0;
 
   return (
-    <div className="group/card group/row flex flex-col rounded-md border bg-card transition-colors hover:border-primary/50">
+    <div data-slot="project-card" className="group/card group/row flex flex-col rounded-md border bg-card transition-colors hover:border-primary/50">
       <div className="p-3 pb-2">
         <div className="flex items-center gap-2">
           <AppLink
@@ -862,6 +862,7 @@ export function ProjectsPage() {
         <>
           {isCompact ? (
             <CollectionList
+              comfortableOnDesktop
               label={scopeLabels[scope]}
               columns={columns}
               hiddenColumns={hiddenColumns}

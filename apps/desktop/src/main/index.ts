@@ -20,6 +20,7 @@ import {
   setupDaemonManager,
 } from "./daemon-manager";
 import { setupLocalDirectory } from "./local-directory";
+import { getLiworkSnapshot, switchLiworkSession } from "./liwork-monitor";
 import { configureLinuxFileDialogs } from "./linux-file-dialog";
 import { openExternalSafely, downloadURLSafely } from "./external-url";
 import { installContextMenu } from "./context-menu";
@@ -788,6 +789,14 @@ if (!gotTheLock) {
     // (the renderer itself runs sandboxed).
     ipcMain.handle("shell:openExternal", (_event, url: string) => {
       return openExternalSafely(url);
+    });
+    ipcMain.handle("liwork:monitor-snapshot", (event) => {
+      if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");
+      return getLiworkSnapshot();
+    });
+    ipcMain.handle("liwork:switch-session", (event, sessionId: unknown) => {
+      if (!BrowserWindow.fromWebContents(event.sender) || typeof sessionId !== "string") throw new Error("Invalid LiWork request");
+      return switchLiworkSession(sessionId);
     });
 
     // Renderer requests its own window close (e.g. Cmd+W on the last main

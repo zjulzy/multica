@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Folder, X } from "@multica/ui/icons";
+import { X } from "@multica/ui/icons";
 import { cn } from "@multica/ui/lib/utils";
 import { TooltipHint } from "@multica/ui/components/common/tooltip-hint";
 import { ShimmerText } from "@multica/ui/components/common/shimmer-text";
@@ -29,8 +29,10 @@ import type { Issue, PinnedItem } from "@multica/core/types";
 import { AppLink } from "../../navigation";
 import { IssueActionsContextMenu } from "../../issues/actions";
 import { useStatusLabel } from "../../issues/utils/status-label";
+import { ProjectIcon } from "../../projects/components/project-icon";
 import { useT } from "../../i18n";
 import { PANEL_ROW_CLASS, PanelList, PanelSection, isPathWithin, panelRowStateClass } from "../panel-nav";
+import { usePersistentPins } from "../persistent-pins-context";
 import {
   ISSUE_ROW_LINK_CLASS,
   IssueAgentBadge,
@@ -65,6 +67,7 @@ export function usePanelPins(
   currentIssueId: string | null,
 ) {
   const p = useWorkspacePaths();
+  const persistentPins = usePersistentPins();
   const { data: allPins = EMPTY_PINS } = useQuery({
     ...pinListOptions(wsId ?? "", userId ?? ""),
     enabled: !!wsId && !!userId,
@@ -91,14 +94,14 @@ export function usePanelPins(
 
   const visible = localPinnedWsId === (wsId ?? null) ? localPinned : EMPTY_PINS;
   const expanded = expandedWsId === (wsId ?? null);
-  const displayed = expanded ? visible : visible.slice(0, PINNED_PREVIEW_LIMIT);
+  const displayed = persistentPins || expanded ? visible : visible.slice(0, PINNED_PREVIEW_LIMIT);
   const isPinActive = (pin: PinnedItem) =>
     pin.item_type === "issue"
       ? pin.item_id === currentIssueId
       : isPathWithin(pathname, pinHref(p, pin));
   // A collapsed section shows no rows, so it must not keep the tree unlit.
   const pinnedCollapsed = useSidebarTreeStore((s) => s.pinnedCollapsed);
-  const isActivePinnedRoute = !pinnedCollapsed && displayed.some(isPinActive);
+  const isActivePinnedRoute = (persistentPins || !pinnedCollapsed) && displayed.some(isPinActive);
 
   return {
     visible,
@@ -117,6 +120,7 @@ type PanelPins = ReturnType<typeof usePanelPins>;
 
 export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string }) {
   const { t } = useT("layout");
+  const persistentPins = usePersistentPins();
   const p = useWorkspacePaths();
   const deletePin = useDeletePin();
   const reorderPins = useReorderPins();
@@ -148,8 +152,8 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
   return (
     <PanelSection
       label={t(($) => $.sidebar.pinned_label)}
-      collapsed={collapsed}
-      onCollapsedChange={setCollapsed}
+      collapsed={persistentPins ? false : collapsed}
+      onCollapsedChange={persistentPins ? undefined : setCollapsed}
     >
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <SortableContext items={displayed.map((pin) => pin.id)} strategy={verticalListSortingStrategy}>
@@ -167,7 +171,7 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
           </PanelList>
         </SortableContext>
       </DndContext>
-      {visible.length > PINNED_PREVIEW_LIMIT && (
+      {!persistentPins && visible.length > PINNED_PREVIEW_LIMIT && (
         <button
           type="button"
           aria-expanded={expanded}
@@ -188,6 +192,8 @@ function SortablePinItem({
   href,
   onUnpin,
   label,
+  displayLabel = label,
+  tooltip,
   iconNode,
   active,
   running = false,
@@ -200,6 +206,8 @@ function SortablePinItem({
   href: string;
   onUnpin: () => void;
   label: string;
+  displayLabel?: string;
+  tooltip?: string;
   iconNode: React.ReactNode;
   active: boolean;
   /** Shimmers the label while an agent works on the pinned issue. */
@@ -235,6 +243,7 @@ function SortablePinItem({
       <AppLink
         href={href}
         newTabTitle={label}
+        title={tooltip}
         draggable={false}
         aria-current={active ? "page" : undefined}
         onClick={(event) => {
@@ -251,7 +260,7 @@ function SortablePinItem({
           active={running}
           className={cn("min-w-0 flex-1 truncate", SIDEBAR_SHIMMER_CLASS, unread && "text-foreground")}
         >
-          {label}
+          {displayLabel}
         </ShimmerText>
         {/* Holds the same right-edge slot as a tree row's avatars, and yields
             it to the unpin button on hover. */}
@@ -315,6 +324,7 @@ function PinRow({
   wsId: string;
 }) {
   const isIssue = pin.item_type === "issue";
+  const persistentPins = usePersistentPins();
   const agents = useIssueAgentState(wsId, isIssue ? pin.item_id : "");
   const unread = useIssueUnread(wsId, isIssue ? pin.item_id : "");
   const statusCatalog = useIssueStatuses(wsId);
@@ -338,12 +348,27 @@ function PinRow({
     if (issueQuery.isPending) return <PinSkeleton />;
     if (issueQuery.isError || !issueQuery.data) return null;
     const issue = issueQuery.data;
+    const identifier = issue.identifier?.trim();
+    const titleStartsWithId = !!identifier && issue.title.slice(0, identifier.length).toUpperCase() === identifier.toUpperCase();
+    const rest = titleStartsWithId ? issue.title.slice(identifier.length) : "";
+    const separator = rest.match(/^(?:\s*[:：—–-]\s*|\s+)/u);
+    const shortened = separator ? rest.slice(separator[0].length).trimStart() : "";
+    const baseTitle = shortened || issue.title;
+    // Imported bug titles start with their build changelist, not the Multica ID.
+    // Keep all following category tags and never turn a title into an empty row.
+    const withoutChangelist = baseTitle.replace(/^【CL\s*\d+】\s*/i, "");
+    const displayTitle = withoutChangelist || baseTitle;
+    const tooltip = identifier && !shortened && issue.title.toUpperCase() !== identifier.toUpperCase()
+      ? `${identifier} · ${issue.title}`
+      : issue.title;
     return (
       <SortablePinItem
         pin={pin}
         href={href}
         onUnpin={onUnpin}
         label={issue.title}
+        displayLabel={persistentPins ? displayTitle : issue.title}
+        tooltip={persistentPins ? tooltip : undefined}
         active={active}
         running={!!agents?.running}
         unread={!agents && !!unread}
@@ -372,7 +397,7 @@ function PinRow({
       onUnpin={onUnpin}
       label={project.title}
       active={active}
-      iconNode={<Folder className="size-4 shrink-0" />}
+      iconNode={<ProjectIcon project={project} size="sm" />}
     />
   );
 }

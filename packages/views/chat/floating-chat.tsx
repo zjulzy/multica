@@ -6,6 +6,7 @@ import { useNavigation } from "../navigation";
 import { ChatFab } from "./components/chat-fab";
 import { ChatWindow } from "./components/chat-window";
 import { isFloatingChatRouteSuppressed } from "./floating-chat-visibility";
+import { useChatDockVisible } from "./chat-dock-visibility";
 
 /**
  * Mount point for the floating chat overlay (FAB + window). Rendered once in
@@ -22,8 +23,9 @@ export function FloatingChat() {
   const enabled = useChatStore((s) => s.floatingChatEnabled);
   const { pathname } = useNavigation();
   const wsPaths = useWorkspacePaths();
+  const dockVisible = useChatDockVisible();
 
-  if (!enabled) return null;
+  if (!enabled || dockVisible) return null;
   // Suppress on the Chat tab — it renders the same conversation full-page.
   if (isFloatingChatRouteSuppressed(pathname, wsPaths.chat())) return null;
 

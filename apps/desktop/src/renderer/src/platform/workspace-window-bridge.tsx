@@ -5,6 +5,7 @@ import { workspaceSlugForPath } from "@multica/core/paths";
 import { useWorkspaceList } from "@multica/core/workspace";
 import { useT } from "@multica/views/i18n";
 import { useTabStore } from "@/stores/tab-store";
+import { tryRouteToChatDock } from "./navigation";
 import {
   nextWorkspaceForNewWindow,
   openWorkspaceInNewWindow,
@@ -35,6 +36,7 @@ export function WorkspaceWindowBridge() {
   useEffect(
     () =>
       window.desktopAPI.onOpenWorkspacePath?.((path) => {
+        if (tryRouteToChatDock(path)) return;
         const slug = workspaceSlugForPath(path);
         if (slug) useTabStore.getState().switchWorkspace(slug, path);
       }),

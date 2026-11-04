@@ -17,12 +17,16 @@ interface DesktopPrefsStore {
   /** Show the active-agent status hub in the sidebar. */
   agentStatusHubEnabled: boolean;
   interfaceMotionEnabled: boolean;
+  sidebarFontSize: "small" | "standard" | "large";
+  liworkMonitorEnabled: boolean;
   setSingleTabMode: (enabled: boolean) => void;
   setInboxDockEnabled: (enabled: boolean) => void;
   setInboxDockOpen: (open: boolean) => void;
   setInboxDockSize: (size: number) => void;
   setAgentStatusHubEnabled: (enabled: boolean) => void;
   setInterfaceMotionEnabled: (enabled: boolean) => void;
+  setSidebarFontSize: (size: "small" | "standard" | "large") => void;
+  setLiworkMonitorEnabled: (enabled: boolean) => void;
 }
 
 export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
@@ -34,6 +38,8 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       inboxDockSize: 38,
       agentStatusHubEnabled: true,
       interfaceMotionEnabled: false,
+      sidebarFontSize: "standard",
+      liworkMonitorEnabled: true,
       setSingleTabMode: (enabled) => set({ singleTabMode: enabled }),
       setInboxDockEnabled: (enabled) =>
         set(enabled ? { inboxDockEnabled: true } : { inboxDockEnabled: false, inboxDockOpen: false }),
@@ -42,10 +48,12 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
         set({ inboxDockSize: Math.min(70, Math.max(0, size)) }),
       setAgentStatusHubEnabled: (enabled) => set({ agentStatusHubEnabled: enabled }),
       setInterfaceMotionEnabled: (enabled) => set({ interfaceMotionEnabled: enabled }),
+      setSidebarFontSize: (size) => set({ sidebarFontSize: size }),
+      setLiworkMonitorEnabled: (enabled) => set({ liworkMonitorEnabled: enabled }),
     }),
     {
       name: "multica_desktop_prefs",
-      version: 5,
+      version: 7,
       migrate: (persistedState) => {
         const state = persistedState as Partial<DesktopPrefsStore>;
         return {
@@ -56,6 +64,8 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
           inboxDockSize: state.inboxDockSize ?? 38,
           agentStatusHubEnabled: state.agentStatusHubEnabled ?? true,
           interfaceMotionEnabled: state.interfaceMotionEnabled ?? false,
+          sidebarFontSize: state.sidebarFontSize === "small" || state.sidebarFontSize === "large" ? state.sidebarFontSize : "standard",
+          liworkMonitorEnabled: state.liworkMonitorEnabled ?? true,
         } as DesktopPrefsStore;
       },
     },

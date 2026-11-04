@@ -86,7 +86,7 @@ export function CollectionPageHeader({
 }: CollectionPageHeaderProps) {
   const label = (
     <>
-      <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      <Icon data-page-header-icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 truncate">{title}</span>
     </>
   );

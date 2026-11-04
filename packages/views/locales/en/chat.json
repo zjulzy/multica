@@ -5,6 +5,10 @@
     "no_agent_description": "Create an agent, then talk through a request here and let it turn the request into issues.",
     "no_agent_action": "New agent",
     "select_prompt": "Pick a conversation, or start a new one with +",
+    "session_link_loading": "Checking chat…",
+    "session_link_retry_hint": "Could not check this chat. Please retry.",
+    "session_link_retry": "Retry",
+    "session_link_unavailable": "This chat is unavailable or you no longer have access.",
     "agent_link_no_access": "You don't have access to chat with this agent."
   },
   "fab": {

@@ -549,6 +549,7 @@ function AutopilotList() {
         </CollectionPageState>
       ) : (
         <CollectionList
+          comfortableOnDesktop
           label={scopeLabels[scope]}
           columns={columns}
           hiddenColumns={hiddenColumns}

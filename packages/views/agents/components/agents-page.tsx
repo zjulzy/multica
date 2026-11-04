@@ -780,6 +780,7 @@ export function AgentsPage(_props: AgentsPageProps = {}) {
         </div>
       ) : (
         <CollectionList
+          comfortableOnDesktop
           label={scopeTitles[scope]}
           columns={columns}
           hiddenColumns={hiddenColumns}

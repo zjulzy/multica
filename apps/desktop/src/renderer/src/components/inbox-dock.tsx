@@ -11,6 +11,10 @@ import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 import { useT } from "@multica/views/i18n";
 import { Bot } from "lucide-react";
 import { AgentDock } from "./agent-dock";
+import { ChatDockVisibilityProvider } from "@multica/views/chat";
+import { useChatDockRequestStore } from "@/stores/chat-dock-request-store";
+import { ChatDockSurface } from "./chat-dock-surface";
+import { ChatDockTab } from "./chat-dock-tab";
 
 const DOCK_COLLAPSED_SIZE = 36;
 type InboxView = InboxSurfaceController["view"];
@@ -19,6 +23,7 @@ interface DesktopInboxDockLayoutProps {
   children: ReactNode;
   enabled: boolean;
   workspaceId: string | null;
+  workspaceSlug?: string | null;
   openRequest?: { workspaceId: string; key: string } | null;
   agentRequest?: { workspaceId: string; agentId: string } | null;
   onAgentRequestHandled?: (request: { workspaceId: string; agentId: string }) => void;
@@ -100,6 +105,7 @@ export function DesktopInboxDockLayout({
   children,
   enabled,
   workspaceId,
+  workspaceSlug,
   openRequest,
   onRequestHandled,
   agentRequest,
@@ -108,9 +114,27 @@ export function DesktopInboxDockLayout({
 }: DesktopInboxDockLayoutProps): ReactElement {
   const persistedDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
   const { t } = useT("agents");
-  const [activeTab, setActiveTab] = useState<"inbox" | "agents">("inbox");
+  const [activeTab, setActiveTab] = useState<"inbox" | "agents" | "chat">("inbox");
+  const chatRequest = useChatDockRequestStore((state) => state.request);
+  const [chatLocation, setChatLocation] = useState<{ workspaceSlug: string; path: string; validateSession?: boolean; requestId?: number } | null>(null);
+  const pendingChat = !!workspaceSlug && chatRequest?.workspaceSlug === workspaceSlug;
+  const chatPath = chatLocation && chatLocation.workspaceSlug === workspaceSlug ? chatLocation.path : `/${encodeURIComponent(workspaceSlug ?? "")}/chat`;
+  const changeChatPath = useCallback((path: string, expectedRequestId?: number) => { if (workspaceSlug) setChatLocation((current) => expectedRequestId !== undefined && current?.requestId !== expectedRequestId ? current : { workspaceSlug, path }); }, [workspaceSlug]);
+  const markChatValidated = useCallback((path: string, requestId: number) => setChatLocation((current) => current?.path === path && current.requestId === requestId ? { ...current, validateSession: false } : current), []);
   const [selectedAgent, setSelectedAgent] = useState<{ agentId: string } | null>(null);
-  const effectiveTab = agentRequest?.workspaceId === workspaceId ? "agents" : openRequest?.workspaceId === workspaceId ? "inbox" : activeTab;
+  const effectiveTab = pendingChat ? "chat" : agentRequest?.workspaceId === workspaceId ? "agents" : openRequest?.workspaceId === workspaceId ? "inbox" : activeTab;
+  useEffect(() => {
+    if (!chatRequest || !workspaceSlug || chatRequest.workspaceSlug !== workspaceSlug) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled || useChatDockRequestStore.getState().request?.id !== chatRequest.id) return;
+      const requestUrl = new URL(chatRequest.path, "https://multica.invalid");
+      setChatLocation({ workspaceSlug, path: chatRequest.path, validateSession: !!requestUrl.searchParams.get("session"), requestId: chatRequest.id });
+      setActiveTab("chat");
+      useChatDockRequestStore.getState().consume(chatRequest.id);
+    });
+    return () => { cancelled = true; };
+  }, [chatRequest, workspaceSlug]);
   useEffect(() => { setSelectedAgent(null); }, [workspaceId]);
   useEffect(() => {
     if (agentRequest && agentRequest.workspaceId === workspaceId) {
@@ -264,7 +288,9 @@ export function DesktopInboxDockLayout({
     else setInboxDockOpen(!inboxDockOpen);
   };
 
+  const chatVisible = !!enabled && !!workspaceId && !!workspaceSlug && inboxDockOpen && effectiveTab === "chat" && !pendingChat;
   return (
+    <ChatDockVisibilityProvider value={chatVisible}>
     <div className="relative flex min-h-0 flex-1 flex-col">
     <div data-testid="dock-main-content" className="flex min-h-0 flex-1 flex-col">{children}</div>
     {enabled && workspaceId && <>
@@ -298,14 +324,17 @@ export function DesktopInboxDockLayout({
           onRequestHandled={onRequestHandled}
           open={inboxDockOpen && effectiveTab === "inbox"}
           dockContentVisible={effectiveTab === "inbox"}
-          dockContentReplacement={(inboxDockOpen || animating) && effectiveTab === "agents" ? <div inert={!inboxDockOpen || undefined} aria-hidden={!inboxDockOpen || undefined} className="min-h-0 flex-1 bg-background"><AgentDock key={workspaceId} workspaceId={workspaceId} requestedAgent={agentRequest?.workspaceId === workspaceId ? agentRequest : selectedAgent} /></div> : null}
-          dockTabAction={<button type="button" aria-expanded={inboxDockOpen && effectiveTab === "agents"} onClick={() => {
+          dockContentReplacement={(inboxDockOpen || animating) && effectiveTab === "agents" ? <div inert={!inboxDockOpen || undefined} aria-hidden={!inboxDockOpen || undefined} className="min-h-0 flex-1 bg-background"><AgentDock key={workspaceId} workspaceId={workspaceId} requestedAgent={agentRequest?.workspaceId === workspaceId ? agentRequest : selectedAgent} /></div> : (inboxDockOpen || animating) && effectiveTab === "chat" && workspaceSlug ? <div inert={!chatVisible || undefined} aria-hidden={!chatVisible || undefined} className="flex min-h-0 flex-1 bg-background"><ChatDockSurface key={workspaceSlug} workspaceId={workspaceId} workspaceSlug={workspaceSlug} path={chatPath} onPathChange={changeChatPath} visible={chatVisible} validateSession={chatLocation?.workspaceSlug === workspaceSlug && !!chatLocation.validateSession} validationId={chatLocation?.requestId} onValidated={markChatValidated} /></div> : null}
+          dockTabAction={<><button type="button" aria-expanded={inboxDockOpen && effectiveTab === "agents"} onClick={() => {
             if (inboxDockOpen && effectiveTab === "agents") {
               toggleDock();
             } else { setActiveTab("agents"); if (!inboxDockOpen) toggleDock(); }
-          }} className={`inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${inboxDockOpen && effectiveTab === "agents" ? "border-primary/30 bg-accent text-foreground" : ""}`}><Bot aria-hidden className="size-4" /><span className="text-body font-semibold">{t(($) => $.dock.title)}</span></button>}
+          }} className={`inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${inboxDockOpen && effectiveTab === "agents" ? "border-primary/30 bg-accent text-foreground" : ""}`}><Bot aria-hidden className="size-4" /><span className="text-body font-semibold">{t(($) => $.dock.title)}</span></button><ChatDockTab workspaceId={workspaceId} selected={inboxDockOpen && effectiveTab === "chat"} visible={chatVisible && !chatLocation?.validateSession} onClick={() => {
+            if (inboxDockOpen && effectiveTab === "chat") toggleDock();
+            else { setActiveTab("chat"); if (!inboxDockOpen) toggleDock(); }
+          }} /></>}
           onToggle={() => {
-            if (inboxDockOpen && effectiveTab === "agents") { setActiveTab("inbox"); return; }
+            if (inboxDockOpen && effectiveTab !== "inbox") { setActiveTab("inbox"); return; }
             toggleDock();
           }}
         />
@@ -314,5 +343,6 @@ export function DesktopInboxDockLayout({
     </ResizablePanelGroup>
     </>}
     </div>
+    </ChatDockVisibilityProvider>
   );
 }

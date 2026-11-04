@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@multica/core/i18n/react";
 import { useSidebar } from "@multica/ui/components/ui/sidebar";
@@ -59,6 +59,7 @@ vi.mock("@multica/core/workspace", () => ({
 
 vi.mock("@multica/views/navigation", () => ({
   useNavigation: () => ({ push: vi.fn() }),
+  AppLink: ({ href, children, ...props }: { href: string; children: ReactNode } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a href={href} {...props}>{children}</a>,
 }));
 
 vi.mock("@multica/views/platform", () => ({
@@ -66,9 +67,10 @@ vi.mock("@multica/views/platform", () => ({
 }));
 
 vi.mock("@multica/views/layout", () => ({
-  AppRail: () => null,
-  AgentStatusHub: () => null,
+  AppRail: ({ bottomSlot, extraItems }: { bottomSlot?: ReactNode; extraItems?: ReactNode }) => <div data-testid="rail-hub">{bottomSlot}<ul>{extraItems}</ul></div>,
+  AgentStatusHub: ({ compact }: { compact?: boolean }) => <div data-testid={compact ? "compact-hub" : "expanded-hub"} />,
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PersistentPinsProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   AppShellProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   CompactNavSheet: () => null,
   GlobalShortcuts: () => null,
@@ -76,9 +78,12 @@ vi.mock("@multica/views/layout", () => ({
   NewIssueButton: () => null,
   SearchButton: () => null,
   ShellRouteDataPrefetch: ({ children }: { children: ReactNode }) => <>{children}</>,
-  SpacePanel: () => null,
+  SpacePanel: ({ bottomSlot }: { bottomSlot?: ReactNode }) => {
+    const { open } = useSidebar();
+    return open ? <div data-testid="panel-hub">{bottomSlot}</div> : null;
+  },
   // In a panel space the shell's toggleNav is the sidebar toggle.
-  useAppShell: () => ({ toggleNav: useSidebar().toggleSidebar }),
+  useAppShell: () => ({ hasPanel: true, toggleNav: useSidebar().toggleSidebar }),
   useTabPresentation: () => ({ visual: { kind: "icon", icon: "Inbox" }, title: "" }),
   ResourceLeadingVisual: () => null,
 }));
@@ -87,7 +92,7 @@ vi.mock("@multica/views/modals/registry", () => ({ ModalRegistry: () => null }))
 vi.mock("@multica/views/search", () => ({
   SearchCommand: () => null,
 }));
-vi.mock("@multica/views/chat", () => ({ FloatingChat: () => null }));
+vi.mock("@multica/views/chat", () => ({ FloatingChat: () => null, ChatDockVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</> }));
 vi.mock("./tab-bar", () => ({ TabBar: () => null }));
 vi.mock("./window-overlay", () => ({ WindowOverlay: () => null }));
 
@@ -115,6 +120,7 @@ vi.mock("./tab-content", () => ({
 }));
 
 const { DesktopShell } = await import("./desktop-layout");
+const { useDesktopPrefsStore } = await import("@/stores/desktop-prefs-store");
 
 function renderShell() {
   (
@@ -144,9 +150,26 @@ beforeEach(() => {
     value: 1280,
   });
   localStorage.clear();
+  useDesktopPrefsStore.setState({ liworkMonitorEnabled: true });
 });
 
 describe("DesktopShell sidebar trigger", () => {
+  it("offers the LiWork entry and respects its preference", () => {
+    const view = renderShell();
+    const link = view.getByRole("link", { name: "LiWork" });
+    expect(link).toHaveAttribute("href", "/acme/liwork");
+    expect(link.querySelector("svg path")).not.toBeNull();
+    act(() => useDesktopPrefsStore.getState().setLiworkMonitorEnabled(false));
+    expect(view.queryByRole("link", { name: "LiWork" })).not.toBeInTheDocument();
+  });
+  it("keeps the agent hub in the rail when the sidebar is expanded or collapsed", () => {
+    const { getByTestId, queryByTestId } = renderShell();
+    expect(getByTestId("compact-hub")).toBeInTheDocument();
+    expect(queryByTestId("expanded-hub")).toBeNull();
+    fireEvent.click(getByTestId("page-content").querySelector("button")!);
+    expect(getByTestId("compact-hub")).toBeInTheDocument();
+    expect(queryByTestId("expanded-hub")).toBeNull();
+  });
   // The window toolbar parks a trigger beside the traffic lights that never
   // scrolls away, so nothing inside the canvas may add a second one. Desktop
   // windows often sit in the band where `PageHeader`'s fallback trigger

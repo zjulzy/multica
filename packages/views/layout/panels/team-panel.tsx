@@ -1,5 +1,8 @@
 "use client";
 
+import { usePersistentPins } from "../persistent-pins-context";
+import { SharedPinnedSection } from "./shared-pinned-section";
+
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, BookOpenText, Bot, Monitor, Plus, User, UserPlus, Users } from "@multica/ui/icons";
@@ -93,6 +96,7 @@ function WorkingAgentRow({
 }
 
 export function TeamPanel() {
+  const persistentPins = usePersistentPins();
   const { t } = useT("layout");
   const p = useWorkspacePaths();
   const { pathname, push } = useNavigation();
@@ -299,6 +303,7 @@ export function TeamPanel() {
             />
           </PanelList>
         </PanelSection>
+        {persistentPins && <SharedPinnedSection />}
       </PanelBody>
     </>
   );

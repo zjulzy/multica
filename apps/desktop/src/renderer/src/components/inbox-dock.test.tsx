@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -168,6 +168,9 @@ const translations = {
 };
 
 vi.mock("./agent-dock", () => ({ AgentDock: ({ requestedAgent }: { requestedAgent: { agentId: string } | null }) => <div data-testid="agent-dock">{requestedAgent?.agentId}</div> }));
+vi.mock("./chat-dock-surface", () => ({ ChatDockSurface: ({ visible, path }: { visible: boolean; path: string }) => <div data-testid="chat-dock" data-visible={String(visible)} data-path={path} /> }));
+vi.mock("./chat-dock-tab", () => ({ ChatDockTab: ({ onClick }: { onClick: () => void }) => <button onClick={onClick}>Chat</button> }));
+vi.mock("@multica/views/chat", () => ({ ChatDockVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</> }));
 
 vi.mock("@multica/views/i18n", () => ({
   useT: () => ({
@@ -176,17 +179,20 @@ vi.mock("@multica/views/i18n", () => ({
 }));
 
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+import { useChatDockRequestStore } from "@/stores/chat-dock-request-store";
 import { DesktopInboxDockLayout } from "./inbox-dock";
 
 function renderDock({
   enabled = true,
   workspaceId = "workspace-1",
+  workspaceSlug = "acme",
 }: {
   enabled?: boolean;
   workspaceId?: string | null;
+  workspaceSlug?: string | null;
 } = {}) {
   return render(
-    <DesktopInboxDockLayout enabled={enabled} workspaceId={workspaceId}>
+    <DesktopInboxDockLayout enabled={enabled} workspaceId={workspaceId} workspaceSlug={workspaceSlug}>
       <main>Main content</main>
     </DesktopInboxDockLayout>,
   );
@@ -194,6 +200,7 @@ function renderDock({
 
 describe("DesktopInboxDockLayout", () => {
   beforeEach(() => {
+    useChatDockRequestStore.getState().clear();
     useDesktopPrefsStore.setState({
       singleTabMode: false,
       inboxDockEnabled: false,
@@ -207,6 +214,29 @@ describe("DesktopInboxDockLayout", () => {
     panelApi.isCollapsed.mockReturnValue(true);
     panelApi.getSize.mockReturnValue({ inPixels: 300, asPercentage: 38 });
     observedInbox.length = 0;
+  });
+
+  it("opens chat inside the dock and switches back to inbox without replacing the main page", () => {
+    renderDock();
+    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    expect(screen.getByTestId("chat-dock")).toHaveAttribute("data-visible", "true");
+    expect(screen.getByText("Main content")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    expect(screen.queryByTestId("chat-dock")).toBeNull();
+  });
+
+  it("waits for the requested workspace before opening its chat target", async () => {
+    useDesktopPrefsStore.setState({ inboxDockOpen: true });
+    useChatDockRequestStore.getState().open("target", "/target/chat?session=s1");
+    const { rerender } = render(<DesktopInboxDockLayout enabled workspaceId="old-id" workspaceSlug="old"><main>Main</main></DesktopInboxDockLayout>);
+    expect(screen.queryByTestId("chat-dock")).toBeNull();
+    expect(useChatDockRequestStore.getState().request?.workspaceSlug).toBe("target");
+    rerender(<DesktopInboxDockLayout enabled workspaceId="target-id" workspaceSlug="target"><main>Main</main></DesktopInboxDockLayout>);
+    await waitFor(() => expect(screen.getByTestId("chat-dock")).toHaveAttribute("data-path", "/target/chat?session=s1"));
+    expect(useChatDockRequestStore.getState().request).toBeNull();
+    expect(screen.getByTestId("chat-dock")).toHaveAttribute("data-visible", "true");
   });
 
   it.each([

@@ -35,6 +35,8 @@ vi.mock("@multica/core/auth", () => ({
 import { DesktopNavigationProvider, routeContentLinkPath } from "./navigation";
 import { currentPath, useNavigation } from "@multica/views/navigation";
 import { useTabStore, getActiveTab } from "@/stores/tab-store";
+import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+import { useChatDockRequestStore } from "@/stores/chat-dock-request-store";
 
 let unbindWorkspaces: () => void = () => {};
 
@@ -49,6 +51,8 @@ function withWorkspaces(slugs: string[]) {
 afterEach(() => unbindWorkspaces());
 
 beforeEach(() => {
+  useDesktopPrefsStore.getState().setInboxDockEnabled(false);
+  useChatDockRequestStore.getState().clear();
   overlay.open.mockReset();
   overlay.close.mockReset();
   overlay.overlay = null;
@@ -60,6 +64,34 @@ beforeEach(() => {
     value: {
       runtimeConfig: { ok: true, config: { appUrl: "https://app.example" } },
     },
+  });
+});
+
+describe("chat dock navigation", () => {
+  it("opens a chat in the dock without replacing the current page", () => {
+    useDesktopPrefsStore.getState().setInboxDockEnabled(true);
+    const before = getActiveTab(useTabStore.getState())?.url;
+    const getAdapter = renderProvider();
+    act(() => getAdapter().push("/acme/chat?session=session-1"));
+    expect(getActiveTab(useTabStore.getState())?.url).toBe(before);
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    expect(useChatDockRequestStore.getState().request).toMatchObject({ workspaceSlug: "acme", path: "/acme/chat?session=session-1" });
+  });
+
+  it("keeps modifier clicks opening regular tabs", () => {
+    useDesktopPrefsStore.getState().setInboxDockEnabled(true);
+    routeContentLinkPath("/acme/chat?session=session-1", "background-tab");
+    expect(useChatDockRequestStore.getState().request).toBeNull();
+    expect(useTabStore.getState().byWorkspace.acme.tabs.some((tab) => tab.url.includes("/chat?session="))).toBe(true);
+  });
+
+  it("retains a cross-workspace chat request until the destination is ready", () => {
+    useDesktopPrefsStore.getState().setInboxDockEnabled(true);
+    const getAdapter = renderProvider();
+    act(() => getAdapter().push("/butter/chat?agent=agent-1"));
+    expect(useTabStore.getState().activeWorkspaceSlug).toBe("butter");
+    expect(getActiveTab(useTabStore.getState())?.url).not.toContain("/chat");
+    expect(useChatDockRequestStore.getState().request).toMatchObject({ workspaceSlug: "butter", path: "/butter/chat?agent=agent-1" });
   });
 });
 

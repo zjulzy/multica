@@ -15,6 +15,7 @@ import {
   AppRail,
   AgentStatusHub,
   PageHeaderPortalProvider,
+  PersistentPinsProvider,
   ResourceLeadingVisual,
   useTabPresentation,
   AppShellProvider,
@@ -31,6 +32,7 @@ import { FloatingChat } from "@multica/views/chat";
 import { WorkspaceSlugProvider, paths, useCurrentWorkspace } from "@multica/core/paths";
 import { workspaceListOptions } from "@multica/core/workspace";
 import {
+  AppLink,
   useNavigation,
   type LinkClickIntent,
 } from "@multica/views/navigation";
@@ -51,7 +53,9 @@ import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
 import { WindowOverlay } from "./window-overlay";
 import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
+import { useHeaderAlignment } from "./use-header-alignment";
 import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop-os";
+import liworkLogo from "../assets/liwork-logo.svg?raw";
 
 const TOP_BAR_HEIGHT_CLASS = "h-10";
 const RAIL_WIDTH = 64;
@@ -61,6 +65,34 @@ const TITLE_BAR_ACTION_CLASS =
 function RailTopSpacer() {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   return <div className={cn("shrink-0", singleTabMode ? "h-12" : TOP_BAR_HEIGHT_CLASS)} />;
+}
+
+function LiworkMark() {
+  return <span aria-hidden className="inline-flex size-5 shrink-0 items-center justify-center [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: liworkLogo.replace('fill="white"', 'fill="currentColor"') }} />;
+}
+
+function LiworkRailItem({ slug }: { slug: string }) {
+  const { pathname } = useNavigation();
+  const href = `/${encodeURIComponent(slug)}/liwork`;
+  return <li><AppLink href={href} aria-label="LiWork" aria-current={pathname === href ? "page" : undefined} className="group relative flex h-[52px] w-[52px] flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:text-sidebar-accent-foreground">
+    <LiworkMark />
+    <span className="text-micro leading-[14px]">LiWork</span>
+  </AppLink></li>;
+}
+
+function DesktopRail({ hub, dockEnabled, slug }: { hub: React.ReactNode; dockEnabled: boolean; slug: string }) {
+  const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
+  const liworkMonitorEnabled = useDesktopPrefsStore((s) => s.liworkMonitorEnabled);
+  return (
+    <AppRail
+      topSlot={<RailTopSpacer />}
+      globalActions={false}
+      bottomSlot={hub}
+      extraItems={liworkMonitorEnabled ? <LiworkRailItem slug={slug} /> : null}
+      hiddenSpaces={dockEnabled ? ["inbox", "chat"] : []}
+      className={cn("hidden pt-0 md:flex", singleTabMode ? "[--rail-divider-offset:3rem]" : "[--rail-divider-offset:2.5rem]")}
+    />
+  );
 }
 
 function useNativeNavigationGestures() {
@@ -135,15 +167,18 @@ function SingleTabHeaderSlot({
 }) {
   const activeUrl = useActiveTabUrl();
   const { visual } = useTabPresentation(activeUrl ?? "");
+  const isLiwork = activeUrl?.split(/[?#]/)[0]?.split("/")[2] === "liwork";
+  const alignmentRef = useRef<HTMLDivElement>(null);
+  useHeaderAlignment(alignmentRef);
   return (
-    <div className="group/slot flex h-full min-w-0 flex-1 items-center gap-2.5 px-4">
+    <div ref={alignmentRef} className="group/slot flex h-full min-w-0 flex-1 items-center gap-2.5 px-4">
       {/* Collection headers bring their own icon (data-page-header-icon);
           hide ours so the bar never shows two. */}
       <span
         aria-hidden
         className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-muted-foreground group-has-[[data-page-header-icon]]/slot:hidden"
       >
-        <ResourceLeadingVisual visual={visual} />
+        {isLiwork ? <LiworkMark /> : <ResourceLeadingVisual visual={visual} />}
       </span>
       <div
         ref={headerSlotRef}
@@ -174,14 +209,14 @@ function MainCanvas({
     <div
       data-slot="main-canvas"
       className={cn(
-        "relative mr-2 mb-2 flex min-h-0 flex-1 flex-row overflow-hidden rounded-xl bg-page-canvas shadow-[var(--surface-shadow)] ring-1 ring-surface-border",
+        "relative mr-2 mb-2 flex min-h-0 flex-1 flex-row",
         railMounted && !isCompact ? "ml-0" : "ml-2",
       )}
     >
-      <SakuraDecoration />
-      <ThemeAmbience />
       {railMounted && <SpacePanel />}
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div data-slot="desktop-content-card" className="relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-page-canvas shadow-[var(--surface-shadow)] ring-1 ring-surface-border">
+        <SakuraDecoration />
+        <ThemeAmbience />
         {children}
       </div>
       {showWorkspaceLoading && (
@@ -343,6 +378,7 @@ export function DesktopShell() {
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   const renderedPathname = useRenderedRouteStore((s) => s.pathname);
+  const liworkMonitorEnabled = useDesktopPrefsStore((s) => s.liworkMonitorEnabled);
 
   return (
     <DesktopNavigationProvider>
@@ -374,18 +410,14 @@ export function DesktopShell() {
             className="flex-1 bg-app-shell [--sidebar-wrapper-fill:var(--app-shell)]"
           >
             <AppShellProvider renderedPathname={renderedPathname}>
+              <PersistentPinsProvider>
               <ShellRouteDataPrefetch>
                 {slug && <GlobalShortcuts />}
                 {slug && <WindowToolbar />}
                 {slug && (
-                  <AppRail
-                    topSlot={<RailTopSpacer />}
-                    globalActions={false}
-                    bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null}
-                    className="hidden pt-0 md:flex"
-                  />
+                  <DesktopRail slug={slug} dockEnabled={inboxDockEnabled} hub={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />
                 )}
-                {slug && <CompactNavSheet globalActions={false} />}
+                {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["inbox", "chat"] : []} extraItems={liworkMonitorEnabled ? <LiworkRailItem slug={slug} /> : null} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
                 {/* Right side: header + content card */}
                 <div className="flex flex-1 min-w-0 flex-col">
                   <MainTopBar railMounted={Boolean(slug)} headerSlotRef={setHeaderSlot} />
@@ -400,6 +432,7 @@ export function DesktopShell() {
                     <DesktopInboxDockLayout
                       enabled={inboxDockEnabled || temporaryDockVisible}
                       workspaceId={resolvedWorkspace?.id ?? null}
+                      workspaceSlug={resolvedWorkspace?.slug ?? null}
                       openRequest={dockRequest}
                       agentRequest={agentDockRequest}
                       onAgentRequestHandled={handleAgentDockRequest}
@@ -414,6 +447,7 @@ export function DesktopShell() {
                   </MainCanvas>
                 </div>
               </ShellRouteDataPrefetch>
+              </PersistentPinsProvider>
             </AppShellProvider>
           </SidebarProvider>
         </div>

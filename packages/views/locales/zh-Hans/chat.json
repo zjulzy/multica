@@ -5,6 +5,10 @@
     "no_agent_description": "创建一个智能体后，就能在这里和它聊需求，让它拆成任务。",
     "no_agent_action": "新建智能体",
     "select_prompt": "选择一个对话，或点 + 新建",
+    "session_link_loading": "正在确认对话…",
+    "session_link_retry_hint": "无法确认对话，请检查连接后重试。",
+    "session_link_retry": "重试",
+    "session_link_unavailable": "该对话不可用，或你已没有访问权限。",
     "agent_link_no_access": "你没有权限与该智能体聊天。"
   },
   "fab": {

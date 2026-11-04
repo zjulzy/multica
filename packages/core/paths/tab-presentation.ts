@@ -149,6 +149,8 @@ export function resolveTabPresentation(
   data: TabEntityData = {},
 ): TabPresentation {
   switch (subject.kind) {
+    case "liwork":
+      return { visual: { kind: "icon", icon: "Monitor" }, title: { kind: "text", text: "LiWork" } };
     case "page": {
       const page = WORKSPACE_PAGES[subject.page];
       return {

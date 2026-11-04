@@ -2244,6 +2244,16 @@ describe("ApiClient explicit workspace targeting", () => {
     expect(slugHeaderOf(fetchMock)).toBe("proxima-centauri");
   });
 
+  it("targets the requested workspace when reading issue and project details", async () => {
+    const fetchMock = stubOk({});
+    const client = new ApiClient("https://api.example.test");
+    await expect(client.getIssue("i1", { workspaceSlug: "source-workspace" })).rejects.toThrow();
+    expect(slugHeaderOf(fetchMock)).toBe("source-workspace");
+    fetchMock.mockReset().mockResolvedValue(new Response("{}", { status: 200, headers: { "Content-Type": "application/json" } }));
+    await client.getProject("p1", "source-workspace");
+    expect(slugHeaderOf(fetchMock)).toBe("source-workspace");
+  });
+
   it("sends the given slug when listing another workspace's runtimes", async () => {
     const fetchMock = stubOk([]);
     await new ApiClient("https://api.example.test").listRuntimes(

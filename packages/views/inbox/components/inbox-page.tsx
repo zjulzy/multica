@@ -96,6 +96,8 @@ import { CollapsedNavTrigger, PAGE_GUTTER, PageHeader } from "../../layout/page-
 import { PanelHeader } from "../../layout/panel-nav";
 import { useListColumnCollapsed } from "../../layout/app-shell-context";
 import { ListColumn } from "../../layout/list-column";
+import { usePersistentPins } from "../../layout/persistent-pins-context";
+import { SharedPinnedSection } from "../../layout/panels/shared-pinned-section";
 import { useTimeAgo } from "./inbox-list-item";
 import { InboxList } from "./inbox-list";
 import { InboxFilterMenu } from "./inbox-filter-menu";
@@ -114,6 +116,7 @@ import { useIssueLimitUpgradePrompt } from "../../modals/use-issue-limit-upgrade
 
 
 export function InboxPage() {
+  const persistentPins = usePersistentPins();
   const queryClient = useQueryClient();
   const { t } = useT("inbox");
   const { t: tCommon } = useT("common");
@@ -728,6 +731,7 @@ export function InboxPage() {
           {t(($) => $.list.retry)}
         </Button>
       </div>
+      {persistentPins && !isCompact && <div className="px-2"><SharedPinnedSection /></div>}
     </div>
   ) : (
     <InboxContextMenuProvider
@@ -739,6 +743,7 @@ export function InboxPage() {
       }}
     >
       <InboxList
+        footer={persistentPins && !isCompact ? <SharedPinnedSection /> : undefined}
         items={visibleItems}
         view={view}
         selectedKey={selectedKey}
@@ -1037,7 +1042,7 @@ export function InboxPage() {
 
   if (viewLoading) {
     return (
-      <div className="flex min-h-0 flex-1">
+      <div data-slot="desktop-list-page" className="flex min-h-0 flex-1">
         <ListColumn collapsed={listCollapsed}>
           <div className="flex h-12 shrink-0 items-center pl-5 pr-2">
             <Skeleton className="h-5 w-16" />
@@ -1054,7 +1059,7 @@ export function InboxPage() {
             ))}
           </div>
         </ListColumn>
-        <div className="min-w-0 flex-1 p-6">
+        <div data-slot="list-page-main" className="min-w-0 flex-1 p-6">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="mt-4 h-4 w-32" />
         </div>
@@ -1063,9 +1068,9 @@ export function InboxPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div data-slot="desktop-list-page" className="flex min-h-0 flex-1">
       <ListColumn collapsed={listCollapsed}>{listPanel}</ListColumn>
-      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      <div data-slot="list-page-main" className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
         {detailContent ?? (
           <>
           {listCollapsed && (

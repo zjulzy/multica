@@ -6,7 +6,18 @@ import { InterfaceMotionSync } from "./interface-motion-sync";
 describe("InterfaceMotionSync", () => {
   afterEach(() => {
     delete document.documentElement.dataset.interfaceMotion;
-    useDesktopPrefsStore.setState({ interfaceMotionEnabled: false });
+    delete document.documentElement.dataset.sidebarFontSize;
+    useDesktopPrefsStore.setState({ interfaceMotionEnabled: false, sidebarFontSize: "standard" });
+  });
+
+  it("applies sidebar size immediately and removes it on unmount", () => {
+    useDesktopPrefsStore.setState({ sidebarFontSize: "small" });
+    const view = render(<InterfaceMotionSync />);
+    expect(document.documentElement.dataset.sidebarFontSize).toBe("small");
+    act(() => useDesktopPrefsStore.getState().setSidebarFontSize("large"));
+    expect(document.documentElement.dataset.sidebarFontSize).toBe("large");
+    view.unmount();
+    expect(document.documentElement.dataset.sidebarFontSize).toBeUndefined();
   });
 
   it("applies the persisted setting to the document, including portals", () => {

@@ -82,6 +82,7 @@ vi.mock("@multica/views/layout", () => ({
   AppRail: () => <div data-testid="app-rail" />,
   AgentStatusHub: () => null,
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PersistentPinsProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   AppShellProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   CompactNavSheet: () => null,
   GlobalShortcuts: () => <div data-testid="global-shortcuts" />,
@@ -116,6 +117,7 @@ vi.mock("@multica/views/search", () => ({
 
 vi.mock("@multica/views/chat", () => ({
   FloatingChat: () => <div data-testid="floating-chat" />,
+  ChatDockVisibilityProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("./tab-bar", () => ({ TabBar: () => null }));

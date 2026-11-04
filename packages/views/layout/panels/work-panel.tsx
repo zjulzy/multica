@@ -20,6 +20,7 @@ import { PinnedSection, usePanelPins } from "./pinned-section";
 import { useKeptActiveItem } from "./sidebar-tree";
 import { ProjectsSection, useIssueIdInTree } from "./work-tree";
 import { ViewsSection } from "./views-section";
+import { usePersistentPins } from "../persistent-pins-context";
 
 const EMPTY_PROJECTS: Project[] = [];
 /** The Projects section's key in the kept-rows store, apart from every sidebar source. */
@@ -66,6 +67,7 @@ export function WorkPanel() {
   const { pathname } = useNavigation();
   const wsId = useCurrentWorkspace()?.id;
   const userId = useAuthStore((s) => s.user?.id);
+  const persistentPins = usePersistentPins();
 
   const { data: projects = EMPTY_PROJECTS } = useQuery({
     ...projectListOptions(wsId ?? ""),
@@ -142,7 +144,7 @@ export function WorkPanel() {
             />
           )}
 
-          {wsId && (
+          {wsId && !persistentPins && (
             <div data-pinned-section className="contents">
               <PinnedSection pins={pins} wsId={wsId} />
             </div>
@@ -157,7 +159,13 @@ export function WorkPanel() {
               totalProjects={projects.length}
               plainRowsLit={plainRowsLit}
               activeIssueId={plainRowsLit ? currentIssueId : null}
+              listOnly={persistentPins}
             />
+          )}
+          {wsId && persistentPins && (
+            <div data-pinned-section className="contents">
+              <PinnedSection pins={pins} wsId={wsId} />
+            </div>
           )}
         </PanelBody>
       </IssueContextMenuProvider>

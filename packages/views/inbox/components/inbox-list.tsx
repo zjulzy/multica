@@ -57,6 +57,7 @@ export function InboxList({
   onAction,
   emptyLabel,
   emptyAction,
+  footer,
   scrollRestoration = true,
 }: {
   items: InboxItem[];
@@ -69,6 +70,7 @@ export function InboxList({
   onAction: (id: string) => void;
   emptyLabel?: string;
   emptyAction?: ReactNode;
+  footer?: ReactNode;
   /**
    * Off for a preview rendered over another route, which must neither read
    * nor be captured as that route's `list` scroll offset.
@@ -192,6 +194,7 @@ export function InboxList({
           {emptyAction && <div className="mt-3">{emptyAction}</div>}
         </div>}
         <div className="px-2"><Footer /></div>
+        {footer && <div className="px-2">{footer}</div>}
       </div>
     );
   }
@@ -244,6 +247,7 @@ export function InboxList({
             estimatedItemHeight={INBOX_ROW_ESTIMATED_HEIGHT}
           />
         )}
+        {footer}
       </div>
     </div>
   );

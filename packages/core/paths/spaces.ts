@@ -12,10 +12,11 @@ export type AppSpaceId =
   | "team"
   | "chat"
   | "autopilots"
+  | "liwork"
   | "settings";
 
 /** Settings lives in the rail footer rather than the space list. */
-export type RailSpaceId = Exclude<AppSpaceId, "settings">;
+export type RailSpaceId = Exclude<AppSpaceId, "settings" | "liwork">;
 
 /** Spaces in rail order. */
 export const RAIL_SPACES: readonly RailSpaceId[] = [
@@ -40,6 +41,7 @@ const SPACE_BY_SEGMENT: Record<string, AppSpaceId> = {
   usage: "team",
   chat: "chat",
   autopilots: "autopilots",
+  liwork: "liwork",
   settings: "settings",
 };
 

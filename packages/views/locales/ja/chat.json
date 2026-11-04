@@ -5,6 +5,10 @@
     "no_agent_description": "エージェントを作成すると、ここで要望を話し合い、タスクに分解してもらえます。",
     "no_agent_action": "新規エージェント",
     "select_prompt": "会話を選ぶか、＋ で新規作成してください",
+    "session_link_loading": "会話を確認中…",
+    "session_link_retry_hint": "会話を確認できませんでした。再試行してください。",
+    "session_link_retry": "再試行",
+    "session_link_unavailable": "この会話は利用できないか、アクセス権がありません。",
     "agent_link_no_access": "このエージェントとチャットする権限がありません。"
   },
   "fab": {

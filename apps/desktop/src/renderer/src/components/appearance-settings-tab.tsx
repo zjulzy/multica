@@ -13,10 +13,29 @@ export function AppearanceSettingsTab() {
   const setAgentStatusHubEnabled = useDesktopPrefsStore((s) => s.setAgentStatusHubEnabled);
   const interfaceMotionEnabled = useDesktopPrefsStore((s) => s.interfaceMotionEnabled);
   const setInterfaceMotionEnabled = useDesktopPrefsStore((s) => s.setInterfaceMotionEnabled);
+  const sidebarFontSize = useDesktopPrefsStore((s) => s.sidebarFontSize);
+  const setSidebarFontSize = useDesktopPrefsStore((s) => s.setSidebarFontSize);
+  const liworkMonitorEnabled = useDesktopPrefsStore((s) => s.liworkMonitorEnabled);
+  const setLiworkMonitorEnabled = useDesktopPrefsStore((s) => s.setLiworkMonitorEnabled);
 
   return (
     <SettingsTab title={t(($) => $.desktop.appearance.title)}>
       <SettingsCard>
+        <SettingsRow label={t(($) => $.desktop.appearance.liwork_title)} description={t(($) => $.desktop.appearance.liwork_description)}>
+          <Switch checked={liworkMonitorEnabled} onCheckedChange={setLiworkMonitorEnabled} aria-label={t(($) => $.desktop.appearance.liwork_title)} />
+        </SettingsRow>
+        <SettingsRow label={t(($) => $.desktop.appearance.sidebar_font_title)} description={t(($) => $.desktop.appearance.sidebar_font_description)}>
+          <select
+            aria-label={t(($) => $.desktop.appearance.sidebar_font_title)}
+            value={sidebarFontSize}
+            onChange={(event) => setSidebarFontSize(event.target.value as "small" | "standard" | "large")}
+            className="h-9 rounded-md border bg-background px-3 text-body text-foreground"
+          >
+            <option value="small">{t(($) => $.desktop.appearance.sidebar_font_small)}</option>
+            <option value="standard">{t(($) => $.desktop.appearance.sidebar_font_standard)}</option>
+            <option value="large">{t(($) => $.desktop.appearance.sidebar_font_large)}</option>
+          </select>
+        </SettingsRow>
         <SettingsRow
           label={t(($) => $.desktop.appearance.interface_motion_title)}
           description={t(($) => $.desktop.appearance.interface_motion_description)}

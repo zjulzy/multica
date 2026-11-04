@@ -14,16 +14,20 @@ import { useNavigation } from "../navigation";
 import { AppRail } from "./app-rail";
 import { useAppShell } from "./app-shell-context";
 import { SpacePanelContent } from "./space-panel";
+import { usePersistentPins } from "./persistent-pins-context";
+import { SharedPinnedSection } from "./panels/shared-pinned-section";
+import type { RailSpaceId } from "@multica/core/paths";
 
 /**
  * Below `md` the rail and the current space's panel move into one sheet,
  * opened by the page header's nav trigger.
  */
-export function CompactNavSheet({ globalActions = true }: { globalActions?: boolean }) {
+export function CompactNavSheet({ globalActions = true, hiddenSpaces, bottomSlot, extraItems }: { globalActions?: boolean; hiddenSpaces?: readonly RailSpaceId[]; bottomSlot?: React.ReactNode; extraItems?: React.ReactNode }) {
   const { t } = useT("layout");
   const { isCompact, openMobile, setOpenMobile } = useSidebar();
   const { pathname } = useNavigation();
   const shell = useAppShell();
+  const persistentPins = usePersistentPins();
 
   // The sheet covers the page, so leaving through it has to dismiss it or
   // the destination renders underneath and the tap reads as nothing
@@ -48,12 +52,13 @@ export function CompactNavSheet({ globalActions = true }: { globalActions?: bool
           <SheetTitle>{t(($) => $.rail.label)}</SheetTitle>
           <SheetDescription>{t(($) => $.rail.sheet_description)}</SheetDescription>
         </SheetHeader>
-        <AppRail globalActions={globalActions} />
+        <AppRail globalActions={globalActions} hiddenSpaces={hiddenSpaces} extraItems={extraItems} bottomSlot={bottomSlot ? <div onClick={() => setOpenMobile(false)}>{bottomSlot}</div> : undefined} />
         {hasPanel && (
           <div className="my-2 mr-2 flex w-[260px] min-w-0 flex-col overflow-hidden rounded-xl bg-page-canvas shadow-[var(--surface-shadow)] ring-1 ring-surface-border">
             <SpacePanelContent space={shell?.space ?? null} />
           </div>
         )}
+        {!hasPanel && persistentPins && <SharedPinnedSection compactSheet />}
       </SheetContent>
     </Sheet>
   );

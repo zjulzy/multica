@@ -19,6 +19,8 @@ import type {
 import type { TabSelectionShortcutKey } from "../shared/main-renderer-messages";
 
 interface DesktopAPI {
+  getLiworkSnapshot: () => Promise<import("../shared/liwork-monitor").LiworkSnapshot>;
+  switchLiworkSession: (sessionId: string) => Promise<void>;
   /** App version + normalized OS, captured synchronously at preload time. */
   appInfo: {
     version: string;

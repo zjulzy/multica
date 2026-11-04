@@ -168,6 +168,7 @@ vi.mock("./components/use-chat-controller", async () => {
 });
 
 import { ChatPage } from "./chat-page";
+import { ChatDockVisibilityProvider } from "./chat-dock-visibility";
 
 const agent: Agent = {
   id: "agent-1",
@@ -196,7 +197,7 @@ const agent: Agent = {
 
 const NO_ACCESS_MSG = "You don't have access to chat with this agent.";
 
-function renderPage(search: string, { strict = false } = {}) {
+function renderPage(search: string, { strict = false, dockVisible = false, dock = false, visible = true } = {}) {
   const replace = vi.fn();
   let navigation: NavigationAdapter = {
     push: vi.fn(),
@@ -217,7 +218,7 @@ function renderPage(search: string, { strict = false } = {}) {
       <QueryClientProvider client={qc}>
         <I18nProvider locale="en" resources={TEST_RESOURCES}>
           <NavigationProvider value={navigation}>
-            <ChatPage />
+            <ChatDockVisibilityProvider value={dockVisible}><ChatPage dock={dock} visible={visible} /></ChatDockVisibilityProvider>
           </NavigationProvider>
         </I18nProvider>
       </QueryClientProvider>
@@ -252,6 +253,21 @@ beforeEach(() => {
 });
 
 describe("ChatPage URL synchronization", () => {
+  it("does not let a retained main chat page overwrite the active dock session", () => {
+    renderPage("session=main-session", { dockVisible: true });
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
+  });
+
+  it("does not reconcile an invisible dock", () => {
+    renderPage("session=dock-session", { dockVisible: true, dock: true, visible: false });
+    expect(mockSetActiveSession).not.toHaveBeenCalled();
+  });
+
+  it("reconciles the visible dock session", () => {
+    renderPage("session=dock-session", { dockVisible: true, dock: true, visible: true });
+    expect(mockSetActiveSession).toHaveBeenCalledWith("dock-session");
+  });
+
   it.each(["/globex/issues", "/acme/issues"])(
     "does not redirect back to chat when the retained page observes %s",
     (pathname) => {

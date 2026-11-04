@@ -1,5 +1,8 @@
 "use client";
 
+import { usePersistentPins } from "../../layout/persistent-pins-context";
+import { SharedPinnedSection } from "../../layout/panels/shared-pinned-section";
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlarmClock,
@@ -103,6 +106,7 @@ const FLASH_MS = 1600;
 const ANCHOR_WAIT_MS = 1500;
 
 export function SettingsPage({ extraDeviceTabs = [] }: SettingsPageProps = {}) {
+  const persistentPins = usePersistentPins();
   const { t } = useT("settings");
   const workspace = useCurrentWorkspace();
   const workspaceName = workspace?.name ?? t(($) => $.page.workspace_fallback);
@@ -421,7 +425,7 @@ export function SettingsPage({ extraDeviceTabs = [] }: SettingsPageProps = {}) {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
+    <div data-slot="desktop-list-page" className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
       <ListColumn
         collapsed={listCollapsed}
         // Below md the navigation stacks above the content as a select.
@@ -531,9 +535,10 @@ export function SettingsPage({ extraDeviceTabs = [] }: SettingsPageProps = {}) {
               }),
             )
           )}
+          {persistentPins && <SharedPinnedSection />}
         </nav>
       </ListColumn>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div data-slot="list-page-main" className="flex min-h-0 min-w-0 flex-1 flex-col">
         <PageHeader leading={listCollapsed ? <CollapsedNavTrigger /> : false}>
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <h2 className="flex min-w-0 items-center gap-2 px-2 text-body font-medium">

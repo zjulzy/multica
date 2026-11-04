@@ -52,6 +52,19 @@ describe("AgentStatusHub", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("shows sample states for existing agents only in preview and replaces them with real activity", () => {
+    data.agents = [agent("a", "Alice"), agent("b", "Bob")];
+    const { rerender } = renderWithI18n(<AgentStatusHub preview />);
+    expect(screen.getByRole("link", { name: /Alice/ }).querySelector('[data-agent-workload="running"]')).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Bob/ }).querySelector('[data-agent-workload="queued"]')).toBeInTheDocument();
+    expect(screen.getByText("示例")).toBeInTheDocument();
+    data.tasks = [task("b", "running", "real")];
+    rerender(<AgentStatusHub preview />);
+    expect(screen.queryByRole("link", { name: /Alice/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Bob/ }).querySelector('[data-agent-workload="running"]')).toBeInTheDocument();
+    expect(screen.queryByText("示例")).toBeNull();
+  });
+
   it("updates from queued to running and disappears when the task completes", () => {
     data.agents = [agent("a", "Alice")];
     data.tasks = [task("a", "dispatched", "1")];
