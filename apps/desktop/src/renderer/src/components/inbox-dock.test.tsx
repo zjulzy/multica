@@ -287,6 +287,25 @@ describe("DesktopInboxDockLayout", () => {
     expect(panelApi.resize).toHaveBeenCalledWith("70%");
   });
 
+  it("restores the saved height after a click even when the panel is just above the collapsed boundary", () => {
+    useDesktopPrefsStore.setState({ inboxDockSize: 48, interfaceMotionEnabled: true });
+    panelApi.isCollapsed.mockReturnValue(false);
+    panelApi.getSize.mockReturnValue({ inPixels: 40, asPercentage: 5.7 });
+    renderDock();
+    panelApi.resize.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
+    expect(panelApi.resize).toHaveBeenCalledWith("48%");
+  });
+
+  it("does not overwrite the saved expanded height with a non-drag layout report", () => {
+    useDesktopPrefsStore.setState({ inboxDockSize: 48, inboxDockOpen: true });
+    renderDock();
+    panelApi.getSize.mockReturnValue({ inPixels: 40, asPercentage: 5.7 });
+    fireEvent.click(screen.getByRole("button", { name: "Finish drag" }));
+    expect(useDesktopPrefsStore.getState().inboxDockSize).toBe(48);
+  });
+
   it("opens the agents tab and switches back to the Inbox without collapsing", () => {
     renderDock();
     fireEvent.click(screen.getByRole("button", { name: "Agents" }));

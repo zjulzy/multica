@@ -162,6 +162,7 @@ export function DesktopInboxDockLayout({
   const animatingRef = useRef(false);
   const animationTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const userResizingRef = useRef(false);
+  const restoreClickedHeightRef = useRef(false);
   const resizeGestureRef = useRef<{ kind: "pointer"; id: number } | { kind: "keyboard"; key: string } | null>(null);
   const lastPointerIdRef = useRef<number | null>(null);
   const resizeEndTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -229,10 +230,11 @@ export function DesktopInboxDockLayout({
       // The visual height can still be at the collapsed boundary even when
       // the panel library no longer reports its collapsed state. Without
       // restoring the height, the opening animation ends back at the bar.
-      if (panel && (panel.isCollapsed() || (size && size.inPixels <= DOCK_COLLAPSED_SIZE + 0.5))) {
+      if (panel && (restoreClickedHeightRef.current || panel.isCollapsed() || (size && size.inPixels <= DOCK_COLLAPSED_SIZE + 0.5))) {
         panel.expand();
         panel.resize(`${inboxDockSizeRef.current}%`);
       }
+      restoreClickedHeightRef.current = false;
     } else {
       dockPanelRef.current?.collapse();
     }
@@ -263,12 +265,13 @@ export function DesktopInboxDockLayout({
         else setInboxDockOpen(nextOpen);
       }
     }
-    if (size && size.inPixels > DOCK_COLLAPSED_SIZE && useDesktopPrefsStore.getState().inboxDockOpen) {
+    if (size && userResizingRef.current && size.inPixels > DOCK_COLLAPSED_SIZE && useDesktopPrefsStore.getState().inboxDockOpen) {
       setInboxDockSize(size.asPercentage);
     }
   }, [dockPanelRef, inboxDockOpen, onTemporaryClose, setInboxDockOpen, setInboxDockSize]);
 
   const toggleDock = () => {
+    restoreClickedHeightRef.current = !inboxDockOpen;
     userResizingRef.current = false;
     resizeGestureRef.current = null;
     clearTimeout(resizeEndTimer.current);
