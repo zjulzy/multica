@@ -15,6 +15,7 @@ import { ChatDockVisibilityProvider } from "@multica/views/chat";
 import { useChatDockRequestStore } from "@/stores/chat-dock-request-store";
 import { ChatDockSurface } from "./chat-dock-surface";
 import { ChatDockTab } from "./chat-dock-tab";
+import { dockTabClassName } from "@multica/ui/components/common/dock-tab-styles";
 import { useDockAlignment } from "./use-dock-alignment";
 
 const DOCK_COLLAPSED_SIZE = 36;
@@ -337,7 +338,7 @@ export function DesktopInboxDockLayout({
             if (inboxDockOpen && effectiveTab === "agents") {
               toggleDock();
             } else { setActiveTab("agents"); if (!inboxDockOpen) toggleDock(); }
-          }} className={`inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${inboxDockOpen && effectiveTab === "agents" ? "border-primary/30 bg-accent text-foreground" : ""}`}><Bot aria-hidden className="size-4" /><span className="text-body font-semibold">{t(($) => $.dock.title)}</span></button><ChatDockTab workspaceId={workspaceId} selected={inboxDockOpen && effectiveTab === "chat"} visible={chatVisible && !chatLocation?.validateSession} onClick={() => {
+          }} className={dockTabClassName(inboxDockOpen && effectiveTab === "agents")}><Bot aria-hidden className="size-4" /><span className="text-body font-semibold">{t(($) => $.dock.title)}</span></button><ChatDockTab workspaceId={workspaceId} selected={inboxDockOpen && effectiveTab === "chat"} visible={chatVisible && !chatLocation?.validateSession} onClick={() => {
             if (inboxDockOpen && effectiveTab === "chat") toggleDock();
             else { setActiveTab("chat"); if (!inboxDockOpen) toggleDock(); }
           }} /></>}

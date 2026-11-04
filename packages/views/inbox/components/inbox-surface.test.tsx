@@ -290,6 +290,8 @@ describe("InboxSurface dock controller", () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
     rerender(<InboxSurface controller={value} variant="dock" layoutId="test-dock-layout" onDockHeaderToggle={onToggle} contentInert={false} />);
     expect(screen.getByRole("heading", { name: "Inbox" }).closest("button")).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("heading", { name: "Inbox" }).closest("button")).toHaveClass("bg-primary/15", "border-primary/40", "text-primary");
+    expect(screen.getByRole("heading", { name: "Inbox" }).closest("button")).not.toHaveClass("bg-background");
   });
 
   it("keeps both dock header buttons independently clickable when inbox content is inert", () => {

@@ -88,6 +88,7 @@ import {
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { NumberFlow } from "@multica/ui/components/ui/number-flow";
 import { DockUnreadBadge } from "@multica/ui/components/common/dock-unread-badge";
+import { dockTabClassName } from "@multica/ui/components/common/dock-tab-styles";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -612,10 +613,7 @@ export function InboxSurface({
         <button
           type="button"
           aria-expanded={!contentInert}
-          className={cn(
-            "relative inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-            !contentInert && "border-primary/30 bg-accent text-foreground",
-          )}
+          className={dockTabClassName(!contentInert)}
           onClick={onDockHeaderToggle}
         >
           <Inbox aria-hidden className="size-4" />

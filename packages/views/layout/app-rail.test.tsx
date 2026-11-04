@@ -126,10 +126,9 @@ describe("AppRail spaces", () => {
     expect(link("/acme/inbox")).toBeNull();
     expect(link("/acme/chat")).toBeNull();
     expect(link("/acme/issues")).not.toBeNull();
-    const hubRegion = screen.getByTestId("agent-hub").parentElement;
+    const hubRegion = screen.getByTestId("agent-hub").closest('[data-slot="rail-agent-region"]');
     expect(hubRegion).toHaveAttribute("data-slot", "rail-agent-region");
-    expect(hubRegion).toHaveClass("overflow-y-auto");
-    expect(hubRegion).toHaveClass("[scrollbar-width:none]", "hover:[scrollbar-width:thin]");
+    expect(screen.getByTestId("rail-agent-scroll")).toHaveClass("overflow-y-auto", "[scrollbar-width:none]");
     expect(hubRegion?.closest("nav")).toHaveClass("after:top-[var(--rail-divider-offset,0px)]", "after:bg-sidebar-border");
     expect(hubRegion).not.toContainElement(screen.getByRole("link", { name: "Settings" }));
   });

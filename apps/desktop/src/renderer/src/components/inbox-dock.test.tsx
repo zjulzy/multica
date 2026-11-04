@@ -309,11 +309,14 @@ describe("DesktopInboxDockLayout", () => {
   it("opens the agents tab and switches back to the Inbox without collapsing", () => {
     renderDock();
     fireEvent.click(screen.getByRole("button", { name: "Agents" }));
+    expect(screen.getByRole("button", { name: "Agents" })).toHaveClass("bg-primary/15", "border-primary/40", "text-primary");
+    expect(screen.getByRole("button", { name: "Agents" })).not.toHaveClass("bg-background");
     expect(screen.getByTestId("agent-dock")).toBeInTheDocument();
     expect(screen.queryByTestId("mock-inbox-content")).not.toBeInTheDocument();
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);
     expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-content-inert", "true");
     fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(screen.getByRole("button", { name: "Agents" })).toHaveClass("bg-background");
     expect(screen.queryByTestId("agent-dock")).not.toBeInTheDocument();
     expect(screen.getByTestId("mock-inbox-content")).toBeInTheDocument();
     expect(useDesktopPrefsStore.getState().inboxDockOpen).toBe(true);

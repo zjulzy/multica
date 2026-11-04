@@ -28,6 +28,7 @@ import { isPathWithin } from "./panel-nav";
 import { useTeamAgentStatus } from "./panels/team-status";
 import { RAIL_ICON_BUTTON_CLASS } from "./rail-styles";
 import { RailWorkspaces } from "./rail-workspaces";
+import { RailAgentRegion } from "./rail-agent-region";
 import { routeIconForPath } from "./route-icon-components";
 
 type RailBadge =
@@ -252,7 +253,7 @@ export function AppRail({
       </ul>
       </div>
       <div className="flex max-h-[calc(100%-3rem)] min-h-0 shrink-0 flex-col items-center gap-1 pt-2">
-        {bottomSlot && <div data-slot="rail-agent-region" className="min-h-0 max-h-[35vh] overflow-y-auto overscroll-contain [scrollbar-width:none] hover:[scrollbar-width:thin]">{bottomSlot}</div>}
+        {bottomSlot && <RailAgentRegion>{bottomSlot}</RailAgentRegion>}
         <HelpLauncher />
         <TooltipHint label={t(($) => $.nav.settings)} side="right">
           <AppLink

@@ -14,9 +14,12 @@ describe("chat dock unread badge", () => {
     const onClick = vi.fn();
     state.foreground = true;
     const { rerender } = render(<ChatDockTab workspaceId="ws" selected visible onClick={onClick} />);
+    expect(screen.getByRole("button", { name: /Chat/ })).toHaveClass("bg-primary/15", "border-primary/40", "text-primary");
+    expect(screen.getByRole("button", { name: /Chat/ })).not.toHaveClass("bg-background");
     expect(screen.getByLabelText("3")).toBeInTheDocument();
     expect(screen.getByLabelText("3")).toHaveAttribute("data-slot", "dock-unread-badge");
     rerender(<ChatDockTab workspaceId="ws" selected={false} visible={false} onClick={onClick} />);
+    expect(screen.getByRole("button", { name: /Chat/ })).toHaveClass("bg-background");
     expect(screen.getByLabelText("5")).toBeInTheDocument();
     state.foreground = false;
     rerender(<ChatDockTab workspaceId="ws" selected visible onClick={onClick} />);
