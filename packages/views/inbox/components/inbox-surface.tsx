@@ -87,6 +87,7 @@ import {
 } from "@multica/ui/components/ui/resizable";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { NumberFlow } from "@multica/ui/components/ui/number-flow";
+import { DockUnreadBadge } from "@multica/ui/components/common/dock-unread-badge";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -594,7 +595,7 @@ export function InboxSurface({
   const headerTitle = (
     <>
         <h1 className="text-body font-semibold">{t(($) => $.page.title)}</h1>
-        {unreadCount > 0 && (
+        {variant === "page" && unreadCount > 0 && (
           <NumberFlow
             value={unreadCount}
             animated={false}
@@ -612,13 +613,14 @@ export function InboxSurface({
           type="button"
           aria-expanded={!contentInert}
           className={cn(
-            "inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+            "relative inline-flex h-7 shrink-0 items-center gap-2 rounded-md border bg-background px-2.5 text-left text-muted-foreground shadow-sm outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
             !contentInert && "border-primary/30 bg-accent text-foreground",
           )}
           onClick={onDockHeaderToggle}
         >
           <Inbox aria-hidden className="size-4" />
           {headerTitle}
+          <DockUnreadBadge count={unreadCount} />
         </button>
       ) : (
         <div className="flex flex-1 items-center gap-2">{headerTitle}</div>

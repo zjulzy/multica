@@ -263,6 +263,7 @@ describe("InboxSurface dock controller", () => {
 
     expect(screen.getByText("Dock action")).toBeInTheDocument();
     expect(screen.queryByTestId("page-header")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("2")).toHaveAttribute("data-slot", "dock-unread-badge");
   });
 
   it("toggles from the dock title without treating header controls as toggles", () => {

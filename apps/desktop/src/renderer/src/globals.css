@@ -7,6 +7,30 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The main card's rounded outline already separates it from the space panel.
+   A full-height panel border protrudes beyond that outline at both corners. */
+[data-slot="main-canvas"] > [data-slot="space-panel"] > div {
+  border-right-width: 0;
+}
+[data-slot="main-canvas"] [data-slot="space-panel-resize"]::after {
+  top: 0.75rem;
+  bottom: 0.75rem;
+}
+
+/* List pages with a dock keep their navigation column full-height. Reserve
+   the collapsed bar inside the detail surface so its background and bottom
+   corners continue behind the dock, just like the normal content card. */
+[data-slot="dock-region"]:has(> [data-testid="dock-alignment"]):has(:is([data-liwork-monitor-page], [data-settings-page])) > [data-testid="dock-collapsed-spacer"] {
+  display: none;
+}
+[data-slot="dock-region"]:has(> [data-testid="dock-alignment"]) :is([data-liwork-monitor-page], [data-settings-page]) [data-slot="list-page-main"] {
+  padding-bottom: 36px;
+}
+[data-slot="dock-region"]:has(:is([data-liwork-monitor-page], [data-settings-page])) > [data-testid="dock-alignment"] {
+  overflow: hidden;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
 /* List-based pages own their navigation column; keep it on the shell while
    their detail pane retains the same card treatment as other pages. */
 @media (min-width: 768px) {

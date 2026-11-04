@@ -58,7 +58,7 @@ export function CompactNavSheet({ globalActions = true, hiddenSpaces, bottomSlot
             <SpacePanelContent space={shell?.space ?? null} />
           </div>
         )}
-        {!hasPanel && persistentPins && <SharedPinnedSection compactSheet />}
+        {!hasPanel && persistentPins && shell?.space !== "settings" && <SharedPinnedSection compactSheet />}
       </SheetContent>
     </Sheet>
   );

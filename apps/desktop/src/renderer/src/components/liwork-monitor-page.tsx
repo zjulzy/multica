@@ -71,7 +71,7 @@ export function LiworkMonitorPage() {
   const status = task ? (isBuiltInIssueStatus(task.status) ? tIssues(($) => $.status[task.status as BuiltInIssueStatus]) : task.status_name || task.status) : "—";
   const bridgeStatus = selected?.bridgeStatus === "active" ? t(($) => $.desktop.appearance.liwork_bridge_active) : selected?.bridgeStatus === "starting" ? t(($) => $.desktop.appearance.liwork_bridge_starting) : selected?.bridgeStatus === "stalled" ? t(($) => $.desktop.appearance.liwork_bridge_stalled) : "—";
 
-  return <div data-slot="desktop-list-page" className="flex min-h-0 flex-1 flex-col md:flex-row">
+  return <div data-slot="desktop-list-page" data-liwork-monitor-page className="flex min-h-0 flex-1 flex-col md:flex-row">
     <ListColumn collapsed={listCollapsed} className="max-md:h-48 max-md:w-full" innerClassName="max-md:w-full max-md:border-b max-md:border-r-0">
       <div className="flex h-12 shrink-0 items-center px-5 text-title-sm font-semibold">{t(($) => $.desktop.appearance.liwork_issues)}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">

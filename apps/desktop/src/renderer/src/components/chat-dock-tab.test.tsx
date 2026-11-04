@@ -15,6 +15,7 @@ describe("chat dock unread badge", () => {
     state.foreground = true;
     const { rerender } = render(<ChatDockTab workspaceId="ws" selected visible onClick={onClick} />);
     expect(screen.getByLabelText("3")).toBeInTheDocument();
+    expect(screen.getByLabelText("3")).toHaveAttribute("data-slot", "dock-unread-badge");
     rerender(<ChatDockTab workspaceId="ws" selected={false} visible={false} onClick={onClick} />);
     expect(screen.getByLabelText("5")).toBeInTheDocument();
     state.foreground = false;

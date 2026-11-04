@@ -15,6 +15,7 @@ import { ChatDockVisibilityProvider } from "@multica/views/chat";
 import { useChatDockRequestStore } from "@/stores/chat-dock-request-store";
 import { ChatDockSurface } from "./chat-dock-surface";
 import { ChatDockTab } from "./chat-dock-tab";
+import { useDockAlignment } from "./use-dock-alignment";
 
 const DOCK_COLLAPSED_SIZE = 36;
 type InboxView = InboxSurfaceController["view"];
@@ -154,6 +155,9 @@ export function DesktopInboxDockLayout({
   const [motionStart, setMotionStart] = useState<string | null>(null);
   const [frozenInboxHeight, setFrozenInboxHeight] = useState<number | null>(null);
   const inboxContentRef = useRef<HTMLDivElement>(null);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const dockAlignmentRef = useRef<HTMLDivElement>(null);
+  useDockAlignment(mainContentRef, dockAlignmentRef, enabled && !!workspaceId);
   const resizeHandleRef = useRef<HTMLDivElement>(null);
   const animatingRef = useRef(false);
   const animationTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -291,14 +295,15 @@ export function DesktopInboxDockLayout({
   const chatVisible = !!enabled && !!workspaceId && !!workspaceSlug && inboxDockOpen && effectiveTab === "chat" && !pendingChat;
   return (
     <ChatDockVisibilityProvider value={chatVisible}>
-    <div className="relative flex min-h-0 flex-1 flex-col">
-    <div data-testid="dock-main-content" className="flex min-h-0 flex-1 flex-col">{children}</div>
+    <div data-slot="dock-region" className="relative flex min-h-0 flex-1 flex-col">
+    <div ref={mainContentRef} data-testid="dock-main-content" className="flex min-h-0 flex-1 flex-col">{children}</div>
     {enabled && workspaceId && <>
     <div aria-hidden data-testid="dock-collapsed-spacer" className="h-9 shrink-0" />
+    <div ref={dockAlignmentRef} data-testid="dock-alignment" className="pointer-events-none absolute inset-0 z-10 min-h-0">
     <ResizablePanelGroup
       orientation="vertical"
       data-dock-motion={animating && motionEnabled ? "on" : undefined}
-      className="pointer-events-none absolute inset-0 z-10 min-h-0 [&:has([data-separator=active])_*]:!cursor-row-resize [&:has([data-separator=active])]:!cursor-row-resize"
+      className="h-full min-h-0 [&:has([data-separator=active])_*]:!cursor-row-resize [&:has([data-separator=active])]:!cursor-row-resize"
       onLayoutChanged={handleLayoutChanged}
     >
       <ResizablePanel id="content" defaultSize="62%" minSize="30%" />
@@ -341,6 +346,7 @@ export function DesktopInboxDockLayout({
         </div>
       </ResizablePanel>
     </ResizablePanelGroup>
+    </div>
     </>}
     </div>
     </ChatDockVisibilityProvider>

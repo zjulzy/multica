@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   openMobile: false,
   setOpenMobile: vi.fn(),
   hasPanel: true,
+  space: "work",
 }));
 
 vi.mock("../navigation", () => ({
@@ -27,7 +28,7 @@ vi.mock("./space-panel", () => ({
   SpacePanelContent: ({ space }: { space: string | null }) => <div data-testid={`panel-${space}`} />,
 }));
 vi.mock("./app-shell-context", () => ({
-  useAppShell: () => ({ space: "work", hasPanel: state.hasPanel }),
+  useAppShell: () => ({ space: state.space, hasPanel: state.hasPanel }),
 }));
 vi.mock("./panels/shared-pinned-section", () => ({ SharedPinnedSection: () => <div data-testid="shared-pins" /> }));
 
@@ -36,6 +37,7 @@ beforeEach(() => {
   state.isCompact = true;
   state.openMobile = false;
   state.hasPanel = true;
+  state.space = "work";
   state.setOpenMobile.mockClear();
 });
 
@@ -61,6 +63,13 @@ describe("CompactNavSheet dismissal", () => {
 });
 
 describe("CompactNavSheet content", () => {
+  it("does not show pins from settings", () => {
+    state.openMobile = true;
+    state.hasPanel = false;
+    state.space = "settings";
+    renderWithI18n(<PersistentPinsProvider><CompactNavSheet /></PersistentPinsProvider>);
+    expect(screen.queryByTestId("shared-pins")).not.toBeInTheDocument();
+  });
   it("shows pins in the compact sheet on pages without their own panel", () => {
     state.openMobile = true;
     state.hasPanel = false;

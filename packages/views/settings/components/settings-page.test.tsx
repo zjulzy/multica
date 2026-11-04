@@ -8,6 +8,8 @@ import {
   PLUGINS_V1_FLAG,
 } from "@multica/core/feature-flags";
 import { renderWithI18n } from "../../test/i18n";
+import { PersistentPinsProvider } from "../../layout/persistent-pins-context";
+vi.mock("../../layout/panels/shared-pinned-section", () => ({ SharedPinnedSection: () => <div data-testid="shared-pins" /> }));
 
 // This file tests the settings SHELL — the chrome around the tabs — so every
 // tab panel is stubbed out. Their contents have their own test files. Profile
@@ -138,6 +140,10 @@ beforeEach(() => {
 });
 
 describe("SettingsPage nav trigger", () => {
+  it("does not show pinned items in settings", () => {
+    renderWithI18n(<PersistentPinsProvider><SettingsPage /></PersistentPinsProvider>);
+    expect(screen.queryByTestId("shared-pins")).not.toBeInTheDocument();
+  });
   it("opens the nav from settings at compact widths", () => {
     // At compact widths the nav is a sheet, so without this control a touch
     // user who lands here has no way back to it at all — the keyboard
