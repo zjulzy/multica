@@ -89,6 +89,10 @@ export function AccountMenu() {
       { value: "sakura-blush", icon: Sun, label: tSettings(($) => $.preferences.theme.sakura_blush) },
       { value: "moon-lavender", icon: Moon, label: tSettings(($) => $.preferences.theme.moon_lavender) },
       { value: "deep-ocean", icon: Moon, label: tSettings(($) => $.preferences.theme.deep_ocean) },
+      { value: "daisy-garden", icon: Sun, label: tSettings(($) => $.preferences.theme.daisy_garden) },
+      { value: "hydrangea-rain", icon: Sun, label: tSettings(($) => $.preferences.theme.hydrangea_rain) },
+      { value: "osmanthus-courtyard", icon: Sun, label: tSettings(($) => $.preferences.theme.osmanthus_courtyard) },
+      { value: "starlit-dream", icon: Moon, label: tSettings(($) => $.preferences.theme.starlit_dream) },
     ].filter((option) => themes?.includes(option.value)),
   ];
   const name = user?.name ?? "";

@@ -32,6 +32,13 @@ vi.mock("@multica/ui/components/ui/dropdown-menu", () => {
 beforeEach(() => { state.setTheme.mockReset(); state.theme = "sakura-blush"; state.themes = ["light", "dark", "system", "sakura-blush", "deep-ocean"]; });
 
 describe("account theme menu", () => {
+  it("offers all three nature themes in the desktop theme menu", () => {
+    state.themes = [...state.themes, "daisy-garden", "hydrangea-rain", "osmanthus-courtyard", "starlit-dream"];
+    renderWithI18n(<TooltipProvider><AccountMenu /></TooltipProvider>);
+    for (const label of ["Daisy Garden", "Hydrangea Rain", "Osmanthus Courtyard", "Starlit Dream"]) {
+      expect(screen.getByRole("menuitemradio", { name: label })).toBeInTheDocument();
+    }
+  });
   it("shows the selected custom theme and switches to an available custom theme", async () => {
     renderWithI18n(<TooltipProvider><AccountMenu /></TooltipProvider>);
     expect(screen.getAllByText("Sakura Blush")).toHaveLength(2);

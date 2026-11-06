@@ -28,10 +28,11 @@ import { useServerSearch } from "../use-server-search";
 import type { DelegateActor } from "../types";
 import { useDelegateCandidates } from "../delegate/use-delegate";
 
-type ThemeValue = "light" | "dark" | "system" | "graphite-copper" | "mist-celadon" | "cream-gold" | "sakura-blush" | "moon-lavender" | "deep-ocean";
+type ThemeValue = "light" | "dark" | "system" | "graphite-copper" | "mist-celadon" | "cream-gold" | "sakura-blush" | "moon-lavender" | "deep-ocean" | "daisy-garden" | "hydrangea-rain" | "osmanthus-courtyard" | "starlit-dream";
 
 export function ThemePage({ query }: { query: string }) {
   const { t } = useT("search");
+  const { t: tSettings } = useT("settings");
   const palette = usePalette();
   const { theme, setTheme, themes } = useTheme();
   const q = query.trim().toLowerCase();
@@ -47,6 +48,10 @@ export function ThemePage({ query }: { query: string }) {
     { value: "sakura-blush", label: t(($) => $.theme.sakura_blush), icon: Sun, keywords: ["sakura", "blush"] },
     { value: "moon-lavender", label: t(($) => $.theme.moon_lavender), icon: Moon, keywords: ["moon", "lavender"] },
     { value: "deep-ocean", label: t(($) => $.theme.deep_ocean), icon: Moon, keywords: ["deep", "ocean"] },
+    { value: "daisy-garden", label: tSettings(($) => $.preferences.theme.daisy_garden), icon: Sun, keywords: ["daisy", "garden"] },
+    { value: "hydrangea-rain", label: tSettings(($) => $.preferences.theme.hydrangea_rain), icon: Sun, keywords: ["hydrangea", "rain"] },
+    { value: "osmanthus-courtyard", label: tSettings(($) => $.preferences.theme.osmanthus_courtyard), icon: Sun, keywords: ["osmanthus", "courtyard"] },
+    { value: "starlit-dream", label: tSettings(($) => $.preferences.theme.starlit_dream), icon: Moon, keywords: ["starlit", "star", "night"] },
   ];
   options.push(...customThemes.filter((option) => themes?.includes(option.value)));
   const visible = q ? options.filter((o) => scoreRow(o.label, o.keywords, q) > 0) : options;

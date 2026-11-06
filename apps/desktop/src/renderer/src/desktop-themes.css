@@ -71,12 +71,106 @@ html[data-desktop-theme="deep-ocean"] {
   --sidebar-accent:#304153; --sidebar-accent-foreground:#ecf3f7; --sidebar-border:#485f71; --sidebar-ring:#74b5cb;
   --brand:#74b5cb; --brand-foreground:#152b36; --tooltip:#263b4b; --theme-glow:rgba(114,184,207,.10);
 }
+html[data-desktop-theme="daisy-garden"] {
+  --app-shell:#e4eddd; --page-canvas:#fcfdf7; --surface:#ffffff; --surface-raised:#ffffff;
+  --surface-hover:#f0f5e9; --surface-selected:#e2edda; --surface-border:#ccd9c2;
+  --foreground:#2e4032; --surface-foreground:#2e4032; --surface-selected-foreground:#2e4032;
+  --card-foreground:#2e4032; --popover-foreground:#2e4032; --muted-foreground:#526652; --faint-foreground:#627562;
+  --primary:#46774c; --primary-foreground:#ffffff; --secondary:#eaf2e4; --secondary-foreground:#2e4032;
+  --muted:#eaf2e4; --accent:#e2edda; --accent-foreground:#2e4032;
+  --border:#ccd9c2; --input:#b2c6ab; --ring:#46774c;
+  --sidebar:#edf4e8; --sidebar-foreground:#2e4032; --sidebar-primary:#46774c; --sidebar-primary-foreground:#ffffff;
+  --sidebar-accent:#dfebd8; --sidebar-accent-foreground:#2e4032; --sidebar-border:#ccd9c2; --sidebar-ring:#46774c;
+  --brand:#46774c; --brand-foreground:#ffffff; --tooltip:#314b37; --theme-glow:rgba(115,159,99,.09);
+}
+html[data-desktop-theme="hydrangea-rain"] {
+  --app-shell:#e3ebf5; --page-canvas:#f8fbff; --surface:#ffffff; --surface-raised:#ffffff;
+  --surface-hover:#edf3fb; --surface-selected:#e2eaf7; --surface-border:#ccd8e9;
+  --foreground:#304055; --surface-foreground:#304055; --surface-selected-foreground:#304055;
+  --card-foreground:#304055; --popover-foreground:#304055; --muted-foreground:#53667e; --faint-foreground:#64758a;
+  --primary:#4d6fa2; --primary-foreground:#ffffff; --secondary:#e9f0fa; --secondary-foreground:#304055;
+  --muted:#e9f0fa; --accent:#e2eaf7; --accent-foreground:#304055;
+  --border:#ccd8e9; --input:#b1c2d9; --ring:#4d6fa2;
+  --sidebar:#edf3fa; --sidebar-foreground:#304055; --sidebar-primary:#4d6fa2; --sidebar-primary-foreground:#ffffff;
+  --sidebar-accent:#e2eaf7; --sidebar-accent-foreground:#304055; --sidebar-border:#ccd8e9; --sidebar-ring:#4d6fa2;
+  --brand:#4d6fa2; --brand-foreground:#ffffff; --tooltip:#35465f; --theme-glow:rgba(108,139,191,.09);
+}
+html[data-desktop-theme="osmanthus-courtyard"] {
+  --app-shell:#f3e8d6; --page-canvas:#fffaf2; --surface:#fffefa; --surface-raised:#ffffff;
+  --surface-hover:#fbf2e5; --surface-selected:#f5e8d3; --surface-border:#e5d3b7;
+  --foreground:#4b3c2e; --surface-foreground:#4b3c2e; --surface-selected-foreground:#4b3c2e;
+  --card-foreground:#4b3c2e; --popover-foreground:#4b3c2e; --muted-foreground:#725c45; --faint-foreground:#826c55;
+  --primary:#92611f; --primary-foreground:#ffffff; --secondary:#f9eedc; --secondary-foreground:#4b3c2e;
+  --muted:#f9eedc; --accent:#f5e8d3; --accent-foreground:#4b3c2e;
+  --border:#e5d3b7; --input:#cdb798; --ring:#92611f;
+  --sidebar:#fbf1e3; --sidebar-foreground:#4b3c2e; --sidebar-primary:#92611f; --sidebar-primary-foreground:#ffffff;
+  --sidebar-accent:#f5e8d3; --sidebar-accent-foreground:#4b3c2e; --sidebar-border:#e5d3b7; --sidebar-ring:#92611f;
+  --brand:#92611f; --brand-foreground:#ffffff; --tooltip:#55422e; --theme-glow:rgba(192,142,66,.09);
+}
+html[data-desktop-theme="starlit-dream"] {
+  --app-shell:#181d31; --page-canvas:#22283c; --surface:#2b3249; --surface-raised:#343b54;
+  --surface-hover:#39415c; --surface-selected:#414967; --surface-border:#55607d;
+  --foreground:#edf0fb; --surface-foreground:#edf0fb; --surface-selected-foreground:#edf0fb;
+  --card-foreground:#edf0fb; --popover-foreground:#edf0fb; --muted-foreground:#c7cde3; --faint-foreground:#adb6d2;
+  --primary:#b7c7ff; --primary-foreground:#1f2844; --secondary:#39415c; --secondary-foreground:#edf0fb;
+  --muted:#39415c; --accent:#414967; --accent-foreground:#edf0fb;
+  --border:#55607d; --input:#687695; --ring:#b7c7ff;
+  --sidebar:#1c2236; --sidebar-foreground:#edf0fb; --sidebar-primary:#b7c7ff; --sidebar-primary-foreground:#1f2844;
+  --sidebar-accent:#414967; --sidebar-accent-foreground:#edf0fb; --sidebar-border:#4d5872; --sidebar-ring:#b7c7ff;
+  --brand:#b7c7ff; --brand-foreground:#1f2844; --tooltip:#303850; --theme-glow:rgba(160,181,255,.1);
+}
 html[data-desktop-theme] :is([data-slot="button"], [data-slot="input"], [data-slot="textarea"], [data-slot="dialog-content"], [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="select-trigger"], [data-slot="inbox-dock-header"]) {
   background-image:linear-gradient(140deg,var(--theme-glow),transparent 70%);
 }
 html[data-desktop-theme] [data-slot="sidebar-inner"] { background-image:radial-gradient(ellipse at 100% 0,var(--theme-glow),transparent 50%); }
 html[data-desktop-theme="graphite-copper"] .bg-brand.text-white { color:var(--brand-foreground); }
 html[data-desktop-theme="deep-ocean"] .bg-brand.text-white { color:var(--brand-foreground); }
+html[data-desktop-theme="starlit-dream"] .bg-brand.text-white { color:var(--brand-foreground); }
+
+/* Botanical artwork remains visible with motion disabled; the small drifting
+   details only run when the existing motion preference allows them. */
+[data-nature-theme] { display:none; position:absolute; inset:0; overflow:hidden; }
+html[data-desktop-theme="daisy-garden"] [data-nature-theme="daisy-garden"],
+html[data-desktop-theme="hydrangea-rain"] [data-nature-theme="hydrangea-rain"],
+html[data-desktop-theme="osmanthus-courtyard"] [data-nature-theme="osmanthus-courtyard"],
+html[data-desktop-theme="starlit-dream"] [data-nature-theme="starlit-dream"] { display:block; }
+.nature-art { position:absolute; right:-12px; top:24px; width:250px; height:auto; opacity:.56; pointer-events:none; }
+.nature-hydrangea-art { right:-2px; top:20px; width:245px; opacity:.5; }
+.nature-osmanthus-art { right:-6px; top:10px; width:260px; opacity:.54; }
+.nature-starlit-art { right:5px; top:18px; width:250px; opacity:.72; }
+.nature-echo { position:absolute; left:-44px; bottom:-28px; width:155px; height:150px; opacity:.55; transform:scaleX(-1) rotate(-9deg); }
+.nature-echo .nature-art { top:0; right:0; width:155px; }
+[data-nature-particle] { display:none; position:absolute; top:-16px; opacity:0; pointer-events:none; }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-interface-motion="on"] [data-nature-theme] [data-nature-particle] { display:block; animation:nature-drift 15s ease-in-out infinite; }
+  [data-nature-theme="daisy-garden"] [data-nature-particle] { width:7px; height:12px; border-radius:80% 20% 80% 20%; background:#d8e4c4; }
+  [data-nature-theme="hydrangea-rain"] [data-nature-particle] { width:4px; height:12px; border-radius:100%; background:#a9c9e9; animation-name:nature-rainfall !important; animation-duration:11s !important; }
+  [data-nature-theme="osmanthus-courtyard"] [data-nature-particle] { width:5px; height:5px; border-radius:50% 20%; background:#deb86c; animation-duration:17s !important; }
+  [data-nature-theme="starlit-dream"] [data-nature-particle] { top:12%; width:8px; height:8px; background:#d4ddff; clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%); animation:nature-starlight 7s ease-in-out infinite !important; }
+  [data-nature-particle]:nth-of-type(1) { left:32%; animation-delay:-3s !important; }
+  [data-nature-particle]:nth-of-type(2) { left:51%; animation-delay:-9s !important; }
+  [data-nature-particle]:nth-of-type(3) { left:72%; animation-delay:-5s !important; }
+  [data-nature-particle]:nth-of-type(4) { left:90%; animation-delay:-12s !important; }
+  [data-nature-theme="starlit-dream"] [data-nature-particle]:nth-of-type(2) { top:33%; }
+  [data-nature-theme="starlit-dream"] [data-nature-particle]:nth-of-type(3) { top:62%; }
+  [data-nature-theme="starlit-dream"] [data-nature-particle]:nth-of-type(4) { top:78%; }
+}
+@keyframes nature-drift {
+  0% { opacity:0; transform:translate3d(0,0,0) rotate(0); }
+  12% { opacity:.55; }
+  80% { opacity:.4; }
+  100% { opacity:0; transform:translate3d(-48px,680px,0) rotate(240deg); }
+}
+@keyframes nature-rainfall {
+  0% { opacity:0; transform:translate3d(0,0,0) rotate(12deg); }
+  12% { opacity:.42; }
+  80% { opacity:.3; }
+  100% { opacity:0; transform:translate3d(-36px,680px,0) rotate(12deg); }
+}
+@keyframes nature-starlight {
+  0%, 100% { opacity:.05; transform:scale(.55); }
+  48% { opacity:.8; transform:scale(1.15); }
+}
 
 /* Decorative layer stays out of input handling and never changes layout. */
 [data-sakura-decoration] { display:none; }

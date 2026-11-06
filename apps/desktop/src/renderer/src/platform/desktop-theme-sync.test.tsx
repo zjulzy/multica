@@ -7,7 +7,7 @@ import { DesktopThemeSync } from "./desktop-theme-sync";
 
 describe("DesktopThemeSync", () => {
   afterEach(() => { cleanup(); delete document.documentElement.dataset.desktopTheme; });
-  it.each(["graphite-copper", "mist-celadon", "cream-gold", "sakura-blush", "moon-lavender", "deep-ocean"])("sets a desktop-only marker for %s and removes it when switching away", (theme) => {
+  it.each(["graphite-copper", "mist-celadon", "cream-gold", "sakura-blush", "moon-lavender", "deep-ocean", "daisy-garden", "hydrangea-rain", "osmanthus-courtyard", "starlit-dream"])("sets a desktop-only marker for %s and removes it when switching away", (theme) => {
     current.resolvedTheme = theme;
     const view = render(<DesktopThemeSync />);
     expect(document.documentElement.dataset.desktopTheme).toBe(theme);

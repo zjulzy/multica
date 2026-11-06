@@ -300,7 +300,7 @@ export function DesktopInboxDockLayout({
   return (
     <ChatDockVisibilityProvider value={chatVisible}>
     <div data-slot="dock-region" className="relative flex min-h-0 flex-1 flex-col">
-    <div ref={mainContentRef} data-testid="dock-main-content" className="flex min-h-0 flex-1 flex-col">{children}</div>
+    <div ref={mainContentRef} data-testid="dock-main-content" className="isolate flex min-h-0 flex-1 flex-col">{children}</div>
     {enabled && workspaceId && <>
     <div aria-hidden data-testid="dock-collapsed-spacer" className="h-9 shrink-0" />
     <div ref={dockAlignmentRef} data-testid="dock-alignment" className="pointer-events-none absolute inset-0 z-10 min-h-0">

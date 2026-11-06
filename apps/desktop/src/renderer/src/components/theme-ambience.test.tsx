@@ -15,4 +15,13 @@ describe("ThemeAmbience", () => {
       expect(group!.children.length).toBeLessThanOrEqual(6);
     }
   });
+  it("keeps nature decorations accessible only as background and supplies matching animated details", () => {
+    render(<ThemeAmbience />);
+    for (const theme of ["daisy-garden", "hydrangea-rain", "osmanthus-courtyard", "starlit-dream"]) {
+      const group = screen.getByTestId("theme-ambience").querySelector(`[data-nature-theme="${theme}"]`);
+      expect(group).not.toBeNull();
+      expect(group!.querySelector("svg")).not.toBeNull();
+      expect(group!.querySelectorAll("[data-nature-particle]").length).toBeGreaterThan(0);
+    }
+  });
 });

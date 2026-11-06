@@ -182,7 +182,7 @@ describe("PreferencesTab — Language switcher", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const view = render(<PreferencesTab />, { wrapper: I18nWrapper });
     expect(screen.queryByRole("button", { name: "Graphite Copper" })).not.toBeInTheDocument();
-    themeState.themes = ["light", "dark", "graphite-copper", "mist-celadon", "cream-gold", "sakura-blush", "moon-lavender", "deep-ocean", "system"];
+    themeState.themes = ["light", "dark", "graphite-copper", "mist-celadon", "cream-gold", "sakura-blush", "moon-lavender", "deep-ocean", "daisy-garden", "hydrangea-rain", "osmanthus-courtyard", "starlit-dream", "system"];
     view.rerender(<PreferencesTab />);
     await user.click(screen.getByRole("button", { name: "Graphite Copper" }));
     expect(mockSetTheme).toHaveBeenCalledWith("graphite-copper");
@@ -194,6 +194,9 @@ describe("PreferencesTab — Language switcher", () => {
     expect(screen.getByRole("button", { name: "Sakura Blush" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Moon Lavender" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Deep Ocean" })).toBeInTheDocument();
+    for (const name of ["Daisy Garden", "Hydrangea Rain", "Osmanthus Courtyard", "Starlit Dream"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Hydrangea Rain" }));
+    expect(mockSetTheme).toHaveBeenCalledWith("hydrangea-rain");
   });
 
   it.each([

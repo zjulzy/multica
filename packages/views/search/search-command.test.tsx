@@ -71,7 +71,7 @@ const {
     mockOpenModal: vi.fn(),
     mockToast: toast,
     mockSetTheme: vi.fn(),
-    mockTheme: { current: "system" as "light" | "dark" | "system" },
+    mockTheme: { current: "system" as "light" | "dark" | "system", themes: undefined as string[] | undefined },
     mockCommentCollapseAll: vi.fn(),
     mockCommentExpandAll: vi.fn(),
     mockResolvedCollapseAll: vi.fn(),
@@ -236,7 +236,7 @@ vi.mock("../navigation/context", () => {
 });
 
 vi.mock("@multica/ui/components/common/theme-provider", () => ({
-  useTheme: () => ({ theme: mockTheme.current, setTheme: mockSetTheme }),
+  useTheme: () => ({ theme: mockTheme.current, themes: mockTheme.themes, setTheme: mockSetTheme }),
 }));
 
 vi.mock("sonner", () => ({ toast: mockToast }));
@@ -374,6 +374,7 @@ describe("SearchCommand", () => {
     mockToast.warning.mockReset();
     mockSetTheme.mockReset();
     mockTheme.current = "system";
+    mockTheme.themes = undefined;
     mockCommentCollapseAll.mockReset();
     mockCommentExpandAll.mockReset();
     mockResolvedCollapseAll.mockReset();
@@ -524,6 +525,22 @@ describe("SearchCommand", () => {
       await user.click(screen.getByText("Light"));
       expect(mockSetTheme).toHaveBeenCalledWith("light");
       expect(useSearchStore.getState().open).toBe(false);
+    });
+
+    it("finds and switches to a supported new desktop theme", async () => {
+      const user = userEvent.setup();
+      mockTheme.themes = ["light", "dark", "system", "daisy-garden", "hydrangea-rain", "osmanthus-courtyard", "starlit-dream"];
+      renderSearch();
+      await user.type(input(), "theme");
+      await user.click(await rowText("Change theme..."));
+      expect(screen.getByText("Daisy Garden")).toBeInTheDocument();
+      expect(screen.getByText("Hydrangea Rain")).toBeInTheDocument();
+      expect(screen.getByText("Osmanthus Courtyard")).toBeInTheDocument();
+      expect(screen.getByText("Starlit Dream")).toBeInTheDocument();
+      await user.type(screen.getByPlaceholderText("Filter..."), "starlit");
+      expect(renderedValues()).toEqual(["theme:starlit-dream"]);
+      await user.keyboard("{Enter}");
+      expect(mockSetTheme).toHaveBeenCalledWith("starlit-dream");
     });
 
     it("Backspace on an empty submenu input returns to the root", async () => {

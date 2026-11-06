@@ -552,6 +552,7 @@ describe("DesktopInboxDockLayout", () => {
     useDesktopPrefsStore.setState({ interfaceMotionEnabled: true, inboxDockOpen: true });
     renderDock();
     const content = screen.getByTestId("dock-main-content");
+    expect(content).toHaveClass("isolate");
     const inbox = screen.getByTestId("dock-inbox-content");
     expect(screen.getByTestId("dock-layout")).not.toContainElement(content);
     expect(screen.getByTestId("dock-collapsed-spacer")).toHaveClass("h-9");

@@ -131,6 +131,10 @@ function ThemeRow() {
     ["sakura-blush", t(($) => $.preferences.theme.sakura_blush)],
     ["moon-lavender", t(($) => $.preferences.theme.moon_lavender)],
     ["deep-ocean", t(($) => $.preferences.theme.deep_ocean)],
+    ["daisy-garden", t(($) => $.preferences.theme.daisy_garden)],
+    ["hydrangea-rain", t(($) => $.preferences.theme.hydrangea_rain)],
+    ["osmanthus-courtyard", t(($) => $.preferences.theme.osmanthus_courtyard)],
+    ["starlit-dream", t(($) => $.preferences.theme.starlit_dream)],
   ] as const;
   const value = theme && themes?.includes(theme) ? theme : "system";
   return (
@@ -146,7 +150,7 @@ function ThemeRow() {
             ["system", t(($) => $.preferences.theme.system)],
           ]}
         />
-        {[extraThemes.slice(0, 3), extraThemes.slice(3)].map((row) => {
+        {[extraThemes.slice(0, 3), extraThemes.slice(3, 6), extraThemes.slice(6, 9), extraThemes.slice(9, 12)].map((row) => {
           const options = row.filter(([key]) => themes?.includes(key));
           return options.length ? <SegmentedToggle key={options[0]![0]} value={value} onChange={setTheme} buttonClassName="px-3 py-1 text-label" options={options} /> : null;
         })}
