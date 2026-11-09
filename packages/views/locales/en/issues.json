@@ -643,6 +643,8 @@
     "add_reaction": "Add reaction",
     "collapse_thread": "Collapse thread",
     "expand_thread": "Expand thread",
+    "expand_reply": "Expand reply",
+    "collapse_reply": "Collapse reply",
     "delete_title": "Delete comment",
     "delete_desc": "This comment will be permanently deleted. This cannot be undone.",
     "delete_desc_with_replies": "This comment and all its replies will be permanently deleted. This cannot be undone.",

@@ -15,13 +15,15 @@ import { CommentSelectionBubble } from "./comment-selection-bubble";
 type CapturedSelection = NonNullable<ReturnType<typeof captureCommentSelection>>;
 type SourceAnchor = { id: string; range: Range; root: HTMLElement };
 
-export function useCommentAnnotations({ draftKey, sources, enabled, onAdded, editable = false }: {
+export function useCommentAnnotations({ draftKey, sources, enabled, onAdded, editable = false, displayMarkers = true }: {
   draftKey: CommentDraftKey;
   sources: { id: string; name: string; revision?: number }[];
   enabled: boolean;
   onAdded?: () => void;
   /** Editable descriptions use their existing toolbar to call addSelection. */
   editable?: boolean;
+  /** A virtualized composer can edit a source without drawing duplicate markers. */
+  displayMarkers?: boolean;
 }) {
   const { t } = useT("issues");
   const cardRef = useRef<HTMLDivElement>(null);
@@ -112,7 +114,7 @@ export function useCommentAnnotations({ draftKey, sources, enabled, onAdded, edi
   }, [editingId]);
 
   useEffect(() => {
-    if ((!anchorKey && !editingId) || !enabled) {
+    if (!displayMarkers || (!anchorKey && !editingId) || !enabled) {
       setAnchors((current) => current.length ? [] : current);
       return;
     }
@@ -157,7 +159,7 @@ export function useCommentAnnotations({ draftKey, sources, enabled, onAdded, edi
     });
     observer.observe(card, { childList: true, subtree: true, characterData: true });
     return () => { observer.disconnect(); if (canHighlight) CSS.highlights.delete(highlightName); };
-  }, [anchorKey, highlightName, draftKey, editable, enabled, editingId]);
+  }, [anchorKey, highlightName, draftKey, editable, enabled, editingId, displayMarkers]);
 
   useEffect(() => {
     if (!selection || (editor?.existing && !annotations.some((a) => a.id === editingId))) {

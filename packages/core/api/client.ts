@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import { startTimelineRequest, finishTimelineRequest } from "../issue-performance";
 import { AgentRuntimeSchema, EMPTY_RUNTIME } from "../runtimes/schema";
 import type { IssueWakeup, IssueWakeupInput, IssueWakeupSummaryRow, PausedWakeup, SystemWakeup, WakeupRun, WorkspaceSystemWakeup } from "../types/issue-wakeup";
 import type { WorkspaceWakeupPage, WorkspaceWakeupFilters } from "../types/issue-wakeup";
@@ -1735,12 +1736,15 @@ export class ApiClient {
   }
 
   async listTimeline(issueId: string): Promise<TimelineEntry[]> {
-    const raw = await this.fetch<unknown>(
-      `/api/issues/${issueId}/timeline`,
-    );
-    return parseWithFallback(raw, TimelineEntriesSchema, EMPTY_TIMELINE_ENTRIES, {
-      endpoint: "GET /api/issues/:id/timeline",
-    });
+    startTimelineRequest(issueId);
+    try {
+      const raw = await this.fetch<unknown>(`/api/issues/${issueId}/timeline`);
+      return parseWithFallback(raw, TimelineEntriesSchema, EMPTY_TIMELINE_ENTRIES, {
+        endpoint: "GET /api/issues/:id/timeline",
+      });
+    } finally {
+      finishTimelineRequest(issueId);
+    }
   }
 
   async listTimelineForStats(issueId: string, signal?: AbortSignal): Promise<{ entries: TimelineEntry[]; truncated: boolean }> {

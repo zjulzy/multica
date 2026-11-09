@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, Profiler, memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2, ChevronRight, CornerUpLeft, ListChevronsDownUp, Copy, Link2, Loader2, MessageSquarePlus, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "@multica/ui/icons";
 import { toast } from "sonner";
 import { Card } from "@multica/ui/components/ui/card";
@@ -56,8 +56,12 @@ import { CommentsFoldBar } from "./resolved-thread-bar";
 import { deriveThreadResolution } from "./thread-utils";
 import { RevisionConflictCompare } from "./revision-conflict-compare";
 import { InlineCommentRun, PlacedInlineCommentRun, useInlineCommentRunState, type InlineCommentRunState } from "./inline-comment-run";
-import { EMPTY_COMMENT_RUNS, isRunFailureNotice, orderThreadWithRuns, type CommentRun, type ThreadRunSlot } from "./comment-runs";
+import { EMPTY_COMMENT_RUNS, isActiveCommentRun, isRunFailureNotice, orderThreadWithRuns, type CommentRun, type ThreadRunSlot } from "./comment-runs";
 import { descriptionPreview } from "./description-preview";
+import { replyPreview } from "./reply-preview";
+import { captureReplyFoldAnchor, restoreReplyFoldAnchor } from "./reply-fold-anchor";
+import { fadeReplyIn, fadeReplyOut } from "./reply-fold-motion";
+import { recordIssueRender } from "../hooks/issue-render-profile";
 import { useCommentAnnotations } from "./use-comment-annotations";
 import { useAttachmentVersions } from "./deliverables/attachment-versions";
 import { VersionBadge } from "./deliverables/version-badge";
@@ -71,6 +75,10 @@ const highlightedCommentBackgroundClass =
   "bg-[color-mix(in_srgb,var(--card)_95%,var(--brand)_5%)]";
 const stickyHeaderFadeClass =
   "after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-1 after:bg-[inherit] after:[mask-image:linear-gradient(to_bottom,#000,transparent)] after:[-webkit-mask-image:linear-gradient(to_bottom,#000,transparent)]";
+
+function ProfileReply({ name, children }: { name: string; children: ReactNode }) {
+  return process.env.NODE_ENV === "development" ? <Profiler id={name} onRender={(id, _phase, duration) => recordIssueRender(id, duration)}>{children}</Profiler> : children;
+}
 
 function StickyHeaderShell({
   className,
@@ -160,6 +168,18 @@ interface CommentCardProps {
   onResolvedExpandChange?: (rootId: string, expand: boolean) => void;
   /** ID of the comment to highlight (flash animation). */
   highlightedCommentId?: string | null;
+  /** Reveal a requested reply for a deep link or minimap jump. */
+  requestedReplyId?: string | null;
+  /** Page-wide search must include older replies in its DOM walk. */
+  forceShowReplies?: boolean;
+  onEditingChange?: (commentId: string, editing: boolean) => void;
+  onCollapseReply?: (trigger: HTMLButtonElement) => void;
+  onExpandReply?: () => void;
+  replyIsCollapsed?: boolean;
+  replyStatus?: string;
+  preserveEditOnUnmount?: boolean;
+  /** Render the root alone when replies are separate timeline items. */
+  rootOnly?: boolean;
 }
 
 // Shared delete confirmation dialog
@@ -358,32 +378,40 @@ function TaskCommentRetryButton({
 
 const NEVER_STEER = () => false;
 
+const virtualEditSessions = new Map<string, { base: string; retained: Set<string> | null }>();
+
 function useEditAttachmentState(
   issueId: string,
   entry: TimelineEntry,
   onEdit: (commentId: string, content: string, attachmentIds: string[], suppressAgentIds?: string[], contentBase?: string) => Promise<void>,
+  preserveOnUnmount = false,
 ) {
   const { t } = useT("issues");
   const { t: tEditor } = useT("editor");
-  const [editing, setEditing] = useState(false);
-  const [initialValue, setInitialValue] = useState(entry.content ?? "");
-  const [initialContentBase, setInitialContentBase] = useState(entry.content ?? "");
+  const draftKey = `edit:${issueId}:${entry.id}` as const;
+  const session = preserveOnUnmount ? virtualEditSessions.get(draftKey) : undefined;
+  const restoredDraft = session ? useCommentDraftStore.getState().getDraft(draftKey) ?? entry.content ?? "" : entry.content ?? "";
+  const [editing, setEditing] = useState(!!session);
+  const [initialValue, setInitialValue] = useState(restoredDraft);
+  const [initialContentBase, setInitialContentBase] = useState(session?.base ?? entry.content ?? "");
   const [revisionConflict, setRevisionConflict] = useState(false);
   const editorRef = useRef<ContentEditorRef>(null);
   // Saving mid-upload would persist the edit without the file the user just
   // pasted in — same failure as posting a new comment.
   const uploadGate = useUploadGate(editorRef);
   const cancelledRef = useRef(false);
-  const [content, setContent] = useState(entry.content ?? "");
+  const [content, setContent] = useState(restoredDraft);
   // Uploads for this edit session (MUL-5181) — coordinator-owned, persisted in
   // the draft store keyed by the edit draft so scroll-out/close no longer drops
   // an in-flight upload.
-  const draftKey = `edit:${issueId}:${entry.id}` as const;
   // `gate` widens the editor gate with coordinator-owned placeholders — see
   // CommentInput.
   const { uploads, attachments: pendingAttachments, handleUpload, removeUpload, gate } =
     useCommentUploads(draftKey, { issueId }, uploadGate, editorRef);
-  const [retainedStandaloneIds, setRetainedStandaloneIds] = useState<Set<string> | null>(null);
+  const [retainedStandaloneIds, setRetainedStandaloneIds] = useState<Set<string> | null>(session?.retained ?? null);
+  useEffect(() => {
+    if (preserveOnUnmount && editing) virtualEditSessions.set(draftKey, { base: initialContentBase, retained: retainedStandaloneIds });
+  }, [preserveOnUnmount, editing, draftKey, initialContentBase, retainedStandaloneIds]);
   const triggerPreview = useCommentTriggerPreview({
     issueId,
     parentId: entry.parent_id ?? undefined,
@@ -421,6 +449,7 @@ function useEditAttachmentState(
   );
 
   const resetState = () => {
+    if (preserveOnUnmount) virtualEditSessions.delete(draftKey);
     setEditing(false);
     setRevisionConflict(false);
     setContent(entry.content ?? "");
@@ -433,6 +462,7 @@ function useEditAttachmentState(
   const startEdit = () => {
     cancelledRef.current = false;
     const draft = getDraft(draftKey) ?? entry.content ?? "";
+    if (preserveOnUnmount) virtualEditSessions.set(draftKey, { base: entry.content ?? "", retained: initialStandaloneAttachmentIds(entry) });
     setInitialValue(draft);
     setInitialContentBase(entry.content ?? "");
     setContent(draft);
@@ -533,7 +563,7 @@ function useEditAttachmentState(
       const live = store.drafts[draftKey];
       const untouched = live === undefined || live === submittedEntryRef.current;
       if (!editMountedRef.current) {
-        if (untouched) store.clearDraft(draftKey);
+        if (untouched) { store.clearDraft(draftKey); if (preserveOnUnmount) virtualEditSessions.delete(draftKey); }
         return;
       }
       if (!untouched) return;
@@ -640,6 +670,12 @@ function CommentRow({
   onCreateSubIssue,
   onResolveToggle,
   onCopyLink,
+  onEditingChange,
+  onCollapseReply,
+  onExpandReply,
+  replyIsCollapsed = false,
+  replyStatus,
+  preserveEditOnUnmount = false,
 }: {
   runHeader?: ReactNode;
   runMetadata?: ReactNode;
@@ -660,13 +696,24 @@ function CommentRow({
   onCreateSubIssue?: (commentId: string) => void;
   onResolveToggle?: (commentId: string, resolved: boolean) => void;
   onCopyLink?: (commentId: string) => void;
+  onEditingChange?: (commentId: string, editing: boolean) => void;
+  onCollapseReply?: (trigger: HTMLButtonElement) => void;
+  onExpandReply?: () => void;
+  replyIsCollapsed?: boolean;
+  replyStatus?: string;
+  preserveEditOnUnmount?: boolean;
 }) {
   const { t } = useT("issues");
   const locale = useLocale();
   const timeAgo = useTimeAgo();
   const { getActorName } = useActorName();
 
-  const edit = useEditAttachmentState(issueId, entry, onEdit);
+  const edit = useEditAttachmentState(issueId, entry, onEdit, preserveEditOnUnmount);
+  useLayoutEffect(() => {
+    if (!edit.editing || !onEditingChange) return;
+    onEditingChange(entry.id, true);
+    return () => onEditingChange(entry.id, false);
+  }, [edit.editing, entry.id, onEditingChange]);
 
   const isOwn = entry.actor_type === "member" && entry.actor_id === currentUserId;
   // A message that steered a run is part of that run's input: it cannot be
@@ -686,17 +733,22 @@ function CommentRow({
   if (isDeletedComment(entry)) return null;
 
   return (
-    <div data-comment-block className="pb-3">
+    <div data-comment-block className={replyIsCollapsed ? undefined : "pb-3"}>
       {/* Header pins to the timeline's scroll parent within this reply's own
           row box, so a LONG reply keeps its
           author + actions visible while you scroll its body, then releases once
           this reply ends. The header stays opaque and matches this comment's
           highlight state while it occludes the body scrolling underneath. */}
-      <StickyHeaderShell
+      <ProfileReply name="reply-header"><StickyHeaderShell
         highlighted={isHighlighted}
-        className="flex items-center gap-2.5 px-4 max-md:px-3 pt-3 pb-1"
+        className={cn("flex items-center gap-2.5 px-4 max-md:px-3", onCollapseReply ? "py-2" : "pt-3 pb-1")}
       >
-        <ActorAvatar
+        {onCollapseReply && <button type="button" disabled={edit.editing}
+          onClick={(event) => replyIsCollapsed ? onExpandReply?.() : onCollapseReply(event.currentTarget)}
+          data-reply-fold-id={replyIsCollapsed ? entry.id : undefined}
+          aria-expanded={!replyIsCollapsed} aria-label={`${replyIsCollapsed ? t(($) => $.comment.expand_reply) : t(($) => $.comment.collapse_reply)}: ${entry.actor_name || getActorName(entry.actor_type, entry.actor_id)} ${replyPreview(entry)}`}
+          className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50"><ChevronRight data-reply-fold-icon aria-hidden className={cn("h-4 w-4", !replyIsCollapsed && "rotate-90")} /></button>}
+        <ProfileReply name="reply-avatar"><ActorAvatar
           actorType={entry.actor_type}
           actorId={entry.actor_id}
           name={entry.actor_name}
@@ -705,7 +757,7 @@ function CommentRow({
           size="md"
           enableHoverCard
           showStatusDot
-        />
+        /></ProfileReply>
         <span className="cursor-pointer text-body font-medium">
           {entry.actor_name || getActorName(entry.actor_type, entry.actor_id)}
         </span>
@@ -722,6 +774,8 @@ function CommentRow({
           </TooltipContent>
         </Tooltip>
 
+        {replyStatus && <span className="shrink-0 text-caption text-muted-foreground">{replyStatus}</span>}
+
         <SteerBadge issueId={issueId} entry={entry} />
         {runHeader}
 
@@ -735,7 +789,7 @@ function CommentRow({
           </span>
         )}
 
-        <div data-comment-actions className="ml-auto flex shrink-0 items-center gap-0.5">
+        <ProfileReply name="reply-actions"><div data-comment-actions className="ml-auto flex shrink-0 items-center gap-0.5">
           {!edit.editing && <QuickEmojiPicker
             onSelect={(emoji) => onToggleReaction(entry.id, emoji)}
             ariaLabel={t(($) => $.comment.add_reaction)}
@@ -819,8 +873,9 @@ function CommentRow({
             onConfirm={() => onDelete(entry.id)}
             hasReplies={hasReplies}
           />
-        </div>
-      </StickyHeaderShell>
+        </div></ProfileReply>
+      </StickyHeaderShell></ProfileReply>
+      {!replyIsCollapsed && <ProfileReply name="reply-content"><div data-reply-motion-body>
       {replyTo && <div className="pl-12 pr-4 max-md:pl-3 max-md:pr-3 pb-1.5">{replyTo}</div>}
 
       {edit.editing ? (
@@ -843,6 +898,7 @@ function CommentRow({
               onUploadFile={edit.handleUpload}
               onUploadingChange={edit.onUploadingChange}
               debounceMs={100}
+              flushPendingOnUnmount={preserveEditOnUnmount}
               currentIssueId={issueId}
               attachments={edit.editorAttachments}
             />
@@ -930,6 +986,7 @@ function CommentRow({
         getActorName={getActorName}
         className="mt-1.5 pl-12 pr-4 max-md:pl-3 max-md:pr-3"
       />}
+      </div></ProfileReply>}
     </div>
   );
 }
@@ -981,7 +1038,7 @@ export function AgentRunComment({ run, standalone = false, commentProps, enterin
   const motionRef = useRunCommentMotion(entering, reply?.id, run.task.status);
   const highlighted = (highlightedId ?? commentProps?.highlightedCommentId) === (slotEntry?.id ?? run.task.id);
   return (
-    <div ref={motionRef} data-run-slot-id={run.task.id}
+    <div ref={motionRef} data-run-slot-id={run.task.id} data-reply-motion-id={!standalone ? slotEntry?.id : undefined}
       data-run-comment-id={!reply ? run.task.id : undefined}
       id={!standalone && slotEntry ? `comment-${slotEntry.id}` : undefined}
       className={cn("transition-colors duration-700", standalone ? !reply && "rounded-xl border" : "border-t border-border/50", !reply && "py-1.5",
@@ -1003,6 +1060,188 @@ export function AgentRunComment({ run, standalone = false, commentProps, enterin
 }
 
 // CommentCard — One Card per thread (parent + all replies flat inside)
+
+// A virtualized outer timeline can unmount a thread while the reader scrolls.
+// Keep explicit expansion in memory so returning to it does not fold it again.
+const replyExpansionOverrides = new Map<string, boolean>();
+const pendingThreadAnnotationEdits = new Map<string, { annotationId: string; sourceCommentId: string }>();
+export function __resetOlderReplyExpansionForTests() { replyExpansionOverrides.clear(); }
+function rememberReplyExpansion(key: string, expanded: boolean) {
+  if (!replyExpansionOverrides.has(key) && replyExpansionOverrides.size >= 3000) replyExpansionOverrides.delete(replyExpansionOverrides.keys().next().value!);
+  replyExpansionOverrides.set(key, expanded);
+}
+
+type ThreadReplyItemProps = Pick<CommentCardProps, "issueId" | "currentUserId" | "canModerate" | "onEdit" | "onDelete" | "onToggleReaction" | "onCreateSubIssue" | "onResolveToggle" | "onCopyLink" | "onJumpToComment" | "highlightedCommentId" | "requestedReplyId" | "forceShowReplies" | "enteringRunIds"> & {
+  root: TimelineEntry;
+  row: TimelineEntry | ThreadRunSlot;
+  replies?: TimelineEntry[];
+  hasReplies?: boolean;
+  latestReplyId?: string;
+  resolutionReplyId?: string;
+  runs?: CommentRun[];
+  onReply?: CommentCardProps["onReply"];
+  threadEnd?: boolean;
+};
+
+const unavailableThreadReply: CommentCardProps["onReply"] = async () => false;
+
+/** A reply that can be mounted independently of its thread root. */
+export const ThreadReplyItem = memo(function ThreadReplyItem({ root, row, latestReplyId, resolutionReplyId, replies = [], hasReplies, issueId, currentUserId, canModerate, onEdit, onDelete, onToggleReaction, onCreateSubIssue, onResolveToggle, onCopyLink, onJumpToComment, highlightedCommentId, requestedReplyId, forceShowReplies = false, enteringRunIds, runs = EMPTY_COMMENT_RUNS, onReply = unavailableThreadReply, threadEnd = false }: ThreadReplyItemProps) {
+  const { t } = useT("issues");
+  const { getActorName } = useActorName();
+  const reply = "run" in row ? row.reply : row;
+  const annotation = useCommentAnnotations({ draftKey: `reply:${issueId}:${root.id}`, enabled: !!currentUserId,
+    sources: reply ? [{ id: reply.id, name: reply.actor_name || getActorName(reply.actor_type, reply.actor_id), revision: reply.revision }] : [] });
+  const replyId = reply?.id;
+  const key = `${issueId}:${root.id}:${replyId ?? ""}`;
+  const [, rerender] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const wrapper = useRef<HTMLDivElement>(null);
+  const pendingEnter = useRef(false);
+  const pendingAnchor = useRef<ReturnType<typeof captureReplyFoldAnchor>>(null);
+  const pendingCancel = useRef<(() => void) | null>(null);
+  const setExpanded = useCallback((expanded: boolean) => {
+    if (!replyId || replyExpansionOverrides.get(key) === expanded) return;
+    rememberReplyExpansion(key, expanded);
+    rerender((version) => version + 1);
+  }, [key, replyId]);
+  useEffect(() => {
+    if (replyId && replyId === latestReplyId && "run" in row && isActiveCommentRun(row.run.task) && !replyExpansionOverrides.has(key)) {
+      rememberReplyExpansion(key, true);
+    }
+  }, [key, latestReplyId, replyId, row]);
+  useEffect(() => {
+    if (replyId && requestedReplyId === replyId) setExpanded(true);
+  }, [replyId, requestedReplyId, setExpanded]);
+  const expand = useCallback(() => { pendingEnter.current = true; setExpanded(true); }, [setExpanded]);
+  const collapse = useCallback((trigger: HTMLButtonElement) => {
+    if (!replyId || pendingCancel.current) return;
+    const body = wrapper.current?.querySelector<HTMLElement>("[data-reply-motion-body]");
+    const commit = () => {
+      pendingCancel.current = null;
+      pendingAnchor.current = captureReplyFoldAnchor(trigger, replyId);
+      setExpanded(false);
+    };
+    if (!body) { commit(); return; }
+    pendingCancel.current = () => {};
+    const cancel = fadeReplyOut(body, commit);
+    if (pendingCancel.current) pendingCancel.current = cancel;
+  }, [replyId, setExpanded]);
+  useEffect(() => () => { if (pendingCancel.current) { pendingCancel.current(); if (replyId) rememberReplyExpansion(key, false); } }, [key, replyId]);
+  useLayoutEffect(() => {
+    if (pendingEnter.current) {
+      pendingEnter.current = false;
+      const body = wrapper.current?.querySelector<HTMLElement>("[data-reply-motion-body]");
+      if (body) fadeReplyIn(body);
+    }
+    const anchor = pendingAnchor.current;
+    if (!anchor) return;
+    pendingAnchor.current = null;
+    restoreReplyFoldAnchor(anchor);
+    let frame = 0, remaining = 3;
+    const cancel = () => { cancelAnimationFrame(frame); for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) anchor.scroller.removeEventListener(type, cancel); };
+    const stabilize = () => { restoreReplyFoldAnchor(anchor); if (--remaining > 0) frame = requestAnimationFrame(stabilize); else cancel(); };
+    for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) anchor.scroller.addEventListener(type, cancel, { passive: true });
+    frame = requestAnimationFrame(stabilize);
+    return cancel;
+  });
+  const handleEditing = useCallback((_id: string, value: boolean) => { setEditing(value); if (value) setExpanded(true); }, [setExpanded]);
+  const expanded = !reply || isDeletedComment(reply) || forceShowReplies || editing || (replyExpansionOverrides.get(key) ?? reply.id === latestReplyId);
+  useEffect(() => {
+    const draftKey = `reply:${issueId}:${root.id}`;
+    const pending = pendingThreadAnnotationEdits.get(draftKey);
+    if (!pending || pending.sourceCommentId !== replyId || !expanded) return;
+    let frame = 0, attempts = 0;
+    const open = () => {
+      if (pendingThreadAnnotationEdits.get(draftKey) !== pending) return;
+      if (annotation.editAnnotation(pending.annotationId, false)) { pendingThreadAnnotationEdits.delete(draftKey); return; }
+      if (++attempts < 120) frame = requestAnimationFrame(open);
+    };
+    frame = requestAnimationFrame(open);
+    return () => cancelAnimationFrame(frame);
+  }, [issueId, root.id, replyId, expanded]);
+  const renderRuns = (presentation: "inline" | "header") => runs.filter((run) => run.commentId === replyId && run.hasReply && (!run.anchorCommentId || run.anchorCommentId === replyId || forceShowReplies))
+    .map((run) => <PlacedInlineCommentRun key={run.task.id} run={run} presentation={presentation} />);
+  const common = reply ? { issueId, entry: reply, replies: [], currentUserId, canModerate, onReply, onEdit, onDelete, onToggleReaction, onCreateSubIssue, onResolveToggle, onCopyLink, highlightedCommentId, enteringRunIds, onEditingChange: handleEditing, onCollapseReply: forceShowReplies ? undefined : collapse, onExpandReply: expand, replyIsCollapsed: !expanded, preserveEditOnUnmount: true } : undefined;
+  return <div ref={(node) => { wrapper.current = node; annotation.cardRef.current = node; }} {...annotation.captureProps} className={cn("border-x border-surface-border bg-surface", threadEnd && "rounded-b-xl border-b")}>
+    {annotation.popup}
+    {"run" in row ? <AgentRunComment run={row.run} entering={enteringRunIds?.has(row.run.task.id)} highlightedId={highlightedCommentId}
+      replyTo={row.replyTo && <ReplyToQuote entry={row.replyTo} onJump={onJumpToComment} />}
+      commentProps={common ? { ...common, replyStatus: isActiveCommentRun(row.run.task) ? row.run.task.status === "running" ? t(($) => $.agent_activity.status_running) : t(($) => $.agent_activity.status_queued) : undefined } : undefined} />
+      : !isDeletedComment(row) && common && <div id={`comment-${row.id}`} data-reply-motion-id={row.id} className={cn("border-t border-border/50 transition-colors duration-700", highlightedCommentId === row.id && highlightedCommentBackgroundClass)}>
+        <CommentRow {...common} isHighlighted={highlightedCommentId === row.id} isResolution={row.id === resolutionReplyId}
+          hasReplies={hasReplies ?? replies.some((child) => child.parent_id === row.id)} runHeader={renderRuns("header")} runMetadata={renderRuns("inline")} />
+      </div>}
+  </div>;
+});
+
+type ThreadComposerItemProps = Pick<CommentCardProps, "issueId" | "replies" | "currentUserId" | "onReply" | "onReplyAccepted" | "onJumpToComment"> & { root: TimelineEntry; runs?: CommentRun[] };
+
+/** The thread's composer stays usable even when the root is virtualized away. */
+export function ThreadComposerItem({ root, replies, issueId, currentUserId, onReply, onReplyAccepted, onJumpToComment, runs = EMPTY_COMMENT_RUNS }: ThreadComposerItemProps) {
+  const { t } = useT("issues");
+  const { getActorName } = useActorName();
+  const wrapper = useRef<HTMLDivElement>(null);
+  const replyTarget = useCommentDraftStore((s) => s.drafts[`reply:${issueId}:${root.id}`]?.replyTarget);
+  const replyTargetId = replyTarget?.commentId ?? root.id;
+  const missing = !!replyTarget && replyTargetId !== root.id && !replies.some((reply) => reply.id === replyTargetId && !isDeletedComment(reply));
+  const annotation = useCommentAnnotations({ draftKey: `reply:${issueId}:${root.id}`, enabled: !!currentUserId, displayMarkers: false,
+    sources: [root, ...replies].filter((entry) => entry.type === "comment").map((entry) => ({ id: entry.id, name: entry.actor_name || getActorName(entry.actor_type, entry.actor_id), revision: entry.revision })) });
+  useLayoutEffect(() => {
+    annotation.cardRef.current = wrapper.current?.closest<HTMLDivElement>("[data-issue-scroll-container]") ?? wrapper.current;
+    return () => { annotation.cardRef.current = null; };
+  }, [annotation.cardRef]);
+  const steer = useCallback((task: AgentTask) => runs.some((run) => run.task.id === task.id), [runs]);
+  return <div ref={wrapper} className="rounded-b-xl border border-t-0 border-surface-border bg-surface pb-0">
+    {annotation.popup}
+    <div className="border-t border-border/50 px-4 max-md:px-3 py-2.5">
+      <ReplyInput issueId={issueId} parentId={replyTargetId} targetMissing={missing} placeholder={t(($) => $.reply.placeholder)} size="sm"
+        avatarType="member" avatarId={currentUserId ?? ""} draftKey={`reply:${issueId}:${root.id}`}
+        onEditAnnotation={(id) => {
+          if (annotation.editAnnotation(id, true)) return true;
+          const draftKey = `reply:${issueId}:${root.id}` as const;
+          const saved = useCommentDraftStore.getState().getAnnotations(draftKey).find((item) => item.id === id);
+          if (!saved || !onJumpToComment) return false;
+          const scroller = wrapper.current?.closest<HTMLElement>("[data-issue-scroll-container]");
+          if (scroller?.querySelector(`[data-comment-content=${JSON.stringify(saved.sourceCommentId)}]`)) return false;
+          if (saved.sourceCommentId !== root.id && !replies.some((reply) => reply.id === saved.sourceCommentId && !isDeletedComment(reply))) return false;
+          const pending = { annotationId: id, sourceCommentId: saved.sourceCommentId };
+          pendingThreadAnnotationEdits.set(draftKey, pending);
+          window.setTimeout(() => {
+            if (pendingThreadAnnotationEdits.get(draftKey) !== pending) return;
+            pendingThreadAnnotationEdits.delete(draftKey);
+            toast.error(t(($) => $.reply.annotations.source_changed));
+          }, 5000);
+          const collapse = useCommentCollapseStore.getState();
+          if (collapse.isCollapsed(issueId, root.id)) collapse.toggle(issueId, root.id);
+          onJumpToComment(saved.sourceCommentId);
+          return true;
+        }} steerByDefault={steer}
+        onSubmit={(content, attachments, suppress, taskIds) => missing ? Promise.resolve(false) : onReply(replyTargetId, content, attachments, suppress, taskIds)}
+        onAccepted={onReplyAccepted} />
+    </div>
+  </div>;
+}
+
+export function ThreadResolutionItem({ root, replies, onResolvedExpandChange, folded, threadEnd = false }: {
+  root: TimelineEntry; replies: TimelineEntry[]; onResolvedExpandChange: (id: string, expanded: boolean) => void; folded: boolean; threadEnd?: boolean;
+}) {
+  const { t } = useT("issues");
+  if (folded) {
+    const resolution = deriveThreadResolution(root, replies);
+    const resolutionId = resolution.kind === "reply" ? resolution.resolutionId : undefined;
+    return <div className={cn("border-x border-surface-border bg-surface px-4 max-md:px-3 py-2.5 border-t border-border/50", threadEnd && "rounded-b-xl border-b")}>
+      <CommentsFoldBar replies={replies.filter((reply) => reply.id !== resolutionId && !isDeletedComment(reply))} onExpand={() => onResolvedExpandChange(root.id, true)} />
+    </div>;
+  }
+  return <button type="button" onClick={(event) => {
+    const scroller = event.currentTarget.closest("[data-issue-scroll-container]");
+    if (scroller) window.dispatchEvent(new CustomEvent("multica:flush-scoped-editors", { detail: scroller }));
+    onResolvedExpandChange(root.id, false);
+  }} data-thread-sticky-bar className="sticky top-0 z-20 flex w-full items-center gap-2.5 border-x border-surface-border border-t border-border/50 bg-muted px-4 max-md:px-3 py-2.5 text-left text-body text-muted-foreground transition-colors cursor-pointer hover:bg-accent hover:text-accent-foreground"
+    aria-label={t(($) => $.comment.resolve.collapse)}><ListChevronsDownUp className="h-3.5 w-3.5" />{t(($) => $.comment.resolve.collapse)}</button>;
+}
+
 
 // A quick action posts an ordinary comment and is rendered as one (MUL-5465).
 // It briefly had a collapsed one-line header that expanded to reveal the
@@ -1033,6 +1272,11 @@ function CommentCardImpl({
   expandedResolvedIds,
   onResolvedExpandChange,
   highlightedCommentId,
+  requestedReplyId,
+  forceShowReplies = false,
+  onEditingChange,
+  onCollapseReply,
+  rootOnly = false,
 }: CommentCardProps) {
   const { t } = useT("issues");
   const locale = useLocale();
@@ -1050,15 +1294,114 @@ function CommentCardImpl({
     enabled: !!currentUserId,
     onAdded: () => { if (replyFolded) onResolvedExpandChange?.(entry.id, true); },
   });
+  useEffect(() => {
+    if (!rootOnly) return;
+    const draftKey = `reply:${issueId}:${entry.id}`;
+    const pending = pendingThreadAnnotationEdits.get(draftKey);
+    if (!pending || pending.sourceCommentId !== entry.id) return;
+    let frame = 0, attempts = 0;
+    const open = () => {
+      if (pendingThreadAnnotationEdits.get(draftKey) !== pending) return;
+      if (annotation.editAnnotation(pending.annotationId, false)) { pendingThreadAnnotationEdits.delete(draftKey); return; }
+      if (++attempts < 120) frame = requestAnimationFrame(open);
+    };
+    frame = requestAnimationFrame(open);
+    return () => cancelAnimationFrame(frame);
+  }, [rootOnly, issueId, entry.id]);
   const isCollapsed = useCommentCollapseStore((s) => s.isCollapsed(issueId, entry.id));
   const toggleCollapse = useCommentCollapseStore((s) => s.toggle);
   const open = !isCollapsed;
+  const flushThreadEditors = useCallback(() => {
+    const root = annotation.cardRef.current;
+    if (root) window.dispatchEvent(new CustomEvent("multica:flush-scoped-editors", { detail: root }));
+  }, [annotation.cardRef]);
   const handleToggle = useCallback(
-    () => toggleCollapse(issueId, entry.id),
-    [toggleCollapse, issueId, entry.id],
+    () => { if (open) flushThreadEditors(); toggleCollapse(issueId, entry.id); },
+    [toggleCollapse, issueId, entry.id, open, flushThreadEditors],
   );
 
   const edit = useEditAttachmentState(issueId, entry, onEdit);
+  const olderRepliesKey = `${issueId}:${entry.id}`;
+  const [, setReplyExpansionVersion] = useState(0);
+  const pendingFoldAnchor = useRef<ReturnType<typeof captureReplyFoldAnchor>>(null);
+  const pendingFadeIn = useRef<{ id: string; expanded: boolean } | null>(null);
+  const pendingFadeOut = useRef(new Map<string, () => void>());
+  const [editingReplies, setEditingReplies] = useState<ReadonlySet<string>>(() => new Set());
+  const seenActiveRuns = useRef(new Set<string>());
+  const setReplyExpanded = useCallback((commentId: string, expanded: boolean) => {
+    const key = `${olderRepliesKey}:${commentId}`;
+    if (replyExpansionOverrides.get(key) === expanded) return;
+    rememberReplyExpansion(key, expanded);
+    setReplyExpansionVersion((version) => version + 1);
+  }, [olderRepliesKey]);
+  const expandReply = useCallback((commentId: string) => {
+    pendingFadeIn.current = { id: commentId, expanded: true };
+    setReplyExpanded(commentId, true);
+  }, [setReplyExpanded]);
+  const collapseReply = useCallback((commentId: string, trigger: HTMLButtonElement) => {
+    if (pendingFadeOut.current.has(commentId)) return;
+    const row = trigger.closest<HTMLElement>("[data-reply-motion-id]")?.querySelector<HTMLElement>("[data-reply-motion-body]");
+    const commit = () => {
+      pendingFadeOut.current.delete(commentId);
+      pendingFoldAnchor.current = captureReplyFoldAnchor(trigger, commentId);
+      setReplyExpanded(commentId, false);
+    };
+    if (!row) { commit(); return; }
+    // Insert before starting, since disabled motion commits synchronously.
+    pendingFadeOut.current.set(commentId, () => {});
+    const cancel = fadeReplyOut(row, commit);
+    if (pendingFadeOut.current.has(commentId)) pendingFadeOut.current.set(commentId, cancel);
+  }, [setReplyExpanded]);
+  useEffect(() => () => {
+    for (const [id, cancel] of pendingFadeOut.current) {
+      cancel();
+      rememberReplyExpansion(`${olderRepliesKey}:${id}`, false);
+    }
+    pendingFadeOut.current.clear();
+  }, [olderRepliesKey]);
+  useLayoutEffect(() => {
+    const pending = pendingFadeIn.current;
+    if (!pending) return;
+    pendingFadeIn.current = null;
+    const attr = pending.expanded ? "data-reply-motion-id" : "data-reply-fold-id";
+    const row = annotation.cardRef.current?.querySelector<HTMLElement>(`[${attr}=${JSON.stringify(pending.id)}]`);
+    const body = pending.expanded ? row?.querySelector<HTMLElement>("[data-reply-motion-body]") : null;
+    if (body) fadeReplyIn(body);
+  });
+  useLayoutEffect(() => {
+    const anchor = pendingFoldAnchor.current;
+    if (!anchor) return;
+    pendingFoldAnchor.current = null;
+    restoreReplyFoldAnchor(anchor);
+    let frame = 0;
+    let remaining = 3;
+    const cancel = () => {
+      cancelAnimationFrame(frame);
+      for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) anchor.scroller.removeEventListener(type, cancel);
+    };
+    const stabilize = () => {
+      restoreReplyFoldAnchor(anchor);
+      if (--remaining > 0) frame = requestAnimationFrame(stabilize);
+      else cancel();
+    };
+    for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) anchor.scroller.addEventListener(type, cancel, { passive: true });
+    frame = requestAnimationFrame(stabilize);
+    return cancel;
+  });
+  const handleReplyEditing = useCallback((commentId: string, editing: boolean) => {
+    if (editing) setReplyExpanded(commentId, true);
+    setEditingReplies((previous) => {
+      if (previous.has(commentId) === editing) return previous;
+      const next = new Set(previous);
+      if (editing) next.add(commentId); else next.delete(commentId);
+      return next;
+    });
+  }, [setReplyExpanded]);
+  useLayoutEffect(() => {
+    if (!edit.editing || !onEditingChange) return;
+    onEditingChange(entry.id, true);
+    return () => onEditingChange(entry.id, false);
+  }, [edit.editing, entry.id, onEditingChange]);
 
   const isOwn = entry.actor_type === "member" && entry.actor_id === currentUserId;
   const receipts = commentSupplementReceipts(entry);
@@ -1088,23 +1431,28 @@ function CommentCardImpl({
 
   // A run slot renders the run's latest comment, or its activity until it
   // posts one.
-  const renderThreadRow = (row: TimelineEntry | ThreadRunSlot) => "run" in row ? (
+  const renderThreadRow = (row: TimelineEntry | ThreadRunSlot, collapsed = false) => "run" in row ? (
     <AgentRunComment key={row.run.task.id} run={row.run} entering={enteringRunIds?.has(row.run.task.id)}
       highlightedId={highlightedCommentId}
       replyTo={row.replyTo && <ReplyToQuote entry={row.replyTo} onJump={onJumpToComment} />}
       commentProps={row.reply ? {
         issueId, entry: row.reply, replies: [], currentUserId, canModerate, onReply, onEdit, onDelete,
         onToggleReaction, onCreateSubIssue, onResolveToggle, onCopyLink, highlightedCommentId, enteringRunIds,
+        onEditingChange: handleReplyEditing,
+        onCollapseReply: forceShowReplies || replyFolded ? undefined : (trigger) => collapseReply(row.reply!.id, trigger),
+        onExpandReply: () => expandReply(row.reply!.id), replyIsCollapsed: collapsed,
+        replyStatus: isActiveCommentRun(row.run.task) ? row.run.task.status === "running" ? t(($) => $.agent_activity.status_running) : t(($) => $.agent_activity.status_queued) : undefined,
       } : undefined} />
-  ) : renderReply(row);
+  ) : renderReply(row, collapsed);
 
-  const renderReply = (reply: TimelineEntry) => (
+  const renderReply = (reply: TimelineEntry, collapsed = false) => (
     <Fragment key={reply.id}>
       {/* A tombstone keeps its place in the thread but contributes no row
           of its own. */}
       {!isDeletedComment(reply) && (
         <div
           id={`comment-${reply.id}`}
+          data-reply-motion-id={reply.id}
           className={cn(
             "border-t border-border/50 transition-colors duration-700",
             highlightedCommentId === reply.id && highlightedCommentBackgroundClass,
@@ -1126,6 +1474,10 @@ function CommentCardImpl({
             onCreateSubIssue={onCreateSubIssue}
             onResolveToggle={onResolveToggle}
             onCopyLink={onCopyLink}
+            onEditingChange={handleReplyEditing}
+            onCollapseReply={forceShowReplies || replyFolded ? undefined : (trigger) => collapseReply(reply.id, trigger)}
+            onExpandReply={() => expandReply(reply.id)}
+            replyIsCollapsed={collapsed}
           />
         </div>
       )}
@@ -1161,6 +1513,29 @@ function CommentCardImpl({
     ? orderThreadWithRuns(entry, resolutionReply ? [resolutionReply] : [], runs.filter((run) => !run.hasReply
       && (run.anchorCommentId === entry.id || run.anchorCommentId === replyResolutionId)))
     : orderThreadWithRuns(entry, allNestedReplies, runs);
+  const latestReplyRow = [...threadRows].reverse().find((row) => {
+    const reply = "run" in row ? row.reply : row;
+    return reply && !isDeletedComment(reply);
+  });
+  const latestReplyId = latestReplyRow ? ("run" in latestReplyRow ? latestReplyRow.reply?.id : latestReplyRow.id) : undefined;
+  useEffect(() => {
+    if (requestedReplyId && (requestedReplyId !== latestReplyId || replyExpansionOverrides.get(`${olderRepliesKey}:${requestedReplyId}`) === false) && visibleReplies.some((reply) => reply.id === requestedReplyId)) {
+      setReplyExpanded(requestedReplyId, true);
+    }
+  }, [requestedReplyId, latestReplyId, replies, setReplyExpanded, olderRepliesKey]);
+  // Record active runs even when their reply row is outside the virtual window.
+  for (const row of threadRows) {
+    if ("run" in row && isActiveCommentRun(row.run.task) && (!row.reply || row.reply.id === latestReplyId || replyExpansionOverrides.get(`${olderRepliesKey}:${row.reply.id}`) === true)) {
+      seenActiveRuns.current.add(row.run.task.id);
+    }
+  }
+  const renderIndividualReply = (row: TimelineEntry | ThreadRunSlot) => {
+    const reply = "run" in row ? row.reply : row;
+    if (!reply || isDeletedComment(reply)) return renderThreadRow(row);
+    const overridden = replyExpansionOverrides.get(`${olderRepliesKey}:${reply.id}`);
+    const expanded = forceShowReplies || editingReplies.has(reply.id) || (overridden ?? (reply.id === latestReplyId || ("run" in row && seenActiveRuns.current.has(row.run.task.id))));
+    return renderThreadRow(row, !expanded);
+  };
 
   // Pin the root comment's header to the timeline's scroll parent while the
   // thread is open, so a LONG root comment keeps its author + actions visible
@@ -1179,12 +1554,12 @@ function CommentCardImpl({
     // overflow-clip (not -hidden) clips the rounded corners WITHOUT creating a
     // scroll container, so the sticky collapse affordances below resolve to the
     // timeline's scroll parent instead of this card. See PR #3623.
-    <Card ref={annotation.cardRef} {...annotation.captureProps} className="!py-0 !gap-0 overflow-clip transition-colors duration-700">
+    <Card ref={annotation.cardRef} {...annotation.captureProps} className={cn("!py-0 !gap-0 overflow-clip transition-colors duration-700", rootOnly && open && "rounded-b-none border-b-0")}>
       {annotation.popup}
       {onCollapseResolved && (
         <button
           type="button"
-          onClick={onCollapseResolved}
+          onClick={() => { flushThreadEditors(); onCollapseResolved(); }}
           data-thread-sticky-bar
           className="sticky top-0 z-20 flex w-full items-center gap-2.5 border-b border-border/50 bg-muted px-4 max-md:px-3 py-2.5 text-left text-body text-muted-foreground transition-colors cursor-pointer hover:bg-accent hover:text-accent-foreground"
           aria-label={t(($) => $.comment.resolve.collapse)}
@@ -1204,9 +1579,12 @@ function CommentCardImpl({
           <StickyHeaderShell
             sticky={stickyHeader}
             highlighted={isHighlighted}
-            className={cn("px-4 max-md:px-3", !open ? "py-3" : stickyHeader ? "pt-3 pb-1" : "pt-3 pb-2")}
+            className={cn("px-4 max-md:px-3", onCollapseReply ? "py-2" : !open ? "py-3" : stickyHeader ? "pt-3 pb-1" : "pt-3 pb-2")}
           >
             <div className="flex items-center gap-2.5">
+              {onCollapseReply && <button type="button" disabled={edit.editing} onClick={(event) => onCollapseReply(event.currentTarget)}
+                aria-expanded="true" aria-label={`${t(($) => $.comment.collapse_reply)}: ${entry.actor_name || getActorName(entry.actor_type, entry.actor_id)} ${replyPreview(entry)}`}
+                className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50"><ChevronRight aria-hidden className="h-4 w-4 rotate-90" /></button>}
               {deleted ? (
                 // The thread's root was deleted; its replies still hang off it.
                 <span className="min-w-0 truncate text-body italic text-muted-foreground">
@@ -1487,7 +1865,7 @@ function CommentCardImpl({
         {/* Replies + reply input — rendered OUTSIDE root-section so the root
             header's sticky containing block ends with the body. Gated on `open`
             to mirror the body Panel's collapse visibility. */}
-        {open && (
+        {open && !rootOnly && (
           <>
           {replyFolded ? (
             <>
@@ -1500,7 +1878,7 @@ function CommentCardImpl({
                   />
                 </div>
               )}
-              {threadRows.map(renderThreadRow)}
+              {threadRows.map((row) => renderThreadRow(row))}
             </>
           ) : (
             <>
@@ -1508,7 +1886,7 @@ function CommentCardImpl({
               {replyResolutionId != null && onResolvedExpandChange && (
                 <button
                   type="button"
-                  onClick={() => onResolvedExpandChange(entry.id, false)}
+                  onClick={() => { flushThreadEditors(); onResolvedExpandChange(entry.id, false); }}
                   data-thread-sticky-bar
                   className="sticky top-0 z-20 flex w-full items-center gap-2.5 border-t border-border/50 bg-muted px-4 max-md:px-3 py-2.5 text-left text-body text-muted-foreground transition-colors cursor-pointer hover:bg-accent hover:text-accent-foreground"
                   aria-label={t(($) => $.comment.resolve.collapse)}
@@ -1517,8 +1895,7 @@ function CommentCardImpl({
                   {t(($) => $.comment.resolve.collapse)}
                 </button>
               )}
-              {/* Replies — chronological; the resolution keeps its place with a badge */}
-              {threadRows.map(renderThreadRow)}
+              {threadRows.map(renderIndividualReply)}
 
               {/* Reply input */}
               <div className="border-t border-border/50 px-4 max-md:px-3 py-2.5">

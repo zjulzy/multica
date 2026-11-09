@@ -10,11 +10,11 @@ class FakeResizeObserver {
   observe() {}
   disconnect() {}
 }
-function Fixture({ hasPane = true, liwork = true, settings = false }: { hasPane?: boolean; liwork?: boolean; settings?: boolean }) {
+function Fixture({ hasPane = true, liwork = true, settings = false, paneReady = true }: { hasPane?: boolean; liwork?: boolean; settings?: boolean; paneReady?: boolean }) {
   const content = useRef<HTMLDivElement>(null);
   const dock = useRef<HTMLDivElement>(null);
   useDockAlignment(content, dock, true);
-  return <div><div ref={content} data-testid="content">{hasPane && <div data-liwork-monitor-page={liwork ? "" : undefined} data-settings-page={settings ? "" : undefined}><div data-slot="list-page-main" /></div>}</div><div ref={dock} data-testid="dock" /></div>;
+  return <div data-slot="dock-region" data-testid="region"><div ref={content} data-testid="content">{hasPane && <div data-liwork-monitor-page={liwork ? "" : undefined} data-settings-page={settings ? "" : undefined}>{paneReady && <div data-slot="list-page-main" />}</div>}</div><div ref={dock} data-testid="dock" /></div>;
 }
 describe("dock alignment", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -30,6 +30,7 @@ describe("dock alignment", () => {
     });
     const { getByTestId, rerender } = render(<Fixture />);
     expect(getByTestId("dock").style.left).toBe("260px");
+    expect(getByTestId("region")).toHaveAttribute("data-dock-list-page", "true");
     paneLeft = 440;
     act(() => { notifyResize(); frame?.(0); });
     expect(getByTestId("dock").style.left).toBe("340px");
@@ -37,6 +38,7 @@ describe("dock alignment", () => {
     await act(async () => { await Promise.resolve(); });
     act(() => frame?.(0));
     expect(getByTestId("dock").style.left).toBe("0px");
+    expect(getByTestId("region")).not.toHaveAttribute("data-dock-list-page");
   });
   it("leaves other pages at full width", () => {
     vi.stubGlobal("ResizeObserver", FakeResizeObserver);
@@ -46,6 +48,19 @@ describe("dock alignment", () => {
     });
     const { getByTestId } = render(<Fixture liwork={false} />);
     expect(getByTestId("dock").style.left).toBe("0px");
+    expect(getByTestId("region")).not.toHaveAttribute("data-dock-list-page");
+  });
+  it("detects a detail pane added after the list page mounts", async () => {
+    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+    let frame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { frame = callback; return 1; });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    const { getByTestId, rerender } = render(<Fixture paneReady={false} />);
+    expect(getByTestId("region")).not.toHaveAttribute("data-dock-list-page");
+    rerender(<Fixture paneReady />);
+    await act(async () => { await Promise.resolve(); });
+    act(() => frame?.(0));
+    expect(getByTestId("region")).toHaveAttribute("data-dock-list-page", "true");
   });
   it("aligns with the settings detail pane", () => {
     vi.stubGlobal("ResizeObserver", FakeResizeObserver);

@@ -628,6 +628,8 @@
     "add_reaction": "新增表情回應",
     "collapse_thread": "收起討論",
     "expand_thread": "展開討論",
+    "expand_reply": "展開回覆",
+    "collapse_reply": "收起回覆",
     "delete_title": "刪除評論",
     "delete_desc": "這條評論會被永久刪除，無法撤銷。",
     "delete_desc_with_replies": "這條評論及其全部回覆會被永久刪除，無法撤銷。",

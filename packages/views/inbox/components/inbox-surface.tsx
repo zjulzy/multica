@@ -101,6 +101,7 @@ import { cn } from "@multica/ui/lib/utils";
 import { PAGE_GUTTER, PageHeader } from "../../layout/page-header";
 import { useTimeAgo } from "./inbox-list-item";
 import { InboxList } from "./inbox-list";
+import { beginIssuePerformance } from "@multica/core/issue-performance";
 import { InboxFilterMenu } from "./inbox-filter-menu";
 import { InboxContextMenuProvider } from "./inbox-context-menu";
 import type { InboxView } from "./inbox-view";
@@ -426,6 +427,7 @@ export function InboxSurface({
   // by issue) and a fresh mount with a cleared memento entry lands by itself.
   const [highlightRequestToken, setHighlightRequestToken] = useState(0);
   const handleSelect = (item: InboxItem) => {
+    if (item.issue_id) beginIssuePerformance(item.issue_id);
     const nextKey = item.issue_id ?? item.id;
     // Every click on a notification row is a fresh deep-link intent: clear
     // the "highlight already landed" memento entry so the comment jump runs

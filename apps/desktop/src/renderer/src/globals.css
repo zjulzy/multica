@@ -20,13 +20,13 @@
 /* List pages with a dock keep their navigation column full-height. Reserve
    the collapsed bar inside the detail surface so its background and bottom
    corners continue behind the dock, just like the normal content card. */
-[data-slot="dock-region"]:has(> [data-testid="dock-alignment"]):has(:is([data-liwork-monitor-page], [data-settings-page])) > [data-testid="dock-collapsed-spacer"] {
+[data-slot="dock-region"][data-dock-list-page="true"] > [data-testid="dock-collapsed-spacer"] {
   display: none;
 }
-[data-slot="dock-region"]:has(> [data-testid="dock-alignment"]) :is([data-liwork-monitor-page], [data-settings-page]) [data-slot="list-page-main"] {
+[data-slot="dock-region"][data-dock-list-page="true"] :is([data-liwork-monitor-page], [data-settings-page]) [data-slot="list-page-main"] {
   padding-bottom: 36px;
 }
-[data-slot="dock-region"]:has(:is([data-liwork-monitor-page], [data-settings-page])) > [data-testid="dock-alignment"] {
+[data-slot="dock-region"][data-dock-list-page="true"] > [data-testid="dock-alignment"] {
   overflow: hidden;
   border-radius: 0 0 0.75rem 0.75rem;
 }

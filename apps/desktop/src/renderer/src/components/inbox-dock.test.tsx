@@ -265,6 +265,18 @@ describe("DesktopInboxDockLayout", () => {
     expect(panelApi.collapse).toHaveBeenCalled();
   });
 
+  it("releases collapsed inbox content and restores its selection when reopened", () => {
+    renderDock();
+    expect(screen.queryByTestId("mock-inbox-content")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(screen.getByTestId("mock-inbox-content")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Select issue" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Inbox" }));
+    expect(screen.queryByTestId("mock-inbox-content")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Expand Inbox" }));
+    expect(screen.getByTestId("inbox-surface")).toHaveAttribute("data-selected-key", "issue-9");
+  });
+
   it("expands from the local header action and persists the open state", () => {
     renderDock();
 

@@ -6,6 +6,7 @@ export function useDockAlignment(contentRef: RefObject<HTMLElement | null>, dock
     const content = contentRef.current;
     const dock = dockRef.current;
     if (!enabled || !content || !dock) return;
+    const region = dock.closest<HTMLElement>('[data-slot="dock-region"]');
 
     let target: HTMLElement | null = null;
     let frame = 0;
@@ -18,6 +19,8 @@ export function useDockAlignment(contentRef: RefObject<HTMLElement | null>, dock
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
     const update = () => {
       const next = findTarget();
+      if (next !== content) region?.setAttribute("data-dock-list-page", "true");
+      else region?.removeAttribute("data-dock-list-page");
       if (next !== target) {
         observer?.disconnect();
         target = next;
@@ -31,7 +34,9 @@ export function useDockAlignment(contentRef: RefObject<HTMLElement | null>, dock
     };
     const mutations = new MutationObserver((records) => {
       const paneAdded = records.some((record) => Array.from(record.addedNodes).some((node) =>
-        node instanceof Element && (node.matches(selector) || node.querySelector(selector)),
+        node instanceof Element && (node.matches(selector) || node.querySelector(selector) ||
+          (node.matches('[data-slot="list-page-main"]') && node.closest(selector)) ||
+          (node.closest(selector) && node.querySelector('[data-slot="list-page-main"]'))),
       ));
       if ((target && !target.isConnected) || paneAdded) {
         if (findTarget() !== target) schedule();
@@ -41,6 +46,7 @@ export function useDockAlignment(contentRef: RefObject<HTMLElement | null>, dock
     window.addEventListener("resize", schedule);
     update();
     return () => {
+      region?.removeAttribute("data-dock-list-page");
       observer?.disconnect();
       mutations.disconnect();
       window.removeEventListener("resize", schedule);

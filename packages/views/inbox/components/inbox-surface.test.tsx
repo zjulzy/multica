@@ -108,7 +108,7 @@ vi.mock("../../issues/components/issue-peek", () => ({
 vi.mock("../../issues/surface/activity", () => ({
   useIssueSurfaceActivity: () => ({ activityByIssueId: new Map() }),
 }));
-vi.mock("../../platform", () => ({ useViewStateWriter: () => vi.fn() }));
+vi.mock("../../platform", () => ({ useViewStateWriter: () => vi.fn(), useScrollRestorationAdapter: () => null }));
 vi.mock("../../navigation", () => ({
   useNavigation: () => ({ searchParams: new URLSearchParams(), replace: state.replace }),
   useReportNavigating: () => {},

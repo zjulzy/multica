@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { InboxSurface, type InboxSurfaceController } from "@multica/views/inbox";
 import {
   ResizableHandle,
@@ -17,6 +17,8 @@ import { ChatDockSurface } from "./chat-dock-surface";
 import { ChatDockTab } from "./chat-dock-tab";
 import { dockTabClassName } from "@multica/ui/components/common/dock-tab-styles";
 import { useDockAlignment } from "./use-dock-alignment";
+import { ScrollRestorationProvider } from "@multica/views/platform";
+import { createDockScrollRestoration } from "./dock-scroll-restoration";
 
 const DOCK_COLLAPSED_SIZE = 36;
 type InboxView = InboxSurfaceController["view"];
@@ -53,6 +55,7 @@ function DockInboxSurface({
   dockContentReplacement?: ReactNode;
 }) {
   const [view, setViewState] = useState<InboxView>("inbox");
+  const scrollAdapter = useMemo(() => createDockScrollRestoration(), []);
   const [selectedKey, setSelectedKeyState] = useState("");
   const [pinnedSelectionKey, setPinnedSelectionKey] = useState<string | null>(null);
   const [handledRequest, setHandledRequest] = useState<typeof openRequest>(null);
@@ -82,7 +85,7 @@ function DockInboxSurface({
   }, [setSelectedKey]);
 
   return (
-    <InboxSurface
+    <ScrollRestorationProvider adapter={scrollAdapter}><InboxSurface
       controller={{
         view: pendingRequest ? "inbox" : view,
         selectedKey: pendingRequest?.key ?? selectedKey,
@@ -99,7 +102,7 @@ function DockInboxSurface({
       dockTabAction={dockTabAction}
       dockContentVisible={dockContentVisible}
       dockContentReplacement={dockContentReplacement}
-    />
+    /></ScrollRestorationProvider>
   );
 }
 
@@ -332,7 +335,7 @@ export function DesktopInboxDockLayout({
           openRequest={openRequest}
           onRequestHandled={onRequestHandled}
           open={inboxDockOpen && effectiveTab === "inbox"}
-          dockContentVisible={effectiveTab === "inbox"}
+          dockContentVisible={effectiveTab === "inbox" && (inboxDockOpen || animating)}
           dockContentReplacement={(inboxDockOpen || animating) && effectiveTab === "agents" ? <div inert={!inboxDockOpen || undefined} aria-hidden={!inboxDockOpen || undefined} className="min-h-0 flex-1 bg-background"><AgentDock key={workspaceId} workspaceId={workspaceId} requestedAgent={agentRequest?.workspaceId === workspaceId ? agentRequest : selectedAgent} /></div> : (inboxDockOpen || animating) && effectiveTab === "chat" && workspaceSlug ? <div inert={!chatVisible || undefined} aria-hidden={!chatVisible || undefined} className="flex min-h-0 flex-1 bg-background"><ChatDockSurface key={workspaceSlug} workspaceId={workspaceId} workspaceSlug={workspaceSlug} path={chatPath} onPathChange={changeChatPath} visible={chatVisible} validateSession={chatLocation?.workspaceSlug === workspaceSlug && !!chatLocation.validateSession} validationId={chatLocation?.requestId} onValidated={markChatValidated} /></div> : null}
           dockTabAction={<><button type="button" aria-expanded={inboxDockOpen && effectiveTab === "agents"} onClick={() => {
             if (inboxDockOpen && effectiveTab === "agents") {

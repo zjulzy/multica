@@ -1,0 +1,125 @@
+import { describe, expect, it } from "vitest";
+import { captureReplyFoldAnchor, clearReplyFoldSpacer, restoreReplyFoldAnchor } from "./reply-fold-anchor";
+
+describe("reply fold scroll anchoring", () => {
+  it("does not scroll for a small alignment difference when the viewport was already stable", () => {
+    const scroller = document.createElement("div");
+    scroller.dataset.issueScrollContainer = "";
+    const trigger = document.createElement("button");
+    const summary = document.createElement("button");
+    summary.dataset.replyFoldId = "small-shift";
+    const icon = document.createElement("span");
+    icon.dataset.replyFoldIcon = "";
+    summary.append(icon);
+    const spacer = document.createElement("div");
+    spacer.dataset.replyFoldSpacer = "";
+    scroller.append(trigger, summary, spacer);
+    Object.defineProperty(scroller, "clientHeight", { value: 400 });
+    Object.defineProperty(scroller, "scrollHeight", { value: 2000 });
+    trigger.getBoundingClientRect = () => ({ top: 100 } as DOMRect);
+    icon.getBoundingClientRect = () => ({ top: 98.5 } as DOMRect);
+    scroller.scrollTop = 200;
+    const snapshot = captureReplyFoldAnchor(trigger, "small-shift")!;
+    restoreReplyFoldAnchor(snapshot);
+    restoreReplyFoldAnchor(snapshot);
+    expect(scroller.scrollTop).toBe(200);
+  });
+
+  it("keeps a tiny amount of space when the new bottom is just above the original position", () => {
+    const scroller = document.createElement("div");
+    scroller.dataset.issueScrollContainer = "";
+    const trigger = document.createElement("button");
+    const summary = document.createElement("button");
+    summary.dataset.replyFoldId = "tiny-bottom";
+    const icon = document.createElement("span");
+    icon.dataset.replyFoldIcon = "";
+    summary.append(icon);
+    const spacer = document.createElement("div");
+    spacer.dataset.replyFoldSpacer = "";
+    scroller.append(trigger, summary, spacer);
+    Object.defineProperty(scroller, "clientHeight", { value: 400 });
+    Object.defineProperty(scroller, "scrollHeight", { get: () => 598 + (parseFloat(spacer.style.height) || 0) });
+    trigger.getBoundingClientRect = () => ({ top: 100 } as DOMRect);
+    icon.getBoundingClientRect = () => ({ top: 98.5 } as DOMRect);
+    scroller.scrollTop = 200;
+    const snapshot = captureReplyFoldAnchor(trigger, "tiny-bottom")!;
+    scroller.scrollTop = 198;
+    restoreReplyFoldAnchor(snapshot);
+    expect(scroller.scrollTop).toBe(200);
+    expect(spacer.style.height).toBe("2px");
+    scroller.scrollTop = 197;
+    scroller.dispatchEvent(new Event("scroll"));
+    expect(spacer.style.height).toBe("0px");
+  });
+
+  it("preserves the trigger position with temporary space near the bottom", () => {
+    const scroller = document.createElement("div");
+    scroller.dataset.issueScrollContainer = "";
+    const trigger = document.createElement("button");
+    const summary = document.createElement("button");
+    summary.dataset.replyFoldId = "reply-1";
+    const icon = document.createElement("span");
+    icon.dataset.replyFoldIcon = "";
+    summary.append(icon);
+    const spacer = document.createElement("div");
+    spacer.dataset.replyFoldSpacer = "";
+    scroller.append(trigger, summary, spacer);
+    Object.defineProperty(scroller, "clientHeight", { value: 400 });
+    Object.defineProperty(scroller, "scrollHeight", { get: () => 600 + (parseFloat(spacer.style.height) || 0) });
+    trigger.getBoundingClientRect = () => ({ top: 100 } as DOMRect);
+    icon.getBoundingClientRect = () => ({ top: 180 } as DOMRect);
+    scroller.scrollTop = 500;
+    const snapshot = captureReplyFoldAnchor(trigger, "reply-1")!;
+    restoreReplyFoldAnchor(snapshot);
+    expect(scroller.scrollTop).toBe(580);
+    expect(spacer.style.height).toBe("380px");
+    scroller.scrollTop = 190;
+    scroller.dispatchEvent(new Event("scroll"));
+    expect(spacer.style.height).toBe("0px");
+  });
+
+  it("adjusts the scroll without adding space when there is room", () => {
+    const scroller = document.createElement("div");
+    scroller.dataset.issueScrollContainer = "";
+    const trigger = document.createElement("button");
+    const summary = document.createElement("button");
+    summary.dataset.replyFoldId = "reply-2";
+    const icon = document.createElement("span");
+    icon.dataset.replyFoldIcon = "";
+    summary.append(icon);
+    const spacer = document.createElement("div");
+    spacer.dataset.replyFoldSpacer = "";
+    scroller.append(trigger, summary, spacer);
+    Object.defineProperty(scroller, "clientHeight", { value: 400 });
+    Object.defineProperty(scroller, "scrollHeight", { value: 2000 });
+    trigger.getBoundingClientRect = () => ({ top: 150 } as DOMRect);
+    icon.getBoundingClientRect = () => ({ top: 200 } as DOMRect);
+    scroller.scrollTop = 500;
+    restoreReplyFoldAnchor(captureReplyFoldAnchor(trigger, "reply-2")!);
+    expect(scroller.scrollTop).toBe(550);
+    expect(spacer.style.height).toBe("0px");
+  });
+
+  it("clears temporary space and its listener when leaving an issue", () => {
+    const scroller = document.createElement("div");
+    scroller.dataset.issueScrollContainer = "";
+    const trigger = document.createElement("button");
+    const summary = document.createElement("button");
+    summary.dataset.replyFoldId = "reply-3";
+    const icon = document.createElement("span");
+    icon.dataset.replyFoldIcon = "";
+    summary.append(icon);
+    const spacer = document.createElement("div");
+    spacer.dataset.replyFoldSpacer = "";
+    scroller.append(trigger, summary, spacer);
+    Object.defineProperty(scroller, "clientHeight", { value: 400 });
+    Object.defineProperty(scroller, "scrollHeight", { get: () => 600 + (parseFloat(spacer.style.height) || 0) });
+    trigger.getBoundingClientRect = () => ({ top: 100 } as DOMRect);
+    icon.getBoundingClientRect = () => ({ top: 180 } as DOMRect);
+    scroller.scrollTop = 500;
+    restoreReplyFoldAnchor(captureReplyFoldAnchor(trigger, "reply-3")!);
+    expect(spacer.style.height).toBe("380px");
+    clearReplyFoldSpacer(scroller);
+    expect(spacer.style.height).toBe("0px");
+  });
+});

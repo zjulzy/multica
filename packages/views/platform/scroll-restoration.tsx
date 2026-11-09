@@ -55,6 +55,9 @@ export interface ExternalScrollSource {
 }
 
 export interface ScrollRestorationAdapter {
+  /** Capture scoped DOM scroll sources before an embedded view unmounts. */
+  captureElements?(root: HTMLElement): void;
+  captureElement?(element: HTMLElement): void;
   /**
    * The saved entry for a container key on the current route, or undefined
    * when there is nothing to restore.

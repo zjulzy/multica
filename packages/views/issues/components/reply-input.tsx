@@ -275,6 +275,7 @@ function ReplyInput({
             onUploadFile={handleUpload}
             onUploadingChange={uploadGate.onUploadingChange}
             debounceMs={100}
+            flushPendingOnUnmount={!!draftKey}
             currentIssueId={issueId}
             attachments={pendingAttachments}
             enableSlashCommands

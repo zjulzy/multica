@@ -1,5 +1,5 @@
 import { describe, expect, it, onTestFinished, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { forwardRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TimelineEntry } from "@multica/core/types";
@@ -30,7 +30,7 @@ vi.mock("@multica/core/workspace/hooks", () => ({
 }));
 
 vi.mock("../../common/actor-avatar", () => ({
-  ActorAvatar: () => null,
+  ActorAvatar: ({ name, avatarUrl }: { name?: string; avatarUrl?: string }) => name ? <img alt={name} src={avatarUrl} /> : null,
 }));
 
 vi.mock("../hooks/use-comment-trigger-preview", () => ({
@@ -99,6 +99,38 @@ function renderThread(root: TimelineEntry, replies: TimelineEntry[]) {
 const actionMenus = () => screen.queryAllByRole("button", { name: "Comment actions" });
 
 describe("CommentCard — deleted comments", () => {
+  it("folds older replies individually and only opens the selected reply", () => {
+    const { container } = renderThread(comment("root", null), [comment("old-1", "root"), comment("old-2", "root"), comment("latest", "root")]);
+    expect(container.querySelector('[data-comment-content="old-1"]')).toBeNull();
+    expect(container.querySelector('[data-comment-content="old-2"]')).toBeNull();
+    expect(container.querySelector('[data-comment-content="latest"]')).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /expand reply.*old-1/i }));
+    expect(container.querySelector('[data-comment-content="old-1"]')).not.toBeNull();
+    expect(container.querySelector('[data-comment-content="old-2"]')).toBeNull();
+    const collapse = screen.getByRole("button", { name: /collapse reply.*old-1/i });
+    expect(collapse.parentElement?.firstElementChild).toBe(collapse);
+    fireEvent.click(collapse);
+    expect(container.querySelector('[data-comment-content="old-1"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /collapse reply.*latest/i }));
+    expect(container.querySelector('[data-comment-content="latest"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /expand reply.*latest/i }));
+    expect(container.querySelector('[data-comment-content="latest"]')).not.toBeNull();
+  });
+  it("shows the author's avatar in a folded reply summary", () => {
+    const root = comment("avatar-root", null);
+    renderThread(root, [comment("avatar-old", root.id, { actor_name: "Mia", actor_avatar_url: "https://example.test/avatar.png" }), comment("avatar-latest", root.id)]);
+    const summary = screen.getByRole("button", { name: /expand reply.*avatar-old/i });
+    expect(within(summary.parentElement!).getByRole("img", { name: "Mia" })).toHaveAttribute("src", "https://example.test/avatar.png");
+  });
+  it("keeps a manually expanded thread open across a virtualized remount", () => {
+    const root = comment("remount-root", null);
+    const replies = [comment("remount-old", root.id), comment("remount-latest", root.id)];
+    const first = renderThread(root, replies);
+    fireEvent.click(screen.getByRole("button", { name: /expand reply.*remount-old/i }));
+    first.unmount();
+    renderThread(root, replies);
+    expect(screen.getByText("body remount-old")).toBeTruthy();
+  });
   it("renders no row for a deleted reply and keeps the replies to it", () => {
     const { container } = renderThread(comment("a", null), [tombstone("bb", "a"), comment("ccc", "bb")]);
 
