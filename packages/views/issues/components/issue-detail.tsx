@@ -1629,16 +1629,6 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, def
   } = useIssueTimeline(id, user?.id);
 
   const readyIssueRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!issue || issueLoading || timelineLoading || readyIssueRef.current === id || !onInitialContentReady) return;
-    readyIssueRef.current = id;
-    if (process.env.NODE_ENV === "development") console.info("[issue-load-performance]", JSON.stringify({ kind: "initial-render-components", components: takeIssueRenderSummary(), directoryObservers: {
-      members: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.members(wsId), exact: true })?.getObserversCount() ?? 0,
-      agents: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.agents(wsId), exact: true })?.getObserversCount() ?? 0,
-      squads: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.squads(wsId), exact: true })?.getObserversCount() ?? 0,
-    } }));
-    onInitialContentReady();
-  }, [id, issue, issueLoading, timelineLoading, onInitialContentReady, directoryQueryClient, wsId]);
 
   const loadTimingRef = useRef<{ id: string; startedAt: number; reported: boolean } | null>(null);
   if (process.env.NODE_ENV === "development" && (!loadTimingRef.current || loadTimingRef.current.id !== id)) {
@@ -2255,6 +2245,8 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, def
     data: childIssues = [],
     isSuccess: childIssuesLoaded,
     isFetching: childIssuesFetching,
+    isError: childIssuesError,
+    refetch: refetchChildIssues,
   } = useQuery({
     ...childIssuesOptions(wsId, id),
     enabled: !!issue,
@@ -2266,6 +2258,16 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, def
   // this answer, so a defaulted or stale empty array must not count as "no
   // sub-issues" (MUL-5714).
   const childCountKnown = childIssuesLoaded && !childIssuesFetching;
+  useEffect(() => {
+    if (!issue || issueLoading || timelineLoading || (!childIssuesLoaded && !childIssuesError) || readyIssueRef.current === id || !onInitialContentReady) return;
+    readyIssueRef.current = id;
+    if (process.env.NODE_ENV === "development") console.info("[issue-load-performance]", JSON.stringify({ kind: "initial-render-components", components: takeIssueRenderSummary(), directoryObservers: {
+      members: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.members(wsId), exact: true })?.getObserversCount() ?? 0,
+      agents: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.agents(wsId), exact: true })?.getObserversCount() ?? 0,
+      squads: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.squads(wsId), exact: true })?.getObserversCount() ?? 0,
+    } }));
+    onInitialContentReady();
+  }, [id, issue, issueLoading, timelineLoading, childIssuesLoaded, childIssuesError, onInitialContentReady, directoryQueryClient, wsId]);
   // Parent's children — used to render the "x/y" progress next to the
   // "Sub-issue of …" breadcrumb under the title.
   const { data: parentChildIssues = [] } = useQuery({
@@ -3724,7 +3726,9 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, def
           </div>
 
           {/* Sub-issues — Linear-style */}
-          {childIssues.length === 0 && (
+          {!childIssuesLoaded && !childIssuesError && <div className="mt-6 text-label text-muted-foreground" role="status">{tCommon(($) => $.loading)}</div>}
+          {childIssuesError && childIssues.length === 0 && <button type="button" data-testid="sub-issues-load-retry" className="mt-6 text-label text-muted-foreground hover:text-foreground" onClick={() => void refetchChildIssues()}>{t(($) => $.detail.section_load_failed_retry)}</button>}
+          {childIssuesLoaded && !childIssuesError && childIssues.length === 0 && (
             <div className="mt-6">
               <button
                 type="button"

@@ -22,6 +22,8 @@ import { IssueWindowNavigationProvider } from "../platform/issue-window-navigati
 import { EmbeddedIssueNavigationProvider } from "../platform/embedded-issue-navigation";
 import { useCanonicalIssue } from "@multica/core/issues/canonical-id";
 import { parseEmbeddedIssuePresentation, type EmbeddedIssuePresentation } from "../../../shared/embedded-issue-presentation";
+import { useQueryClient } from "@tanstack/react-query";
+import { createEmbeddedChildRefresh } from "./embedded-child-refresh";
 
 /** Boot auth, workspace and shared issue dependencies before assignment. */
 export function EmbeddedPoolWindow({ context }: { context: IssueWindowContext }) {
@@ -117,13 +119,15 @@ function IssueWindowRoute() {
 function EmbeddedIssueContent({ workspaceSlug, workspaceId }: { workspaceSlug: string; workspaceId: string }) {
   const { id = "" } = useParams<{ id: string }>();
   const { canonicalId, issue } = useCanonicalIssue(workspaceId, id);
+  const queryClient = useQueryClient();
+  const refreshChildren = useMemo(() => canonicalId ? createEmbeddedChildRefresh(queryClient, workspaceId, canonicalId) : null, [queryClient, workspaceId, canonicalId]);
   const refs = useMemo(() => [id, canonicalId, issue?.identifier].filter((value): value is string => !!value), [id, canonicalId, issue?.identifier]);
   const notifyReady = useCallback(() => window.desktopAPI.sendEmbeddedGuestReady(), []);
   const [presentation, setPresentation] = useState<EmbeddedIssuePresentation>({ surface: "main" });
   useEffect(() => window.desktopAPI.onEmbeddedGuestPresentation((raw) => {
     const next = parseEmbeddedIssuePresentation(raw);
-    if (next) setPresentation(next);
-  }), []);
+    if (next) { setPresentation(next); void refreshChildren?.(); }
+  }), [refreshChildren]);
   const navigate = useCallback((message: Parameters<typeof window.desktopAPI.sendEmbeddedIssueNavigation>[0]) => {
     if (presentation.surface !== "main" && message && typeof message === "object" && "kind" in message && message.kind === "current-issue") return;
     window.desktopAPI.sendEmbeddedIssueNavigation(message);

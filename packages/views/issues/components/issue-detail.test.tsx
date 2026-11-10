@@ -766,6 +766,29 @@ describe("IssueDetail (shared)", () => {
     mockApiObj.getProject.mockReset();
   });
 
+  it("does not mark an embedded issue ready before the initial child list settles", async () => {
+    let resolveChildren!: (value: { issues: Issue[] }) => void;
+    mockApiObj.listChildIssues.mockReturnValue(new Promise((resolve) => { resolveChildren = resolve; }));
+    const ready = vi.fn();
+    const client = createTestQueryClient();
+    render(<I18nProvider locale="en" resources={TEST_RESOURCES}><QueryClientProvider client={client}><IssueDetail issueId="issue-1" onInitialContentReady={ready} /></QueryClientProvider></I18nProvider>);
+    await waitFor(() => expect(mockApiObj.listChildIssues).toHaveBeenCalled());
+    await screen.findByText(mockIssue.title);
+    expect(ready).not.toHaveBeenCalled();
+    await act(async () => { resolveChildren({ issues: [] }); });
+    await waitFor(() => expect(ready).toHaveBeenCalledOnce());
+  });
+
+  it("shows a retry and lets an embedded issue open if loading children fails", async () => {
+    mockApiObj.listChildIssues.mockRejectedValue(new Error("network failed"));
+    const ready = vi.fn();
+    const client = createTestQueryClient();
+    render(<I18nProvider locale="en" resources={TEST_RESOURCES}><QueryClientProvider client={client}><IssueDetail issueId="issue-1" onInitialContentReady={ready} /></QueryClientProvider></I18nProvider>);
+    await waitFor(() => expect(ready).toHaveBeenCalledOnce());
+    expect(await screen.findByTestId("sub-issues-load-retry")).toHaveTextContent("Could not load. Retry");
+    expect(screen.queryByRole("button", { name: "Add sub-issues" })).toBeNull();
+  });
+
   it("passes the issue's agent assignment to the local-directory hint", async () => {
     const agent = { id: "agent-vue", name: "Vue developer", runtime_id: "runtime-vue" };
     mockApiObj.getIssue.mockResolvedValue({
