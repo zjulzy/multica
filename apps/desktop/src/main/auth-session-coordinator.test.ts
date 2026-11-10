@@ -13,6 +13,15 @@ function createCoordinator(mainWindows: string[] = ["main"]) {
 }
 
 describe("AuthSessionCoordinator", () => {
+  it("exposes only an authenticated main window's current identity", () => {
+    const { coordinator } = createCoordinator();
+    expect(coordinator.currentMainUserId("main")).toBeNull();
+    coordinator.reportMain("main", "user-a");
+    expect(coordinator.currentMainUserId("main")).toBe("user-a");
+    expect(coordinator.currentMainUserId("unknown")).toBeNull();
+    coordinator.reportMain("main", null);
+    expect(coordinator.currentMainUserId("main")).toBeNull();
+  });
   it("keeps an issue window whose account matches the main window", () => {
     const { close, coordinator } = createCoordinator();
     coordinator.reportMain("main", "user-a");

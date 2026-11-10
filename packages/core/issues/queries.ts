@@ -684,7 +684,15 @@ export function childrenByParentsOptions(
 export function issueTimelineOptions(issueId: string) {
   return queryOptions({
     queryKey: issueKeys.timeline(issueId),
-    queryFn: () => api.listTimeline(issueId),
+    queryFn: async () => {
+      if (process.env.NODE_ENV !== "development") return api.listTimeline(issueId);
+      const started = performance.now();
+      try {
+        return await api.listTimeline(issueId);
+      } finally {
+        console.info("[issue-load-performance]", JSON.stringify({ kind: "timeline-request", durationMs: Math.round(performance.now() - started) }));
+      }
+    },
   });
 }
 

@@ -29,7 +29,7 @@ import { ReactionBar } from "@multica/ui/components/common/reaction-bar";
 import { QuickEmojiPicker } from "@multica/ui/components/common/quick-emoji-picker";
 import { cn } from "@multica/ui/lib/utils";
 import { copyText } from "@multica/ui/lib/clipboard";
-import { useActorName } from "@multica/core/workspace/hooks";
+import { ActorDirectoryBoundary, useActorDirectory } from "@multica/core/workspace/actor-directory";
 import { useLocale, useTimeAgo } from "../../i18n";
 import { ContentEditor, type ContentEditorRef, ReadonlyContent, useFileDropZone, FileDropOverlay, Attachment as AttachmentRenderer, AttachmentDownloadProvider, useUploadGate, useComposerSubmit } from "../../editor";
 import { useCommentUploads } from "./use-comment-uploads";
@@ -706,7 +706,7 @@ function CommentRow({
   const { t } = useT("issues");
   const locale = useLocale();
   const timeAgo = useTimeAgo();
-  const { getActorName } = useActorName();
+  const { getActorName } = useActorDirectory();
 
   const edit = useEditAttachmentState(issueId, entry, onEdit, preserveEditOnUnmount);
   useLayoutEffect(() => {
@@ -722,6 +722,7 @@ function CommentRow({
   const canEditEntry = receipts.length === 0 && (isOwn || (canModerate && entry.actor_type === "member"));
   const canDeleteEntry = !receipts.some(isSupplementInFlight) && (isOwn || canModerate);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   const reactions = entry.reactions ?? [];
 
@@ -796,7 +797,7 @@ function CommentRow({
             align="end"
             className={buttonVariants({ variant: "ghost", size: "icon-sm", className: commentActionClassName })}
           />}
-          <DropdownMenu>
+          <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
             <DeferredTooltip
               content={t(($) => $.comment.more_actions)}
               trigger={
@@ -814,7 +815,7 @@ function CommentRow({
                 />
               }
             />
-            <DropdownMenuContent align="end">
+            {actionsOpen && <DropdownMenuContent align="end">
               {/* Groups: act on it (edit, resolve), take it elsewhere, then delete alone. */}
               {canEditEntry && (
                 <DropdownMenuItem onClick={edit.startEdit}>
@@ -865,7 +866,7 @@ function CommentRow({
                   </DropdownMenuItem>
                 </>
               )}
-            </DropdownMenuContent>
+            </DropdownMenuContent>}
           </DropdownMenu>
           <DeleteCommentDialog
             open={confirmDelete}
@@ -994,7 +995,7 @@ function CommentRow({
 /** Names the input a run answers once other rows separate the two (MUL-7628). */
 function ReplyToQuote({ entry, onJump }: { entry: TimelineEntry; onJump?: (commentId: string) => void }) {
   const { t } = useT("issues");
-  const { getActorName } = useActorName();
+  const { getActorName } = useActorDirectory();
   const label = t(($) => $.comment.replying_to, {
     name: entry.actor_name || getActorName(entry.actor_type, entry.actor_id),
     preview: descriptionPreview(entry.content ?? ""),
@@ -1086,9 +1087,13 @@ type ThreadReplyItemProps = Pick<CommentCardProps, "issueId" | "currentUserId" |
 const unavailableThreadReply: CommentCardProps["onReply"] = async () => false;
 
 /** A reply that can be mounted independently of its thread root. */
-export const ThreadReplyItem = memo(function ThreadReplyItem({ root, row, latestReplyId, resolutionReplyId, replies = [], hasReplies, issueId, currentUserId, canModerate, onEdit, onDelete, onToggleReaction, onCreateSubIssue, onResolveToggle, onCopyLink, onJumpToComment, highlightedCommentId, requestedReplyId, forceShowReplies = false, enteringRunIds, runs = EMPTY_COMMENT_RUNS, onReply = unavailableThreadReply, threadEnd = false }: ThreadReplyItemProps) {
+export const ThreadReplyItem = memo(function ThreadReplyItem(props: ThreadReplyItemProps) {
+  return <ActorDirectoryBoundary><ThreadReplyItemContent {...props} /></ActorDirectoryBoundary>;
+});
+
+function ThreadReplyItemContent({ root, row, latestReplyId, resolutionReplyId, replies = [], hasReplies, issueId, currentUserId, canModerate, onEdit, onDelete, onToggleReaction, onCreateSubIssue, onResolveToggle, onCopyLink, onJumpToComment, highlightedCommentId, requestedReplyId, forceShowReplies = false, enteringRunIds, runs = EMPTY_COMMENT_RUNS, onReply = unavailableThreadReply, threadEnd = false }: ThreadReplyItemProps) {
   const { t } = useT("issues");
-  const { getActorName } = useActorName();
+  const { getActorName } = useActorDirectory();
   const reply = "run" in row ? row.reply : row;
   const annotation = useCommentAnnotations({ draftKey: `reply:${issueId}:${root.id}`, enabled: !!currentUserId,
     sources: reply ? [{ id: reply.id, name: reply.actor_name || getActorName(reply.actor_type, reply.actor_id), revision: reply.revision }] : [] });
@@ -1173,14 +1178,18 @@ export const ThreadReplyItem = memo(function ThreadReplyItem({ root, row, latest
           hasReplies={hasReplies ?? replies.some((child) => child.parent_id === row.id)} runHeader={renderRuns("header")} runMetadata={renderRuns("inline")} />
       </div>}
   </div>;
-});
+}
 
 type ThreadComposerItemProps = Pick<CommentCardProps, "issueId" | "replies" | "currentUserId" | "onReply" | "onReplyAccepted" | "onJumpToComment"> & { root: TimelineEntry; runs?: CommentRun[] };
 
 /** The thread's composer stays usable even when the root is virtualized away. */
-export function ThreadComposerItem({ root, replies, issueId, currentUserId, onReply, onReplyAccepted, onJumpToComment, runs = EMPTY_COMMENT_RUNS }: ThreadComposerItemProps) {
+export function ThreadComposerItem(props: ThreadComposerItemProps) {
+  return <ActorDirectoryBoundary><ThreadComposerItemContent {...props} /></ActorDirectoryBoundary>;
+}
+
+function ThreadComposerItemContent({ root, replies, issueId, currentUserId, onReply, onReplyAccepted, onJumpToComment, runs = EMPTY_COMMENT_RUNS }: ThreadComposerItemProps) {
   const { t } = useT("issues");
-  const { getActorName } = useActorName();
+  const { getActorName } = useActorDirectory();
   const wrapper = useRef<HTMLDivElement>(null);
   const replyTarget = useCommentDraftStore((s) => s.drafts[`reply:${issueId}:${root.id}`]?.replyTarget);
   const replyTargetId = replyTarget?.commentId ?? root.id;
@@ -1281,7 +1290,7 @@ function CommentCardImpl({
   const { t } = useT("issues");
   const locale = useLocale();
   const timeAgo = useTimeAgo();
-  const { getActorName } = useActorName();
+  const { getActorName } = useActorDirectory();
   const replyTarget = useCommentDraftStore((s) => s.drafts[`reply:${issueId}:${entry.id}`]?.replyTarget);
   const replyTargetId = replyTarget?.commentId ?? entry.id;
   // A deleted target's tombstone is as gone as a removed row.
@@ -1927,6 +1936,8 @@ function CommentCardImpl({
 // WS-driven cache refresh. Default shallow comparison is sufficient: the
 // timeline grouping is useMemo'd in issue-detail.tsx (stable Map ref), and
 // every callback is stabilized via useCallback in use-issue-timeline.ts.
-const CommentCard = memo(CommentCardImpl);
+const CommentCard = memo(function CommentCard(props: CommentCardProps) {
+  return <ActorDirectoryBoundary><CommentCardImpl {...props} /></ActorDirectoryBoundary>;
+});
 
 export { CommentCard, type CommentCardProps };

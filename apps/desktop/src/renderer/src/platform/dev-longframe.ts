@@ -23,6 +23,7 @@ export function summarizeLongFrame(entry: LongFrame) {
       function: (script.sourceFunctionName ?? "").replace(/[^\w.$<>-]/g, "").slice(0, 80),
       ...(script.sourceCharPosition !== undefined ? { offset: script.sourceCharPosition } : {}),
       durationMs: Math.round(script.duration),
+      forcedLayoutMs: Math.round(script.forcedStyleAndLayoutDuration ?? 0),
     };
   }).sort((a, b) => b.durationMs - a.durationMs).slice(0, 5);
   return { kind: "long-frame-global", durationMs: Math.round(entry.duration), scripts };

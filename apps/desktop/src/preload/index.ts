@@ -109,6 +109,50 @@ function subscribeToMainRendererChannel<T>(
 }
 
 const desktopAPI = {
+  isEmbeddedIssue: process.argv.includes("--multica-embedded-issue=1"),
+  isEmbeddedPool: process.argv.includes("--multica-embedded-pool=1"),
+  prepareEmbeddedPool: (request: unknown) => ipcRenderer.invoke("embedded-pool:prepare", request),
+  assignEmbeddedPool: (token: string, request: unknown) => ipcRenderer.invoke("embedded-pool:assign", token, request),
+  sendEmbeddedPoolReady: () => ipcRenderer.send("embedded-pool:ready"),
+  onEmbeddedPoolReady: (callback: (token: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, token: string) => callback(token);
+    ipcRenderer.on("embedded-pool:ready", handler);
+    return () => ipcRenderer.removeListener("embedded-pool:ready", handler);
+  },
+  onEmbeddedPoolAssigned: (callback: (context: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, context: unknown) => callback(context);
+    ipcRenderer.on("embedded-pool:assigned", handler);
+    return () => ipcRenderer.removeListener("embedded-pool:assigned", handler);
+  },
+  prepareEmbeddedGuest: (request: unknown) => ipcRenderer.invoke("embedded-guest:prepare", request),
+  activateEmbeddedGuest: (token: string) => ipcRenderer.invoke("embedded-guest:activate", token),
+  showEmbeddedGuestSurfaces: (tokens: string[]) => ipcRenderer.invoke("embedded-guest:show-surfaces", tokens),
+  hideEmbeddedGuest: () => ipcRenderer.invoke("embedded-guest:hide"),
+  removeEmbeddedGuest: (token: string) => ipcRenderer.invoke("embedded-guest:remove", token),
+  sendEmbeddedGuestReady: () => ipcRenderer.send("embedded-guest:ready"),
+  setEmbeddedGuestPresentation: (token: string, presentation: unknown) => ipcRenderer.invoke("embedded-guest:presentation", token, presentation),
+  sendEmbeddedGuestAction: (action: "done" | "delete") => ipcRenderer.send("embedded-guest:action", action),
+  onEmbeddedGuestPresentation: (callback: (presentation: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, value: unknown) => callback(value);
+    ipcRenderer.on("embedded-guest:presentation", handler);
+    return () => ipcRenderer.removeListener("embedded-guest:presentation", handler);
+  },
+  onEmbeddedGuestAction: (callback: (value: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, value: unknown) => callback(value);
+    ipcRenderer.on("embedded-guest:action", handler);
+    return () => ipcRenderer.removeListener("embedded-guest:action", handler);
+  },
+  onEmbeddedGuestReady: (callback: (token: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, token: string) => callback(token);
+    ipcRenderer.on("embedded-guest:ready", handler);
+    return () => ipcRenderer.removeListener("embedded-guest:ready", handler);
+  },
+  sendEmbeddedIssueNavigation: (message: unknown) => ipcRenderer.send("embedded-issue:navigate", message),
+  onEmbeddedIssueNavigation: (callback: (message: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, message: unknown) => callback(message);
+    ipcRenderer.on("embedded-issue:navigation", handler);
+    return () => ipcRenderer.removeListener("embedded-issue:navigation", handler);
+  },
   getLiworkSnapshot: () => ipcRenderer.invoke("liwork:monitor-snapshot"),
   switchLiworkSession: (sessionId: string) => ipcRenderer.invoke("liwork:switch-session", sessionId),
   /** App version + normalized OS. Read once at preload time so the renderer

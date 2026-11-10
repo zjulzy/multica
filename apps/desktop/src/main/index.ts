@@ -88,6 +88,7 @@ import { AuthSessionCoordinator } from "./auth-session-coordinator";
 import { devAppSuffix, devProtocolArguments } from "./dev-protocol";
 import { parseTitleBarOverlayColors, titleBarOptionsFor } from "./title-bar";
 import { MainWindowRegistry } from "./main-window-registry";
+import { setupEmbeddedWebviewExperiment, installEmbeddedWebviewHost, clearEmbeddedWebviews } from "./embedded-webview-experiment";
 import {
   NotificationGate,
   parseNativeNotificationPayload,
@@ -459,14 +460,15 @@ function createMainWindow(saved: WindowState = {}): BrowserWindow {
     ...(is.dev || process.platform === "linux"
       ? { icon: BUNDLED_ICON_PATH }
       : {}),
-    webPreferences: createRendererWebPreferences(
+    webPreferences: { ...createRendererWebPreferences(
       join(__dirname, "../preload/index.js"),
       systemLocale,
       workspaceSlug ? [encodeWorkspaceWindowArgument(workspaceSlug)] : [],
-    ),
+    ), ...(!is.dev || process.env.MULTICA_NATIVE_ISSUE_CACHE_EXPERIMENT === "1" ? { webviewTag: true } : {}) },
   });
   mainWindows.add(window, workspaceSlug);
   authSessionCoordinator.registerMainWindow(window);
+  if (!is.dev || process.env.MULTICA_NATIVE_ISSUE_CACHE_EXPERIMENT === "1") installEmbeddedWebviewHost(window);
 
   // Persist bounds on resize/move (debounced) so the next launch restores
   // size/position and max/fullscreen flags. getNormalBounds is used so
@@ -766,6 +768,16 @@ if (!gotTheLock) {
       },
     });
 
+    if (!is.dev || (process.env.MULTICA_NATIVE_ISSUE_CACHE_EXPERIMENT === "1" && process.env.ELECTRON_RENDERER_URL)) {
+      setupEmbeddedWebviewExperiment({
+        isMain: (window) => mainWindows.has(window),
+        userId: (window) => authSessionCoordinator.currentMainUserId(window),
+        workspaceSlug: (window) => mainWindows.workspaceOf(window),
+        locale: getSystemLocale,
+        rendererUrl: is.dev ? process.env.ELECTRON_RENDERER_URL! : pathToFileURL(join(__dirname, "../renderer/index.html")).toString(),
+      });
+    }
+
     electronApp.setAppUserModelId(
       is.dev ? "ai.multica.desktop.dev" : "ai.multica.desktop",
     );
@@ -950,6 +962,7 @@ if (!gotTheLock) {
           userId,
         );
         if (accountInvalidated) {
+          clearEmbeddedWebviews();
           authSessionGeneration += 1;
           mainRendererMessages.clear("inbox:open");
         }

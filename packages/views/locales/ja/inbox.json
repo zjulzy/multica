@@ -52,6 +52,12 @@
     "retry": "再試行"
   },
   "detail": {
+    "preview_open_issue": "タスク全体を開く",
+    "preview_loading": "会話を読み込み中…",
+    "preview_no_messages": "メッセージはまだありません",
+    "preview_missing": "現在の履歴にこのメッセージがありません。タスク全体を開いて確認してください。",
+    "preview_load_failed": "会話を読み込めませんでした。",
+    "preview_older_hidden": "最近のメッセージと選択した内容を表示しています。",
     "select_prompt": "詳細を表示する通知を選択してください",
     "empty": "インボックスは空です",
     "original_input": "元の入力",

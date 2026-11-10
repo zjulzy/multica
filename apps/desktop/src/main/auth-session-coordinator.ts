@@ -43,6 +43,11 @@ export class AuthSessionCoordinator<T> {
     return typeof userId === "string" && userId === this.accountUserId;
   }
 
+  currentMainUserId(window: T): string | null {
+    if (!this.hasActiveMainSession(window)) return null;
+    return this.mainUserIds.get(window) ?? null;
+  }
+
   isCurrentIssueSession(window: T): boolean {
     return (
       typeof this.accountUserId === "string" &&

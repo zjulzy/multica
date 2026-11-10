@@ -52,7 +52,7 @@ function QuickEmojiPicker({ onSelect, align = "start", className, ariaLabel = "A
           />
         }
       />
-      <PopoverContent align={align} className="w-auto p-0">
+      {open && <PopoverContent align={align} className="w-auto p-0">
         {showFull ? (
           <Suspense fallback={<div className="p-4 text-body text-muted-foreground">Loading...</div>}>
             <EmojiPicker onSelect={handleSelect} />
@@ -80,7 +80,7 @@ function QuickEmojiPicker({ onSelect, align = "start", className, ariaLabel = "A
             </button>
           </div>
         )}
-      </PopoverContent>
+      </PopoverContent>}
     </Popover>
   );
 }

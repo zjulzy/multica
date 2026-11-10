@@ -19,6 +19,26 @@ import type {
 import type { TabSelectionShortcutKey } from "../shared/main-renderer-messages";
 
 interface DesktopAPI {
+  isEmbeddedIssue: boolean;
+  isEmbeddedPool: boolean;
+  prepareEmbeddedPool: (request: unknown) => Promise<{ token: string; url: string } | null>;
+  assignEmbeddedPool: (token: string, request: unknown) => Promise<boolean>;
+  sendEmbeddedPoolReady: () => void;
+  onEmbeddedPoolReady: (callback: (token: string) => void) => () => void;
+  onEmbeddedPoolAssigned: (callback: (context: unknown) => void) => () => void;
+  prepareEmbeddedGuest: (request: unknown) => Promise<{ token: string; key: string; url: string } | null>;
+  activateEmbeddedGuest: (token: string) => Promise<boolean>;
+  showEmbeddedGuestSurfaces: (tokens: string[]) => Promise<boolean>;
+  hideEmbeddedGuest: () => Promise<void>;
+  removeEmbeddedGuest: (token: string) => Promise<void>;
+  sendEmbeddedGuestReady: () => void;
+  setEmbeddedGuestPresentation: (token: string, presentation: unknown) => Promise<boolean>;
+  sendEmbeddedGuestAction: (action: "done" | "delete") => void;
+  onEmbeddedGuestPresentation: (callback: (presentation: unknown) => void) => () => void;
+  onEmbeddedGuestAction: (callback: (value: unknown) => void) => () => void;
+  onEmbeddedGuestReady: (callback: (token: string) => void) => () => void;
+  sendEmbeddedIssueNavigation: (message: unknown) => void;
+  onEmbeddedIssueNavigation: (callback: (message: unknown) => void) => () => void;
   getLiworkSnapshot: () => Promise<import("../shared/liwork-monitor").LiworkSnapshot>;
   switchLiworkSession: (sessionId: string) => Promise<void>;
   /** App version + normalized OS, captured synchronously at preload time. */

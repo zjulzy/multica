@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen } from "@testing-library/react";
-import { forwardRef, type ReactNode } from "react";
+import userEvent from "@testing-library/user-event";
+import { createElement, forwardRef, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TimelineEntry } from "@multica/core/types";
 import { renderWithI18n } from "../../test/i18n";
+
+const menuMetrics = vi.hoisted(() => ({ created: 0 }));
+vi.mock("@multica/ui/components/ui/dropdown-menu", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@multica/ui/components/ui/dropdown-menu")>();
+  return { ...actual, DropdownMenuContent: (props: React.ComponentProps<typeof actual.DropdownMenuContent>) => { menuMetrics.created++; return createElement(actual.DropdownMenuContent, props); } };
+});
 
 // Comment "more actions" menu layout, in three groups: act on the comment
 // (Edit, then Resolve), take it elsewhere (Copy, Copy link, Create sub-issue),
@@ -111,6 +118,22 @@ async function openMenuLayout(index: number): Promise<string[]> {
 }
 
 const agentAuthor = { actor_type: "agent", actor_id: "agent-1" } as const;
+
+it("does not create a reply menu until it is opened", async () => {
+  menuMetrics.created = 0;
+  renderThread(comment("root", null), [comment("reply", "root")]);
+  expect(menuMetrics.created).toBe(1);
+  await openMenuLayout(1);
+  expect(menuMetrics.created).toBeGreaterThan(1);
+});
+
+it("opens the reply actions by keyboard", async () => {
+  renderThread(comment("root", null), [comment("reply", "root")]);
+  const button = screen.getAllByRole("button", { name: "Comment actions" })[1]!;
+  button.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(await screen.findByRole("menu")).toBeTruthy();
+});
 
 describe("CommentCard — actions menu layout", () => {
   it("groups the author's root menu as edit/resolve, copy/derive, delete", async () => {

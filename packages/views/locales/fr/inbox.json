@@ -54,6 +54,12 @@
     "retry": "Réessayer"
   },
   "detail": {
+    "preview_open_issue": "Ouvrir le ticket complet",
+    "preview_loading": "Chargement de la conversation…",
+    "preview_no_messages": "Aucun message pour le moment",
+    "preview_missing": "Ce message est absent de l’historique disponible. Ouvrez le ticket complet pour le consulter.",
+    "preview_load_failed": "Impossible de charger la conversation.",
+    "preview_older_hidden": "Messages récents et contexte sélectionné.",
     "select_prompt": "Sélectionnez une notification pour afficher les détails",
     "empty": "Votre boîte de réception est vide",
     "original_input": "Saisie d'origine",

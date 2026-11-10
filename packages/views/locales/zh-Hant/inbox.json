@@ -52,6 +52,12 @@
     "retry": "重試"
   },
   "detail": {
+    "preview_open_issue": "開啟完整任務",
+    "preview_loading": "正在載入對話…",
+    "preview_no_messages": "暫無訊息",
+    "preview_missing": "目前記錄中找不到這則訊息，請開啟完整任務查看。",
+    "preview_load_failed": "對話載入失敗。",
+    "preview_older_hidden": "顯示最近訊息和所選上下文。",
     "select_prompt": "選擇一條通知檢視詳情",
     "empty": "收件箱為空",
     "original_input": "原始輸入",

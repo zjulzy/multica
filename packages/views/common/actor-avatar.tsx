@@ -8,7 +8,7 @@ import {
   HoverCardTrigger,
   HoverCardContent,
 } from "@multica/ui/components/ui/hover-card";
-import { useActorName } from "@multica/core/workspace/hooks";
+import { ActorDirectoryBoundary, useActorDirectory } from "@multica/core/workspace/actor-directory";
 import { resolvePublicFileUrl } from "@multica/core/workspace/avatar-url";
 import { useAgentPresenceDetail } from "@multica/core/agents";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
@@ -84,7 +84,11 @@ const FOCUSABLE_ANCESTOR_SELECTOR =
 const PROFILE_LINK_CONTROL_SELECTOR =
   'button, [role^="menuitem"], [role="option"], [data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="popover-trigger"]';
 
-export function ActorAvatar({
+export function ActorAvatar(props: ActorAvatarProps) {
+  return <ActorDirectoryBoundary><ActorAvatarContent {...props} /></ActorDirectoryBoundary>;
+}
+
+function ActorAvatarContent({
   actorType,
   actorId,
   name,
@@ -102,7 +106,7 @@ export function ActorAvatar({
     getActorInitials,
     getActorAvatarUrl,
     hasActor,
-  } = useActorName();
+  } = useActorDirectory();
   const paths = useWorkspacePaths();
   const resolvedName = name ?? getActorName(actorType, actorId);
   const resolvedAvatarUrl =

@@ -105,7 +105,8 @@ import { LocalDirectoryHint } from "../../projects/components/local-directory-hi
 import { useNewRunIds } from "./use-run-comment-motion";
 import { AgentRunComment, CommentCard, ThreadComposerItem, ThreadReplyItem, ThreadResolutionItem } from "./comment-card";
 import { projectThreadItems, type ThreadTimelineItem } from "./thread-timeline-items";
-import { recordIssueRender } from "../hooks/issue-render-profile";
+import { recordIssueRender, takeIssueRenderSummary } from "../hooks/issue-render-profile";
+import { ActorDirectoryBoundary } from "@multica/core/workspace/actor-directory";
 import { EMPTY_COMMENT_RUNS, buildCommentRunView, orderTimelineWithRuns, type CommentRun } from "./comment-runs";
 import { issueTasksOptions } from "@multica/core/issues/queries";
 import { SourceContextBadge } from "./source-context-viewer";
@@ -133,7 +134,7 @@ import {
 } from "./deliverables/deliverable-details";
 import { collectDeliverableFiles } from "@multica/core/attachments/deliverables";
 import { AttachmentVersionsProvider } from "./deliverables/attachment-versions";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@multica/core/auth";
 import { useWorkspacePaths } from "@multica/core/paths";
 import { useActorName } from "@multica/core/workspace/hooks";
@@ -149,7 +150,7 @@ import { projectDetailOptions } from "@multica/core/projects/queries";
 import { ProjectIcon } from "../../projects/components/project-icon";
 import { issueLabelsOptions } from "@multica/core/labels";
 import { propertyListOptions } from "@multica/core/properties";
-import { memberListOptions, agentListOptions } from "@multica/core/workspace/queries";
+import { memberListOptions, agentListOptions, workspaceKeys } from "@multica/core/workspace/queries";
 import {
   selectExpandedResolved,
   useCommentCollapseStore,
@@ -1155,6 +1156,7 @@ function SubIssueDisplayPopover({
 
 interface IssueDetailProps {
   issueId: string;
+  onInitialContentReady?: () => void;
   onDelete?: () => void;
   /** Called after the issue is marked as done via the toolbar button. */
   onDone?: () => void;
@@ -1321,7 +1323,11 @@ export function IssueDetailSkeleton({
 
 // IssueDetail
 
-export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = true, layoutId = "multica_issue_detail_layout", enableGlobalFindShortcut = true, highlightCommentId, highlightRequestToken, leadingAction, variant = "page", trailingActions }: IssueDetailProps) {
+export function IssueDetail(props: IssueDetailProps) {
+  return <ActorDirectoryBoundary><IssueDetailBody {...props} /></ActorDirectoryBoundary>;
+}
+
+function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, defaultSidebarOpen = true, layoutId = "multica_issue_detail_layout", enableGlobalFindShortcut = true, highlightCommentId, highlightRequestToken, leadingAction, variant = "page", trailingActions }: IssueDetailProps) {
   const isPeek = variant === "peek";
   const { t } = useT("issues");
   const { t: tCommon } = useT("common");
@@ -1334,6 +1340,7 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
 
   // Issue navigation — read from TQ list cache
   const wsId = useWorkspaceId();
+  const directoryQueryClient = useQueryClient();
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   // Workspace owners and admins moderate any comment authored by anyone
@@ -1621,10 +1628,37 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
     editComment, deleteComment, toggleResolveComment, toggleReaction: handleToggleReaction,
   } = useIssueTimeline(id, user?.id);
 
+  const readyIssueRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!issue || issueLoading || timelineLoading || readyIssueRef.current === id || !onInitialContentReady) return;
+    readyIssueRef.current = id;
+    if (process.env.NODE_ENV === "development") console.info("[issue-load-performance]", JSON.stringify({ kind: "initial-render-components", components: takeIssueRenderSummary(), directoryObservers: {
+      members: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.members(wsId), exact: true })?.getObserversCount() ?? 0,
+      agents: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.agents(wsId), exact: true })?.getObserversCount() ?? 0,
+      squads: directoryQueryClient.getQueryCache().find({ queryKey: workspaceKeys.squads(wsId), exact: true })?.getObserversCount() ?? 0,
+    } }));
+    onInitialContentReady();
+  }, [id, issue, issueLoading, timelineLoading, onInitialContentReady, directoryQueryClient, wsId]);
+
   const loadTimingRef = useRef<{ id: string; startedAt: number; reported: boolean } | null>(null);
   if (process.env.NODE_ENV === "development" && (!loadTimingRef.current || loadTimingRef.current.id !== id)) {
     loadTimingRef.current = { id, startedAt: performance.now(), reported: false };
   }
+  const loadMilestonesRef = useRef<{ id: string; issue: boolean; timeline: boolean } | null>(null);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    if (loadMilestonesRef.current?.id !== id) loadMilestonesRef.current = { id, issue: false, timeline: false };
+    const milestone = loadMilestonesRef.current;
+    const startedAt = loadTimingRef.current?.startedAt ?? performance.now();
+    if (!issueLoading && !milestone.issue) {
+      milestone.issue = true;
+      console.info("[issue-load-performance]", JSON.stringify({ kind: "issue-data-ready", elapsedMs: Math.round(performance.now() - startedAt) }));
+    }
+    if (!timelineLoading && !milestone.timeline) {
+      milestone.timeline = true;
+      console.info("[issue-load-performance]", JSON.stringify({ kind: "timeline-data-ready", elapsedMs: Math.round(performance.now() - startedAt), entries: timeline.length }));
+    }
+  }, [id, issueLoading, timelineLoading, timeline.length]);
   useEffect(() => {
     const loadTiming = loadTimingRef.current;
     if (issueLoading || timelineLoading || (!hasPendingIssuePerformance(id) && (!loadTiming || loadTiming.reported))) return;

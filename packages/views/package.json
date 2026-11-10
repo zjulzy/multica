@@ -16,6 +16,7 @@
     "./editor": "./editor/index.ts",
     "./issue-views": "./issue-views/index.ts",
     "./issues/components": "./issues/components/index.ts",
+    "./issues/surface/cached-inbox-outlet": "./issues/surface/cached-inbox-outlet.tsx",
     "./issues/hooks": "./issues/hooks/index.ts",
     "./issues/utils/filter": "./issues/utils/filter.ts",
     "./issues/utils/sort": "./issues/utils/sort.ts",

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { LightweightInboxProvider } from "@multica/views/inbox";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@multica/ui/lib/utils";
 import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
@@ -51,6 +52,7 @@ import { SakuraDecoration } from "./sakura-decoration";
 import { ThemeAmbience } from "./theme-ambience";
 import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
+import { EmbeddedGuestHost } from "./embedded-guest-host";
 import { WindowOverlay } from "./window-overlay";
 import { WindowToolbar, windowToolbarClearance } from "./window-toolbar";
 import { useHeaderAlignment } from "./use-header-alignment";
@@ -294,6 +296,10 @@ function DesktopInboxBridge() {
   return null;
 }
 
+function MaybeEmbeddedGuestHost({ children }: { children: ReactNode }) {
+  return import.meta.env.PROD || import.meta.env.VITE_NATIVE_ISSUE_CACHE_EXPERIMENT === "1" ? <EmbeddedGuestHost>{children}</EmbeddedGuestHost> : children;
+}
+
 export function DesktopShell() {
   useInternalLinkHandler();
   useNativeNavigationGestures();
@@ -333,6 +339,8 @@ export function DesktopShell() {
   // page. The slot element lives in MainTopBar; pages read it via context.
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   const inboxDockEnabled = useDesktopPrefsStore((s) => s.inboxDockEnabled);
+  const lightweightInboxEnabled = useDesktopPrefsStore((s) => s.lightweightInboxEnabled);
+  const lightweightInboxReplyLimit = useDesktopPrefsStore((s) => s.lightweightInboxReplyLimit);
   const agentStatusHubEnabled = useDesktopPrefsStore((s) => s.agentStatusHubEnabled);
   const setInboxDockOpen = useDesktopPrefsStore((s) => s.setInboxDockOpen);
   const [temporaryDockWorkspace, setTemporaryDockWorkspace] = useState<string | null>(null);
@@ -429,7 +437,7 @@ export function DesktopShell() {
                         click just froze until the destination committed
                         (MUL-6404). */}
                     <NavigationProgress />
-                    <DesktopInboxDockLayout
+                    <LightweightInboxProvider value={{ enabled: lightweightInboxEnabled, replyLimit: lightweightInboxReplyLimit }}><MaybeEmbeddedGuestHost><DesktopInboxDockLayout
                       enabled={inboxDockEnabled || temporaryDockVisible}
                       workspaceId={resolvedWorkspace?.id ?? null}
                       workspaceSlug={resolvedWorkspace?.slug ?? null}
@@ -443,7 +451,7 @@ export function DesktopShell() {
                         <TabContent />
                       </PageHeaderPortalProvider>
                       {slug && <FloatingChat />}
-                    </DesktopInboxDockLayout>
+                    </DesktopInboxDockLayout></MaybeEmbeddedGuestHost></LightweightInboxProvider>
                   </MainCanvas>
                 </div>
               </ShellRouteDataPrefetch>

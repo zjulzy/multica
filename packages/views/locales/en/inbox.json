@@ -54,6 +54,12 @@
     "retry": "Retry"
   },
   "detail": {
+    "preview_open_issue": "Open full issue",
+    "preview_loading": "Loading conversation…",
+    "preview_no_messages": "No messages yet",
+    "preview_missing": "This message is unavailable in the current timeline. Open the full issue to investigate.",
+    "preview_load_failed": "Could not load the conversation.",
+    "preview_older_hidden": "Showing recent messages and the selected context.",
     "select_prompt": "Select a notification to view details",
     "empty": "Your inbox is empty",
     "original_input": "Original input",

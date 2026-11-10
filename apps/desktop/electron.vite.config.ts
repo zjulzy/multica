@@ -2,6 +2,7 @@ import { resolve } from "path";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { patchViteClientForFrozenGuest } from "./src/main/experimental-vite-guest";
 
 export default defineConfig({
   main: {
@@ -23,8 +24,26 @@ export default defineConfig({
       // the renderer port via env. Falls back to 5173 for the common case.
       port: Number(process.env.DESKTOP_RENDERER_PORT) || 5173,
       strictPort: true,
+      // A frozen experimental guest loses its Vite websocket. Forwarding an
+      // unhandled disconnect error through that same socket can recursively
+      // generate more errors. Electron already captures renderer console logs.
+      ...(process.env.MULTICA_NATIVE_ISSUE_CACHE_EXPERIMENT === "1"
+        ? { forwardConsole: false }
+        : {}),
     },
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      ...(process.env.MULTICA_NATIVE_ISSUE_CACHE_EXPERIMENT === "1" ? [{
+        name: "experimental-frozen-guest-vite-reconnect",
+        enforce: "post" as const,
+        transform(code: string, id: string) {
+          if (id.replaceAll("\\", "/").includes("/vite/dist/client/client.mjs")) {
+            return patchViteClientForFrozenGuest(code);
+          }
+          return null;
+        },
+      }] : []),
+      react(), tailwindcss(),
+    ],
     resolve: {
       alias: {
         "@": resolve("src/renderer/src"),

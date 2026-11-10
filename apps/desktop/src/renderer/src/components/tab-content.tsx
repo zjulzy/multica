@@ -11,6 +11,7 @@ import {
   registerCoordinatorQueryClient,
 } from "@/platform/tab-coordinator";
 import { initIssueViewTabs } from "@/platform/issue-view-tabs";
+import { IndependentPinnedIssueHost } from "./independent-pinned-issue-host";
 
 /**
  * Renders the active tab session through THE single app router
@@ -57,12 +58,16 @@ export function TabContent() {
 
   if (!group) return null;
 
-  return (
+  const content = (
     <ActiveTabHost
       key={`${group.activeTabId}:${generation}`}
       tabId={group.activeTabId}
     />
   );
+  if (import.meta.env.PROD || import.meta.env.VITE_NATIVE_ISSUE_CACHE_EXPERIMENT === "1") return content;
+  return import.meta.env.VITE_PINNED_ISSUE_CACHE_EXPERIMENT === "1"
+    ? <IndependentPinnedIssueHost>{content}</IndependentPinnedIssueHost>
+    : content;
 }
 
 function ActiveTabHost({ tabId }: { tabId: string }) {

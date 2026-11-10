@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { setApiInstance } from "../api";
@@ -10,6 +10,7 @@ import type { ApiClient } from "../api/client";
 import type { Workspace } from "../types";
 import { workspaceKeys } from "./queries";
 import { useActorName, useWorkspaceList } from "./hooks";
+import { ActorDirectoryBoundary, useActorDirectory } from "./actor-directory";
 
 // useActorName reads the current workspace from the core WorkspaceId provider;
 // the directory-name resolution under test does not depend on the real id.
@@ -162,4 +163,18 @@ describe("useActorName", () => {
     expect(result.current.hasActor("member", "user-1")).toBe(true);
     expect(result.current.hasActor("member", "departed-user")).toBe(false);
   });
+});
+
+it("shares one directory subscription and updates all scoped consumers", async () => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  qc.setQueryData(workspaceKeys.members("ws-1"), [{ user_id: "user-1", name: "Ada", avatar_url: null }]);
+  qc.setQueryData(workspaceKeys.agents("ws-1"), []);
+  qc.setQueryData(workspaceKeys.squads("ws-1"), []);
+  function Name() { return <span>{useActorDirectory().getActorName("member", "user-1")}</span>; }
+  const view = render(<QueryClientProvider client={qc}><ActorDirectoryBoundary><Name /><ActorDirectoryBoundary><Name /></ActorDirectoryBoundary></ActorDirectoryBoundary></QueryClientProvider>);
+  expect(screen.getAllByText("Ada")).toHaveLength(2);
+  expect(qc.getQueryCache().find({ queryKey: workspaceKeys.members("ws-1") })?.getObserversCount()).toBe(1);
+  act(() => qc.setQueryData(workspaceKeys.members("ws-1"), [{ user_id: "user-1", name: "Grace", avatar_url: null }]));
+  await waitFor(() => expect(screen.getAllByText("Grace")).toHaveLength(2));
+  view.unmount(); qc.clear();
 });

@@ -137,6 +137,9 @@ interface PageHeaderProps {
  */
 const PageHeaderPortalContext = createContext<HTMLElement | null>(null);
 
+/** Let separately mounted page roots target the shell's existing header slot. */
+export function usePageHeaderPortalTarget() { return useContext(PageHeaderPortalContext); }
+
 export function PageHeaderPortalProvider({
   value,
   children,

@@ -1,0 +1,160 @@
+import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
+import { FrozenQueryMirror } from "./frozen-query-mirror";
+
+describe("frozen query mirror prototype", () => {
+  it("does not notify hidden pages and applies shared changes after resuming", () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    const before = { version: 1 }, after = { version: 2 };
+    shared.setQueryData(["issue", "a"], before);
+    const mirror = new FrozenQueryMirror(shared, local);
+    expect(local.getQueryData(["issue", "a"])).toBe(before);
+    mirror.setVisible(false);
+    const observer = vi.fn();
+    const unsubscribe = local.getQueryCache().subscribe(observer);
+    shared.setQueryData(["issue", "a"], after);
+    shared.setQueryData(["issue", "b"], { version: 1 });
+    expect(local.getQueryData(["issue", "a"])).toBe(before);
+    expect(local.getQueryData(["issue", "b"])).toBeUndefined();
+    expect(observer).not.toHaveBeenCalled();
+    mirror.setVisible(true);
+    expect(local.getQueryData(["issue", "a"])).toEqual(after);
+    expect(local.getQueryData(["issue", "b"])).toEqual({ version: 1 });
+    unsubscribe(); mirror.dispose();
+  });
+  it("reconciles removed queries and stops processing changes after disposal", () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], "old");
+    const mirror = new FrozenQueryMirror(shared, local);
+    mirror.setVisible(false);
+    shared.removeQueries({ queryKey: ["issue", "a"], exact: true });
+    expect(local.getQueryData(["issue", "a"])).toBe("old");
+    mirror.setVisible(true);
+    expect(local.getQueryData(["issue", "a"])).toBeUndefined();
+    mirror.dispose();
+    shared.setQueryData(["issue", "a"], "new");
+    expect(local.getQueryData(["issue", "a"])).toBeUndefined();
+  });
+  it("propagates a page-local edit to shared data while active", () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    local.setQueryData(["issue", "a"], { title: "edited" });
+    expect(shared.getQueryData(["issue", "a"])).toEqual({ title: "edited" });
+    mirror.dispose();
+  });
+  it("never overwrites a newer shared update with a hidden page's late write", () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    mirror.setVisible(false);
+    shared.setQueryData(["issue", "a"], { title: "newer" });
+    local.setQueryData(["issue", "a"], { title: "late" });
+    expect(shared.getQueryData(["issue", "a"])).toEqual({ title: "newer" });
+    expect(shared.getQueryState(["issue", "a"])?.isInvalidated).toBe(true);
+    mirror.setVisible(true);
+    expect(local.getQueryData(["issue", "a"])).toEqual({ title: "newer" });
+    mirror.dispose();
+  });
+  it("retains stale markers so uncertain data can be revalidated after resuming", async () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    mirror.setVisible(false);
+    await shared.invalidateQueries({ queryKey: ["issue", "a"], exact: true, refetchType: "none" });
+    expect(local.getQueryState(["issue", "a"])?.isInvalidated).toBe(false);
+    mirror.setVisible(true);
+    expect(local.getQueryState(["issue", "a"])?.isInvalidated).toBe(true);
+    mirror.dispose();
+  });
+  it("marks shared data stale when an edit invalidates the page-local query", async () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    await local.invalidateQueries({ queryKey: ["issue", "a"], exact: true, refetchType: "none" });
+    expect(shared.getQueryState(["issue", "a"])?.isInvalidated).toBe(true);
+    mirror.dispose();
+  });
+  it("clears local staleness after shared data is successfully revalidated", async () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    const unchanged = { title: "same" };
+    shared.setQueryData(["issue", "a"], unchanged);
+    const mirror = new FrozenQueryMirror(shared, local);
+    await shared.invalidateQueries({ queryKey: ["issue", "a"], exact: true, refetchType: "none" });
+    expect(local.getQueryState(["issue", "a"])?.isInvalidated).toBe(true);
+    shared.setQueryData(["issue", "a"], unchanged);
+    expect(local.getQueryState(["issue", "a"])?.isInvalidated).toBe(false);
+    mirror.dispose();
+  });
+  it("restores the shared optimistic value on a failed local edit", () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    const snapshot = local.getQueryData(["issue", "a"]);
+    local.setQueryData(["issue", "a"], { title: "optimistic" });
+    expect(shared.getQueryData(["issue", "a"])).toEqual({ title: "optimistic" });
+    local.setQueryData(["issue", "a"], snapshot);
+    expect(shared.getQueryData(["issue", "a"])).toEqual({ title: "old" });
+    mirror.dispose();
+  });
+  it("does not let a failed old edit roll back newer shared data", () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    const snapshot = local.getQueryData(["issue", "a"]);
+    local.setQueryData(["issue", "a"], { title: "optimistic" });
+    mirror.setVisible(false);
+    shared.setQueryData(["issue", "a"], { title: "server-new" });
+    local.setQueryData(["issue", "a"], snapshot);
+    expect(shared.getQueryData(["issue", "a"])).toEqual({ title: "server-new" });
+    expect(shared.getQueryState(["issue", "a"])?.isInvalidated).toBe(true);
+    mirror.setVisible(true);
+    expect(local.getQueryData(["issue", "a"])).toEqual({ title: "server-new" });
+    mirror.dispose();
+  });
+  it("shares newly fetched data from an active page", async () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    await local.fetchQuery({ queryKey: ["issue", "a"], queryFn: async () => ({ title: "server" }), staleTime: 0 });
+    expect(shared.getQueryData(["issue", "a"])).toEqual({ title: "server" });
+    mirror.dispose();
+  });
+  it("does not show or publish an older response after shared data changes", async () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], { title: "old" });
+    const mirror = new FrozenQueryMirror(shared, local);
+    let resolve!: (value: { title: string }) => void;
+    const fetch = local.fetchQuery({ queryKey: ["issue", "a"], queryFn: () => new Promise((done) => { resolve = done; }), staleTime: 0 });
+    shared.setQueryData(["issue", "a"], { title: "newer" });
+    resolve({ title: "late" });
+    await fetch;
+    expect(shared.getQueryData(["issue", "a"])).toEqual({ title: "newer" });
+    expect(local.getQueryData(["issue", "a"])).toEqual({ title: "newer" });
+    expect(shared.getQueryState(["issue", "a"])?.isInvalidated).toBe(true);
+    mirror.dispose();
+  });
+  it("mirrors only explicitly allowed query keys", () => {
+    const shared = new QueryClient(), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], "allowed");
+    shared.setQueryData(["other-workspace", "private"], "secret");
+    const mirror = new FrozenQueryMirror(shared, local, (key) => key[0] === "issue");
+    expect(local.getQueryData(["issue", "a"])).toBe("allowed");
+    expect(local.getQueryData(["other-workspace", "private"])).toBeUndefined();
+    shared.setQueryData(["other-workspace", "private"], "updated");
+    expect(local.getQueryData(["other-workspace", "private"])).toBeUndefined();
+    mirror.dispose();
+  });
+  it("preserves a failed revalidation state when the page resumes", async () => {
+    const shared = new QueryClient({ defaultOptions: { queries: { retry: false } } }), local = new QueryClient();
+    shared.setQueryData(["issue", "a"], "old");
+    const mirror = new FrozenQueryMirror(shared, local);
+    mirror.setVisible(false);
+    await expect(shared.fetchQuery({ queryKey: ["issue", "a"], queryFn: async () => { throw new Error("offline"); }, staleTime: 0 })).rejects.toThrow("offline");
+    mirror.setVisible(true);
+    expect(local.getQueryState(["issue", "a"])?.status).toBe("error");
+    expect(local.getQueryState(["issue", "a"])?.error?.message).toBe("offline");
+    expect(local.getQueryData(["issue", "a"])).toBe("old");
+    mirror.dispose();
+  });
+});

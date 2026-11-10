@@ -12,11 +12,11 @@ function useIsBelow(breakpoint: number) {
 
   React.useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
-    const onChange = () => {
-      setIsBelow(window.innerWidth < breakpoint)
+    const onChange = (event: MediaQueryListEvent) => {
+      setIsBelow(event.matches)
     }
     mql.addEventListener("change", onChange)
-    setIsBelow(window.innerWidth < breakpoint)
+    setIsBelow(mql.matches)
     return () => mql.removeEventListener("change", onChange)
   }, [breakpoint])
 

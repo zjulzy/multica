@@ -13,6 +13,32 @@ beforeEach(() => {
 });
 
 describe("desktop prefs store", () => {
+  it("migrates and persists a bounded lightweight inbox reply limit", async () => {
+    localStorage.setItem("multica_desktop_prefs", JSON.stringify({ state: {}, version: 9 }));
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().lightweightInboxReplyLimit).toBe(6);
+    useDesktopPrefsStore.getState().setLightweightInboxReplyLimit(12);
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().lightweightInboxReplyLimit).toBe(12);
+    useDesktopPrefsStore.getState().setLightweightInboxReplyLimit(100);
+    expect(useDesktopPrefsStore.getState().lightweightInboxReplyLimit).toBe(50);
+  });
+  it("enables the lightweight inbox for existing preferences and persists disabling it", async () => {
+    localStorage.setItem("multica_desktop_prefs", JSON.stringify({ state: {}, version: 8 }));
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().lightweightInboxEnabled).toBe(true);
+    useDesktopPrefsStore.getState().setLightweightInboxEnabled(false);
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().lightweightInboxEnabled).toBe(false);
+  });
+  it("enables pinned issue caching for existing preferences and persists changes", async () => {
+    localStorage.setItem("multica_desktop_prefs", JSON.stringify({ state: { singleTabMode: true }, version: 7 }));
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().pinnedIssueCacheEnabled).toBe(true);
+    useDesktopPrefsStore.getState().setPinnedIssueCacheEnabled(false);
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().pinnedIssueCacheEnabled).toBe(false);
+  });
   it("defaults singleTabMode to false", () => {
     expect(useDesktopPrefsStore.getState().singleTabMode).toBe(false);
     expect(isSingleTabMode()).toBe(false);

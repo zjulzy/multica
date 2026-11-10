@@ -9,6 +9,10 @@ const translations = {
       single_tab_mode_description: "Use one tab",
       inbox_dock_title: "Bottom inbox panel",
       inbox_dock_description: "Keep Inbox at the bottom",
+      lightweight_inbox_title: "Simplified inbox",
+      lightweight_inbox_description: "Show a simplified issue preview",
+      lightweight_inbox_count_title: "Context replies",
+      lightweight_inbox_count_description: "Maximum number of replies",
       agent_hub_title: "Agent status hub",
       agent_hub_description: "Show active agents in the sidebar",
       interface_motion_title: "Interface motion",
@@ -20,6 +24,8 @@ const translations = {
       sidebar_font_large: "Large",
       liwork_title: "LiWork monitor",
       liwork_description: "Show LiWork",
+      pinned_issue_cache_title: "Pinned issue cache",
+      pinned_issue_cache_description: "Keep visited pinned issues in memory",
     },
   },
 };
@@ -39,11 +45,27 @@ describe("AppearanceSettingsTab", () => {
       singleTabMode: false,
       inboxDockEnabled: false,
       inboxDockOpen: false,
+      lightweightInboxEnabled: true,
+      lightweightInboxReplyLimit: 6,
       agentStatusHubEnabled: true,
       interfaceMotionEnabled: false,
       sidebarFontSize: "standard",
+      pinnedIssueCacheEnabled: true,
     });
   });
+
+  it("changes the simplified inbox and reply limit independently", () => {
+    render(<AppearanceSettingsTab />);
+    const input = screen.getByRole("spinbutton", { name: "Context replies" });
+    fireEvent.change(input, { target: { value: "12" } });
+    fireEvent.blur(input);
+    expect(useDesktopPrefsStore.getState().lightweightInboxReplyLimit).toBe(12);
+    fireEvent.click(screen.getByRole("switch", { name: "Simplified inbox" }));
+    expect(useDesktopPrefsStore.getState().lightweightInboxEnabled).toBe(false);
+    expect(input).toBeDisabled();
+  });
+
+
 
   it("reflects the persisted Inbox dock preference", () => {
     useDesktopPrefsStore.setState({ inboxDockEnabled: true });

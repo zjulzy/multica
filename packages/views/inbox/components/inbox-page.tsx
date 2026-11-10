@@ -52,6 +52,7 @@ import {
 } from "@multica/core/inbox/filter-store";
 
 import { IssueDetail, issueHighlightMementoKey } from "../../issues/components/issue-detail";
+import { InboxIssueContent } from "./inbox-issue-preview";
 import { beginIssuePerformance } from "@multica/core/issue-performance";
 import { ActionShortcutKeycaps } from "../../common/shortcut-keycaps";
 import { useRegisterCommandBarContext } from "../../search/register-context";
@@ -844,6 +845,7 @@ export function InboxPage() {
     >
       {/* Shift+Click on an issue mention peeks it over the detail pane. */}
       <IssuePeekHost key={detailItem.issue_id}>
+        <InboxIssueContent issueId={detailItem.issue_id} highlightCommentId={detailItem.details?.comment_id ?? undefined} highlightRequestToken={highlightRequestToken} leadingAction={compactBackAction ?? (listCollapsed ? <CollapsedNavTrigger /> : undefined)}>
         <IssueDetail
           key={detailItem.issue_id}
           issueId={detailItem.issue_id}
@@ -866,6 +868,7 @@ export function InboxPage() {
             handleArchive(detailItem.id);
           }}
         />
+        </InboxIssueContent>
       </IssuePeekHost>
     </ErrorBoundary>
   ) : detailItem ? (

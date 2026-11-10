@@ -1,5 +1,8 @@
 export {
   NavigationProvider,
+  NavigationSnapshotProvider,
+  NavigationBridgeProvider,
+  useNavigationBridge,
   useNavigation,
   useOptionalNavigation,
   useIsNavigating,
@@ -19,3 +22,4 @@ export { useRowLink, rowLinkInteractiveProps } from "./use-row-link";
 export { useIntentNavigate } from "./use-intent-navigate";
 export { useBackOrReplace } from "./use-back-or-replace";
 export type { NavigationAdapter } from "./types";
+export type { NavigationBridgeSnapshot } from "./context";

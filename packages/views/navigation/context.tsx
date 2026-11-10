@@ -12,6 +12,11 @@ import {
 import type { NavigationAdapter } from "./types";
 
 const NavigationContext = createContext<NavigationAdapter | null>(null);
+
+/** Override only the adapter; pending-navigation reporting stays owned by the outer shell. */
+export function NavigationSnapshotProvider({ value, children }: { value: NavigationAdapter; children: React.ReactNode }) {
+  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
+}
 const NavigationPendingContext = createContext<boolean>(false);
 
 /** `+1` while a reported swap is in flight, `-1` when it settles. */
@@ -19,6 +24,28 @@ type PendingReporter = (delta: 1 | -1) => void;
 const NavigationPendingReportContext = createContext<PendingReporter | null>(
   null,
 );
+
+export interface NavigationBridgeSnapshot {
+  navigation: NavigationAdapter;
+  pending: boolean;
+  report: PendingReporter | null;
+}
+
+/** Capture the shell's existing adapter and progress channel for a separate root. */
+export function useNavigationBridge(): NavigationBridgeSnapshot {
+  const navigation = useNavigation();
+  const pending = use(NavigationPendingContext);
+  const report = use(NavigationPendingReportContext);
+  return useMemo(() => ({ navigation, pending, report }), [navigation, pending, report]);
+}
+
+export function NavigationBridgeProvider({ value, children }: { value: NavigationBridgeSnapshot; children: React.ReactNode }) {
+  return <NavigationContext.Provider value={value.navigation}>
+    <NavigationPendingReportContext.Provider value={value.report}>
+      <NavigationPendingContext.Provider value={value.pending}>{children}</NavigationPendingContext.Provider>
+    </NavigationPendingReportContext.Provider>
+  </NavigationContext.Provider>;
+}
 
 export function NavigationProvider({
   value,

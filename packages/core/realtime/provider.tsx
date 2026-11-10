@@ -25,12 +25,17 @@ import { useRealtimeSync, type RealtimeSyncStores } from "./use-realtime-sync";
 
 type EventHandler = (payload: unknown, actorId?: string, actorType?: string) => void;
 
-interface WSContextValue {
+export interface WSContextValue {
   subscribe: (event: WSEventType, handler: EventHandler) => () => void;
   onReconnect: (callback: () => void) => () => void;
 }
 
 const WSContext = createContext<WSContextValue | null>(null);
+
+/** Share the existing connection with a separately mounted renderer subtree. */
+export function WSContextBridge({ value, children }: { value: WSContextValue; children: ReactNode }) {
+  return <WSContext.Provider value={value}>{children}</WSContext.Provider>;
+}
 
 export interface WSProviderProps {
   children: ReactNode;
@@ -46,6 +51,12 @@ export interface WSProviderProps {
   identity?: ClientIdentity;
   /** Optional callback for showing toast messages (platform-specific, e.g. sonner) */
   onToast?: (message: string, type?: "info" | "error") => void;
+  enableLocalSearchIndex?: boolean;
+}
+
+function LocalSearchIndexSync({ client, userId, workspaceId, workspaceSlug }: { client: WSClient | null; userId: string | null; workspaceId: string | null; workspaceSlug: string | null }) {
+  useLocalSearchIndexSync(client, userId, workspaceId, workspaceSlug);
+  return null;
 }
 
 export function WSProvider({
@@ -56,6 +67,7 @@ export function WSProvider({
   cookieAuth,
   identity,
   onToast,
+  enableLocalSearchIndex = true,
 }: WSProviderProps) {
   const user = authStore((s) => s.user);
   // Reactive read of the current workspace slug (URL-driven singleton in
@@ -128,7 +140,6 @@ export function WSProvider({
   useRealtimeSync(wsClient, stores, onToast);
 
   // Keeps this workspace's local search index attached and caught up.
-  useLocalSearchIndexSync(wsClient, user?.id ?? null, wsId, wsSlug);
 
   const subscribe = useCallback(
     (event: WSEventType, handler: EventHandler) => {
@@ -148,6 +159,7 @@ export function WSProvider({
 
   return (
     <WSContext.Provider value={{ subscribe, onReconnect: onReconnectCb }}>
+      {enableLocalSearchIndex && <LocalSearchIndexSync client={wsClient} userId={user?.id ?? null} workspaceId={wsId} workspaceSlug={wsSlug} />}
       {children}
     </WSContext.Provider>
   );

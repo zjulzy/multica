@@ -525,6 +525,8 @@ export function useIssueTimeline(issueId: string, userId?: string) {
   return {
     timeline: optimisticTimeline,
     loading,
+    isError: query.isError,
+    refetch: query.refetch,
     submitComment,
     submitReply,
     editComment,

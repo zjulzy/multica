@@ -19,7 +19,7 @@ import { DesktopLoginPage } from "./pages/login";
 import { DesktopAuthRecoveryPage } from "./pages/auth-recovery";
 import { DesktopShell } from "./components/desktop-layout";
 import { UpdateNotification } from "./components/update-notification";
-import { IssueWindow } from "./components/issue-window";
+import { EmbeddedPoolWindow, IssueWindow } from "./components/issue-window";
 import { useTabStore } from "./stores/tab-store";
 import { useWindowOverlayStore } from "./stores/window-overlay-store";
 import { useOpenSettingsShortcut } from "./hooks/use-open-settings-shortcut";
@@ -114,7 +114,7 @@ function IssueWindowContent() {
     );
   }
 
-  return user ? <IssueWindow context={context} /> : <DesktopLoginPage />;
+  return user ? (window.desktopAPI.isEmbeddedPool ? <EmbeddedPoolWindow context={context} /> : <IssueWindow context={context} />) : <DesktopLoginPage />;
 }
 
 function AppContent() {
@@ -473,7 +473,7 @@ export default function App() {
   return (
     <DesktopThemeProvider>
       <InterfaceMotionSync />
-      <TitleBarOverlaySync />
+      {!window.desktopAPI.isEmbeddedIssue && <TitleBarOverlaySync />}
       {runtimeConfigResult.ok ? (
         <CoreProvider
           apiBaseUrl={runtimeConfigResult.config.apiUrl}
@@ -488,6 +488,7 @@ export default function App() {
           locale={locale}
           resources={resources}
           localeAdapter={localeAdapter}
+          enableLocalSearchIndex={!window.desktopAPI.isEmbeddedIssue}
         >
           <DesktopAuthSessionBridge />
           <NewItemMotionListener />

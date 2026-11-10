@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useCommentComposerStore } from "@multica/core/issues/stores";
 import { useStickyComposer } from "./use-sticky-composer";
 
-// `useIsMobile` reads `window.innerWidth` against a 768px breakpoint, so the
-// viewport is the only thing these tests need to move.
+// jsdom does not evaluate media queries, so provide a viewport-aware matchMedia.
 const DESKTOP_WIDTH = 1280;
 const PHONE_WIDTH = 390;
 
@@ -14,11 +13,13 @@ function setViewportWidth(width: number) {
 
 describe("useStickyComposer", () => {
   beforeEach(() => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: window.innerWidth <= Number(query.match(/max-width:\s*(\d+)px/)?.[1] ?? -1), addEventListener: () => {}, removeEventListener: () => {} }));
     useCommentComposerStore.setState({ sticky: true });
     setViewportWidth(DESKTOP_WIDTH);
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     useCommentComposerStore.setState({ sticky: true });
     setViewportWidth(DESKTOP_WIDTH);
   });

@@ -46,4 +46,6 @@ export interface CoreProviderProps {
   localeAdapter?: LocaleAdapter;
   /** Automatically sync the signed-in user's locale. Pause during one-shot handoffs. Default: true. */
   syncUserLocale?: boolean;
+  /** Whether this window owns local search indexing. */
+  enableLocalSearchIndex?: boolean;
 }

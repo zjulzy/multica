@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef, type ReactNode } from "react";
 import { useCanonicalIssue } from "@multica/core/issues/canonical-id";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { useWorkspacePaths } from "@multica/core/paths";
@@ -16,6 +16,14 @@ interface IssueDetailRouteProps {
    */
   routeId: string;
   onDelete?: () => void;
+  suppressDetail?: boolean;
+  onInitialContentReady?: () => void;
+  onDone?: () => void;
+  highlightCommentId?: string;
+  highlightRequestToken?: number;
+  defaultSidebarOpen?: boolean;
+  layoutId?: string;
+  leadingAction?: ReactNode;
 }
 
 /**
@@ -68,7 +76,7 @@ function useCommentHighlightHash(): { hash: string; commentId?: string } {
  *    the route and only the route — the inbox renders `IssueDetail` in a side
  *    panel, where replacing the URL would navigate the user out of the inbox.
  */
-export function IssueDetailRoute({ routeId, onDelete }: IssueDetailRouteProps) {
+export function IssueDetailRoute({ routeId, onDelete, onDone, suppressDetail = false, onInitialContentReady, highlightCommentId, highlightRequestToken, defaultSidebarOpen, layoutId, leadingAction }: IssueDetailRouteProps) {
   const wsId = useWorkspaceId();
   const { canonicalId, issue, isResolving, notFound } = useCanonicalIssue(wsId, routeId);
   const highlight = useCommentHighlightHash();
@@ -82,6 +90,7 @@ export function IssueDetailRoute({ routeId, onDelete }: IssueDetailRouteProps) {
   // refetch it, and restart this component's resolve/remount cycle — an
   // unbounded request loop that never settles. See `CanonicalIssue.notFound`.
   if (notFound || !canonicalId) return <IssueNotFound showBackLink={!onDelete} />;
+  if (suppressDetail) return null;
 
   // The page hosts a side peek so Shift+Click on an issue mention in the
   // description or comments opens it floating over the page. Keyed so moving
@@ -91,8 +100,20 @@ export function IssueDetailRoute({ routeId, onDelete }: IssueDetailRouteProps) {
       <IssueDetail
         issueId={canonicalId}
         onDelete={onDelete}
-        highlightCommentId={highlight.commentId}
+        onDone={onDone}
+        onInitialContentReady={onInitialContentReady}
+        highlightCommentId={highlightCommentId ?? highlight.commentId}
+        highlightRequestToken={highlightRequestToken}
+        defaultSidebarOpen={defaultSidebarOpen}
+        layoutId={layoutId}
+        leadingAction={leadingAction}
       />
     </IssuePeekHost>
   );
 }
+
+/** Cached bodies do not own URL normalization; the active route keeps that responsibility. */
+export const CachedIssueDetail = memo(function CachedIssueDetail({ issueId }: { issueId: string }) {
+  const highlight = useCommentHighlightHash();
+  return <IssuePeekHost><IssueDetail issueId={issueId} highlightCommentId={highlight.commentId} /></IssuePeekHost>;
+});
