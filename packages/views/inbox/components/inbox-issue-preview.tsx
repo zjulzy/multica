@@ -22,6 +22,7 @@ import { IssueProjectPicker } from "../../projects/components/issue-project-pick
 import { ReplyInput } from "../../issues/components/reply-input";
 import { CommentInput } from "../../issues/components/comment-input";
 import { selectInboxConversation } from "./inbox-conversation";
+import { scrollInboxTargetIntoView } from "./scroll-inbox-target";
 
 const LightweightInboxContext = createContext({ enabled: false, replyLimit: 6 });
 export const LightweightInboxProvider = LightweightInboxContext.Provider;
@@ -50,8 +51,9 @@ function InboxIssuePreviewContent({ issueId, highlightCommentId, highlightReques
   const { timeline, loading, isError, refetch, submitReply, submitComment } = useIssueTimeline(issueId, user?.id);
   const selected = useMemo(() => selectInboxConversation(timeline, highlightCommentId, replyLimit), [timeline, highlightCommentId, replyLimit]);
   const targetRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (highlightCommentId && !loading && !selected.targetMissing) targetRef.current?.scrollIntoView?.({ block: "nearest" });
+    if (highlightCommentId && !loading && !selected.targetMissing && scrollerRef.current && targetRef.current) scrollInboxTargetIntoView(scrollerRef.current, targetRef.current);
   }, [issueId, highlightCommentId, highlightRequestToken, loading, selected.targetMissing]);
   const fullPath = `${paths.issueDetail(issue?.identifier ?? issueId)}${highlightCommentId ? `#comment-${encodeURIComponent(highlightCommentId)}` : ""}`;
 
@@ -67,7 +69,7 @@ function InboxIssuePreviewContent({ issueId, highlightCommentId, highlightReques
       <Button variant={sidebarOpen ? "secondary" : "ghost"} size="icon-sm" aria-label={issueT(($) => $.detail.sidebar_tooltip)} aria-expanded={sidebarOpen} onClick={() => setSidebarOpen((open) => !open)}><PanelRight /></Button>
     </div>
     <div className="flex min-h-0 min-w-0 flex-1">
-    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4">
+    <div ref={scrollerRef} className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
         {(loading || issueQuery.isLoading) && <div role="status" className="py-8 text-center text-muted-foreground">{t(($) => $.detail.preview_loading)}</div>}
         {!loading && isError && <div role="alert" className="py-4 text-muted-foreground">{t(($) => $.detail.preview_load_failed)} <Button size="sm" variant="outline" onClick={() => void refetch()}>{t(($) => $.list.retry)}</Button></div>}
