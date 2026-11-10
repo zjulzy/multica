@@ -1269,6 +1269,8 @@
       "inbox_dock_description": "在視窗底部常駐可收合的收件匣，並隱藏側邊欄中的收件匣入口。",
       "interface_motion_title": "介面動效",
       "sidebar_font_title": "側邊欄字體大小",
+      "meego_sync_title": "Meego 同步入口",
+      "meego_sync_description": "在相符的工作區顯示 Meego 同步入口。",
       "performance_title": "效能總覽入口",
       "performance_description": "在左側欄顯示效能總覽入口。",
       "liwork_title": "LiWork 連線面板",

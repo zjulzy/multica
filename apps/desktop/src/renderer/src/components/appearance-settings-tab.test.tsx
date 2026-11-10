@@ -26,6 +26,8 @@ const translations = {
       liwork_description: "Show LiWork",
       performance_title: "Performance monitor",
       performance_description: "Show performance",
+      meego_sync_title: "Meego sync",
+      meego_sync_description: "Show Meego sync",
       pinned_issue_cache_title: "Pinned issue cache",
       pinned_issue_cache_description: "Keep visited pinned issues in memory",
     },
@@ -54,6 +56,7 @@ describe("AppearanceSettingsTab", () => {
       sidebarFontSize: "standard",
       pinnedIssueCacheEnabled: true,
       performanceMonitorEnabled: true,
+      meegoSyncEnabled: true,
     });
   });
 
@@ -84,6 +87,11 @@ describe("AppearanceSettingsTab", () => {
     render(<AppearanceSettingsTab />);
     fireEvent.click(screen.getByRole("switch", { name: "Performance monitor" }));
     expect(useDesktopPrefsStore.getState().performanceMonitorEnabled).toBe(false);
+  });
+  it("allows hiding the Meego sync entry", () => {
+    render(<AppearanceSettingsTab />);
+    fireEvent.click(screen.getByRole("switch", { name: "Meego sync" }));
+    expect(useDesktopPrefsStore.getState().meegoSyncEnabled).toBe(false);
   });
 
   it("changes sidebar text size without changing the other settings", () => {

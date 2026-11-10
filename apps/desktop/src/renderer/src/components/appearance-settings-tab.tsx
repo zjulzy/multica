@@ -26,12 +26,17 @@ export function AppearanceSettingsTab() {
   const setLiworkMonitorEnabled = useDesktopPrefsStore((s) => s.setLiworkMonitorEnabled);
   const performanceMonitorEnabled = useDesktopPrefsStore((s) => s.performanceMonitorEnabled);
   const setPerformanceMonitorEnabled = useDesktopPrefsStore((s) => s.setPerformanceMonitorEnabled);
+  const meegoSyncEnabled = useDesktopPrefsStore((s) => s.meegoSyncEnabled);
+  const setMeegoSyncEnabled = useDesktopPrefsStore((s) => s.setMeegoSyncEnabled);
   const pinnedIssueCacheEnabled = useDesktopPrefsStore((s) => s.pinnedIssueCacheEnabled);
   const setPinnedIssueCacheEnabled = useDesktopPrefsStore((s) => s.setPinnedIssueCacheEnabled);
 
   return (
     <SettingsTab title={t(($) => $.desktop.appearance.title)}>
       <SettingsCard>
+        <SettingsRow label={t(($) => $.desktop.appearance.meego_sync_title)} description={t(($) => $.desktop.appearance.meego_sync_description)}>
+          <Switch checked={meegoSyncEnabled} onCheckedChange={setMeegoSyncEnabled} aria-label={t(($) => $.desktop.appearance.meego_sync_title)} />
+        </SettingsRow>
         <SettingsRow label={t(($) => $.desktop.appearance.performance_title)} description={t(($) => $.desktop.appearance.performance_description)}>
           <Switch checked={performanceMonitorEnabled} onCheckedChange={setPerformanceMonitorEnabled} aria-label={t(($) => $.desktop.appearance.performance_title)} />
         </SettingsRow>

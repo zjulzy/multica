@@ -20,6 +20,7 @@ describe("spaceForPath", () => {
     [ws.issues(), "work"],
     [ws.issueDetail("MUL-1"), "work"],
     [ws.projectDetail("p-1"), "work"],
+    ["/acme/meego-sync", "work"],
     [ws.agentDetail("a-1"), "team"],
     [ws.squadDetail("s-1"), "team"],
     [ws.memberDetail("m-1"), "team"],

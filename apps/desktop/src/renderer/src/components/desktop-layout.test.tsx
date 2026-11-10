@@ -6,6 +6,8 @@ import { I18nProvider } from "@multica/core/i18n/react";
 import { useSidebar } from "@multica/ui/components/ui/sidebar";
 import { RESOURCES } from "@multica/views/locales";
 
+vi.mock("./meego-sync-nav", () => ({ MeegoSyncNav: () => null }));
+
 // The shell resolves the mocked `getCurrentSlug()` against the workspace list
 // before mounting workspace-scoped chrome, so the list has to contain it or
 // the rail under test never renders. Gating behaviour itself is covered by

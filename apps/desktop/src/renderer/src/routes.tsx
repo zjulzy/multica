@@ -23,6 +23,7 @@ import { DesktopRuntimesPage } from "./components/desktop-runtimes-page";
 import { DesktopAgentsPage } from "./components/desktop-agents-page";
 import { LiworkMonitorPage } from "./components/liwork-monitor-page";
 import { PerformanceDashboard } from "./components/performance-dashboard";
+import { MeegoSyncPage } from "./components/meego-sync-page";
 import {
   AiCreateAgentPage,
   ManualCreateAgentPage,
@@ -166,6 +167,7 @@ export const appRoutes: RouteObject[] = [
           { index: true, element: null },
           { path: "liwork", element: <LiworkMonitorPage />, handle: { title: "LiWork" } },
           { path: "performance", element: <PerformanceDashboard />, handle: { title: "Performance" } },
+          { path: "meego-sync", element: <MeegoSyncPage />, handle: { title: "Meego Sync" } },
           {
             path: "issues",
             element: (

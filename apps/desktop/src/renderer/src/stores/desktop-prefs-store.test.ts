@@ -13,6 +13,14 @@ beforeEach(() => {
 });
 
 describe("desktop prefs store", () => {
+  it("enables the Meego entry for existing preferences and persists disabling it", async () => {
+    localStorage.setItem("multica_desktop_prefs", JSON.stringify({ state: {}, version: 11 }));
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().meegoSyncEnabled).toBe(true);
+    useDesktopPrefsStore.getState().setMeegoSyncEnabled(false);
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().meegoSyncEnabled).toBe(false);
+  });
   it("enables the performance entry for existing preferences and persists changes", async () => {
     localStorage.setItem("multica_desktop_prefs", JSON.stringify({ state: {}, version: 10 }));
     await useDesktopPrefsStore.persist.rehydrate();

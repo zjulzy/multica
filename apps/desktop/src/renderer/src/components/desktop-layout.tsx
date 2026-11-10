@@ -51,6 +51,7 @@ import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 import { DesktopInboxDockLayout } from "./inbox-dock";
 import { SakuraDecoration } from "./sakura-decoration";
 import { ThemeAmbience } from "./theme-ambience";
+import { MeegoSyncNav } from "./meego-sync-nav";
 import { TabBar } from "./tab-bar";
 import { TabContent } from "./tab-content";
 import { EmbeddedGuestHost } from "./embedded-guest-host";
@@ -99,7 +100,7 @@ function DesktopRail({ hub, dockEnabled, slug }: { hub: React.ReactNode; dockEna
       topSlot={<RailTopSpacer />}
       globalActions={false}
       bottomSlot={hub}
-      extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>}
+      extraItems={<><MeegoSyncNav />{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>}
       hiddenSpaces={dockEnabled ? ["inbox", "chat"] : []}
       className={cn("hidden pt-0 md:flex", singleTabMode ? "[--rail-divider-offset:3rem]" : "[--rail-divider-offset:2.5rem]")}
     />
@@ -436,7 +437,7 @@ export function DesktopShell() {
                 {slug && (
                   <DesktopRail slug={slug} dockEnabled={inboxDockEnabled} hub={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />
                 )}
-                {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["inbox", "chat"] : []} extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
+                {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["inbox", "chat"] : []} extraItems={<><MeegoSyncNav />{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
                 {/* Right side: header + content card */}
                 <div className="flex flex-1 min-w-0 flex-col">
                   <MainTopBar railMounted={Boolean(slug)} headerSlotRef={setHeaderSlot} />

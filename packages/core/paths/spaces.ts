@@ -33,6 +33,7 @@ const SPACE_BY_SEGMENT: Record<string, AppSpaceId> = {
   issues: "work",
   projects: "work",
   views: "work",
+  "meego-sync": "work",
   agents: "team",
   squads: "team",
   members: "team",

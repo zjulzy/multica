@@ -1275,6 +1275,8 @@
       "inbox_dock_description": "Conservez une boîte de réception repliable en bas de la fenêtre et masquez son entrée dans la barre latérale.",
       "interface_motion_title": "Animations de l’interface",
       "sidebar_font_title": "Taille du texte latéral",
+      "meego_sync_title": "Synchronisation Meego",
+      "meego_sync_description": "Afficher Meego dans son espace de travail associé.",
       "performance_title": "Aperçu des performances",
       "performance_description": "Afficher les performances dans la barre latérale.",
       "liwork_title": "Moniteur LiWork",

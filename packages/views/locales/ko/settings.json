@@ -983,6 +983,8 @@
       "inbox_dock_description": "창 하단에 접을 수 있는 받은편지함을 고정하고 사이드바의 받은편지함 항목을 숨깁니다.",
       "interface_motion_title": "인터페이스 애니메이션",
       "sidebar_font_title": "사이드바 글자 크기",
+      "meego_sync_title": "Meego 동기화",
+      "meego_sync_description": "해당 작업 공간에 Meego 동기화를 표시합니다.",
       "performance_title": "성능 개요",
       "performance_description": "사이드바에 성능 개요를 표시합니다.",
       "liwork_title": "LiWork 모니터",

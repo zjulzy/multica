@@ -1275,6 +1275,8 @@
       "inbox_dock_description": "Keep a collapsible inbox at the bottom of the window and hide Inbox from the sidebar.",
       "interface_motion_title": "Interface motion",
       "sidebar_font_title": "Sidebar text size",
+      "meego_sync_title": "Meego sync",
+      "meego_sync_description": "Show Meego sync in its matching workspace.",
       "performance_title": "Performance monitor",
       "performance_description": "Show the performance overview in the sidebar.",
       "liwork_title": "LiWork monitor",
