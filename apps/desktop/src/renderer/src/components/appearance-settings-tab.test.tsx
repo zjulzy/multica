@@ -24,6 +24,8 @@ const translations = {
       sidebar_font_large: "Large",
       liwork_title: "LiWork monitor",
       liwork_description: "Show LiWork",
+      performance_title: "Performance monitor",
+      performance_description: "Show performance",
       pinned_issue_cache_title: "Pinned issue cache",
       pinned_issue_cache_description: "Keep visited pinned issues in memory",
     },
@@ -51,6 +53,7 @@ describe("AppearanceSettingsTab", () => {
       interfaceMotionEnabled: false,
       sidebarFontSize: "standard",
       pinnedIssueCacheEnabled: true,
+      performanceMonitorEnabled: true,
     });
   });
 
@@ -75,6 +78,12 @@ describe("AppearanceSettingsTab", () => {
     expect(
       screen.getByRole("switch", { name: "Bottom inbox panel" }),
     ).toBeChecked();
+  });
+
+  it("allows hiding the performance entry", () => {
+    render(<AppearanceSettingsTab />);
+    fireEvent.click(screen.getByRole("switch", { name: "Performance monitor" }));
+    expect(useDesktopPrefsStore.getState().performanceMonitorEnabled).toBe(false);
   });
 
   it("changes sidebar text size without changing the other settings", () => {

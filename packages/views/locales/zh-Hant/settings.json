@@ -1269,6 +1269,8 @@
       "inbox_dock_description": "在視窗底部常駐可收合的收件匣，並隱藏側邊欄中的收件匣入口。",
       "interface_motion_title": "介面動效",
       "sidebar_font_title": "側邊欄字體大小",
+      "performance_title": "效能總覽入口",
+      "performance_description": "在左側欄顯示效能總覽入口。",
       "liwork_title": "LiWork 連線面板",
       "liwork_description": "在左側按鈕列顯示 LiWork 入口。",
       "liwork_page": "LiWork 連線",

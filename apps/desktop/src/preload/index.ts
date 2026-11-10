@@ -154,6 +154,7 @@ const desktopAPI = {
     return () => ipcRenderer.removeListener("embedded-issue:navigation", handler);
   },
   getLiworkSnapshot: () => ipcRenderer.invoke("liwork:monitor-snapshot"),
+  getDesktopPerformanceSnapshot: () => ipcRenderer.invoke("performance:desktop-snapshot"),
   switchLiworkSession: (sessionId: string) => ipcRenderer.invoke("liwork:switch-session", sessionId),
   /** App version + normalized OS. Read once at preload time so the renderer
    *  can use it synchronously when initializing the API client. */

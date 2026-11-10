@@ -7,6 +7,7 @@ import {
   nativeImage,
   Notification,
   screen,
+  webContents,
 } from "electron";
 import { homedir } from "os";
 import { join } from "path";
@@ -21,6 +22,7 @@ import {
 } from "./daemon-manager";
 import { setupLocalDirectory } from "./local-directory";
 import { getLiworkSnapshot, switchLiworkSession } from "./liwork-monitor";
+import { buildPerformanceSnapshot } from "./performance-monitor";
 import { configureLinuxFileDialogs } from "./linux-file-dialog";
 import { openExternalSafely, downloadURLSafely } from "./external-url";
 import { installContextMenu } from "./context-menu";
@@ -801,6 +803,14 @@ if (!gotTheLock) {
     // (the renderer itself runs sandboxed).
     ipcMain.handle("shell:openExternal", (_event, url: string) => {
       return openExternalSafely(url);
+    });
+    let performanceSampled = false;
+    ipcMain.handle("performance:desktop-snapshot", (event) => {
+      if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");
+      const renderers = webContents.getAllWebContents().filter((contents) => !contents.isDestroyed() && (contents.getType() === "window" || contents.getType() === "webview")).map((contents) => ({ pid: contents.getOSProcessId(), kind: contents.getType() === "webview" ? "cache" as const : "window" as const }));
+      const result = buildPerformanceSnapshot(app.getAppMetrics(), renderers, performanceSampled, Date.now());
+      performanceSampled = true;
+      return result;
     });
     ipcMain.handle("liwork:monitor-snapshot", (event) => {
       if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");

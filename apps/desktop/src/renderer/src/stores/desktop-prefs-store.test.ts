@@ -13,6 +13,14 @@ beforeEach(() => {
 });
 
 describe("desktop prefs store", () => {
+  it("enables the performance entry for existing preferences and persists changes", async () => {
+    localStorage.setItem("multica_desktop_prefs", JSON.stringify({ state: {}, version: 10 }));
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().performanceMonitorEnabled).toBe(true);
+    useDesktopPrefsStore.getState().setPerformanceMonitorEnabled(false);
+    await useDesktopPrefsStore.persist.rehydrate();
+    expect(useDesktopPrefsStore.getState().performanceMonitorEnabled).toBe(false);
+  });
   it("migrates and persists a bounded lightweight inbox reply limit", async () => {
     localStorage.setItem("multica_desktop_prefs", JSON.stringify({ state: {}, version: 9 }));
     await useDesktopPrefsStore.persist.rehydrate();

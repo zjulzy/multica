@@ -1269,6 +1269,8 @@
       "inbox_dock_description": "ウィンドウ下部に折りたたみ可能な受信トレイを常設し、サイドバーの受信トレイ項目を非表示にします。",
       "interface_motion_title": "インターフェースのアニメーション",
       "sidebar_font_title": "サイドバーの文字サイズ",
+      "performance_title": "パフォーマンス概要",
+      "performance_description": "サイドバーにパフォーマンス概要を表示します。",
       "liwork_title": "LiWork モニター",
       "liwork_description": "ナビゲーションに LiWork を表示します。",
       "liwork_page": "LiWork 接続",

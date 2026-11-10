@@ -21,6 +21,7 @@ interface DesktopPrefsStore {
   interfaceMotionEnabled: boolean;
   sidebarFontSize: "small" | "standard" | "large";
   liworkMonitorEnabled: boolean;
+  performanceMonitorEnabled: boolean;
   pinnedIssueCacheEnabled: boolean;
   setSingleTabMode: (enabled: boolean) => void;
   setInboxDockEnabled: (enabled: boolean) => void;
@@ -32,6 +33,7 @@ interface DesktopPrefsStore {
   setInterfaceMotionEnabled: (enabled: boolean) => void;
   setSidebarFontSize: (size: "small" | "standard" | "large") => void;
   setLiworkMonitorEnabled: (enabled: boolean) => void;
+  setPerformanceMonitorEnabled: (enabled: boolean) => void;
   setPinnedIssueCacheEnabled: (enabled: boolean) => void;
 }
 
@@ -48,6 +50,7 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       interfaceMotionEnabled: false,
       sidebarFontSize: "standard",
       liworkMonitorEnabled: true,
+      performanceMonitorEnabled: true,
       pinnedIssueCacheEnabled: true,
       setSingleTabMode: (enabled) => set({ singleTabMode: enabled }),
       setInboxDockEnabled: (enabled) =>
@@ -61,11 +64,12 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       setInterfaceMotionEnabled: (enabled) => set({ interfaceMotionEnabled: enabled }),
       setSidebarFontSize: (size) => set({ sidebarFontSize: size }),
       setLiworkMonitorEnabled: (enabled) => set({ liworkMonitorEnabled: enabled }),
+      setPerformanceMonitorEnabled: (enabled) => set({ performanceMonitorEnabled: enabled }),
       setPinnedIssueCacheEnabled: (enabled) => set({ pinnedIssueCacheEnabled: enabled }),
     }),
     {
       name: "multica_desktop_prefs",
-      version: 10,
+      version: 11,
       migrate: (persistedState) => {
         const state = persistedState as Partial<DesktopPrefsStore>;
         return {
@@ -80,6 +84,7 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
           interfaceMotionEnabled: state.interfaceMotionEnabled ?? false,
           sidebarFontSize: state.sidebarFontSize === "small" || state.sidebarFontSize === "large" ? state.sidebarFontSize : "standard",
           liworkMonitorEnabled: state.liworkMonitorEnabled ?? true,
+          performanceMonitorEnabled: state.performanceMonitorEnabled ?? true,
           pinnedIssueCacheEnabled: state.pinnedIssueCacheEnabled ?? true,
         } as DesktopPrefsStore;
       },

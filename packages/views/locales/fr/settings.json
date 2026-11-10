@@ -1275,6 +1275,8 @@
       "inbox_dock_description": "Conservez une boîte de réception repliable en bas de la fenêtre et masquez son entrée dans la barre latérale.",
       "interface_motion_title": "Animations de l’interface",
       "sidebar_font_title": "Taille du texte latéral",
+      "performance_title": "Aperçu des performances",
+      "performance_description": "Afficher les performances dans la barre latérale.",
       "liwork_title": "Moniteur LiWork",
       "liwork_description": "Afficher LiWork dans la barre de navigation.",
       "liwork_page": "Connexions LiWork",

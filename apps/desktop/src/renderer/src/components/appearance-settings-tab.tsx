@@ -24,12 +24,17 @@ export function AppearanceSettingsTab() {
   const setSidebarFontSize = useDesktopPrefsStore((s) => s.setSidebarFontSize);
   const liworkMonitorEnabled = useDesktopPrefsStore((s) => s.liworkMonitorEnabled);
   const setLiworkMonitorEnabled = useDesktopPrefsStore((s) => s.setLiworkMonitorEnabled);
+  const performanceMonitorEnabled = useDesktopPrefsStore((s) => s.performanceMonitorEnabled);
+  const setPerformanceMonitorEnabled = useDesktopPrefsStore((s) => s.setPerformanceMonitorEnabled);
   const pinnedIssueCacheEnabled = useDesktopPrefsStore((s) => s.pinnedIssueCacheEnabled);
   const setPinnedIssueCacheEnabled = useDesktopPrefsStore((s) => s.setPinnedIssueCacheEnabled);
 
   return (
     <SettingsTab title={t(($) => $.desktop.appearance.title)}>
       <SettingsCard>
+        <SettingsRow label={t(($) => $.desktop.appearance.performance_title)} description={t(($) => $.desktop.appearance.performance_description)}>
+          <Switch checked={performanceMonitorEnabled} onCheckedChange={setPerformanceMonitorEnabled} aria-label={t(($) => $.desktop.appearance.performance_title)} />
+        </SettingsRow>
         <SettingsRow label={t(($) => $.desktop.appearance.liwork_title)} description={t(($) => $.desktop.appearance.liwork_description)}>
           <Switch checked={liworkMonitorEnabled} onCheckedChange={setLiworkMonitorEnabled} aria-label={t(($) => $.desktop.appearance.liwork_title)} />
         </SettingsRow>

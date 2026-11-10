@@ -39,7 +39,8 @@ import {
 } from "@multica/views/navigation";
 import { getCurrentSlug, subscribeToCurrentSlug } from "@multica/core/platform";
 import { useDesktopUnreadBadge } from "@multica/views/platform";
-import { useT } from "@multica/views/i18n";
+import { useLocale, useT } from "@multica/views/i18n";
+import { Activity } from "@multica/ui/icons";
 import {
   DesktopNavigationProvider,
   routeContentLinkPath,
@@ -82,15 +83,23 @@ function LiworkRailItem({ slug }: { slug: string }) {
   </AppLink></li>;
 }
 
+function PerformanceRailItem({ slug }: { slug: string }) {
+  const { pathname } = useNavigation();
+  const label = useLocale().startsWith("zh") ? "性能" : "Performance";
+  const href = `/${encodeURIComponent(slug)}/performance`;
+  return <li><AppLink href={href} aria-label={label} aria-current={pathname === href ? "page" : undefined} className="group relative flex h-[52px] w-[52px] flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:text-sidebar-accent-foreground"><Activity className="size-5" /><span className="text-micro leading-[14px]">{label}</span></AppLink></li>;
+}
+
 function DesktopRail({ hub, dockEnabled, slug }: { hub: React.ReactNode; dockEnabled: boolean; slug: string }) {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   const liworkMonitorEnabled = useDesktopPrefsStore((s) => s.liworkMonitorEnabled);
+  const performanceMonitorEnabled = useDesktopPrefsStore((s) => s.performanceMonitorEnabled);
   return (
     <AppRail
       topSlot={<RailTopSpacer />}
       globalActions={false}
       bottomSlot={hub}
-      extraItems={liworkMonitorEnabled ? <LiworkRailItem slug={slug} /> : null}
+      extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>}
       hiddenSpaces={dockEnabled ? ["inbox", "chat"] : []}
       className={cn("hidden pt-0 md:flex", singleTabMode ? "[--rail-divider-offset:3rem]" : "[--rail-divider-offset:2.5rem]")}
     />
@@ -170,6 +179,7 @@ function SingleTabHeaderSlot({
   const activeUrl = useActiveTabUrl();
   const { visual } = useTabPresentation(activeUrl ?? "");
   const isLiwork = activeUrl?.split(/[?#]/)[0]?.split("/")[2] === "liwork";
+  const isPerformance = activeUrl?.split(/[?#]/)[0]?.split("/")[2] === "performance";
   const alignmentRef = useRef<HTMLDivElement>(null);
   useHeaderAlignment(alignmentRef);
   return (
@@ -180,7 +190,7 @@ function SingleTabHeaderSlot({
         aria-hidden
         className="flex size-6 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-muted-foreground group-has-[[data-page-header-icon]]/slot:hidden"
       >
-        {isLiwork ? <LiworkMark /> : <ResourceLeadingVisual visual={visual} />}
+        {isLiwork ? <LiworkMark /> : isPerformance ? <Activity /> : <ResourceLeadingVisual visual={visual} />}
       </span>
       <div
         ref={headerSlotRef}
@@ -387,6 +397,7 @@ export function DesktopShell() {
 
   const renderedPathname = useRenderedRouteStore((s) => s.pathname);
   const liworkMonitorEnabled = useDesktopPrefsStore((s) => s.liworkMonitorEnabled);
+  const performanceMonitorEnabled = useDesktopPrefsStore((s) => s.performanceMonitorEnabled);
 
   return (
     <DesktopNavigationProvider>
@@ -425,7 +436,7 @@ export function DesktopShell() {
                 {slug && (
                   <DesktopRail slug={slug} dockEnabled={inboxDockEnabled} hub={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />
                 )}
-                {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["inbox", "chat"] : []} extraItems={liworkMonitorEnabled ? <LiworkRailItem slug={slug} /> : null} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
+                {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["inbox", "chat"] : []} extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
                 {/* Right side: header + content card */}
                 <div className="flex flex-1 min-w-0 flex-col">
                   <MainTopBar railMounted={Boolean(slug)} headerSlotRef={setHeaderSlot} />

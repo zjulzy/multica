@@ -145,15 +145,22 @@ function renderShell() {
 }
 
 beforeEach(() => {
+  window.matchMedia = (query: string) => ({ matches: query === "(max-width: 767px)" && window.innerWidth <= 767, media: query, onchange: null, addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false });
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
     value: 1280,
   });
   localStorage.clear();
-  useDesktopPrefsStore.setState({ liworkMonitorEnabled: true });
+  useDesktopPrefsStore.setState({ liworkMonitorEnabled: true, performanceMonitorEnabled: true });
 });
 
 describe("DesktopShell sidebar trigger", () => {
+  it("offers the performance entry and respects its preference", () => {
+    const view = renderShell();
+    expect(view.getByRole("link", { name: "Performance" })).toHaveAttribute("href", "/acme/performance");
+    act(() => useDesktopPrefsStore.getState().setPerformanceMonitorEnabled(false));
+    expect(view.queryByRole("link", { name: "Performance" })).not.toBeInTheDocument();
+  });
   it("offers the LiWork entry and respects its preference", () => {
     const view = renderShell();
     const link = view.getByRole("link", { name: "LiWork" });

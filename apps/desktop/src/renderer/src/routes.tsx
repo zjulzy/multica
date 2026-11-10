@@ -22,6 +22,7 @@ import { SkillsPage } from "@multica/views/skills";
 import { DesktopRuntimesPage } from "./components/desktop-runtimes-page";
 import { DesktopAgentsPage } from "./components/desktop-agents-page";
 import { LiworkMonitorPage } from "./components/liwork-monitor-page";
+import { PerformanceDashboard } from "./components/performance-dashboard";
 import {
   AiCreateAgentPage,
   ManualCreateAgentPage,
@@ -164,6 +165,7 @@ export const appRoutes: RouteObject[] = [
           // invariant 1: the router never self-navigates).
           { index: true, element: null },
           { path: "liwork", element: <LiworkMonitorPage />, handle: { title: "LiWork" } },
+          { path: "performance", element: <PerformanceDashboard />, handle: { title: "Performance" } },
           {
             path: "issues",
             element: (

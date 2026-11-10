@@ -40,6 +40,7 @@ interface DesktopAPI {
   sendEmbeddedIssueNavigation: (message: unknown) => void;
   onEmbeddedIssueNavigation: (callback: (message: unknown) => void) => () => void;
   getLiworkSnapshot: () => Promise<import("../shared/liwork-monitor").LiworkSnapshot>;
+  getDesktopPerformanceSnapshot: () => Promise<import("../shared/performance-monitor").DesktopPerformanceSnapshot>;
   switchLiworkSession: (sessionId: string) => Promise<void>;
   /** App version + normalized OS, captured synchronously at preload time. */
   appInfo: {
