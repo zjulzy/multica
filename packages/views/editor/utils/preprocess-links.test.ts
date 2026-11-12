@@ -8,6 +8,10 @@ import { preprocessLinks } from "@multica/ui/markdown/linkify";
 // detected URL at the first CJK full-width punctuation character.
 
 describe("preprocessLinks — CJK punctuation boundary", () => {
+  it("recognizes a Feishu issue URL immediately after a Chinese colon", () => {
+    const url = "https://project.feishu.cn/zgame_new/issue/detail/7164851633";
+    expect(preprocessLinks(`原单：${url}`)).toBe(`原单：[${url}](${url})`);
+  });
   it("stops URL at ideographic full stop 。", () => {
     const out = preprocessLinks("见 https://example.com/path。然后继续");
     expect(out).toBe("见 [https://example.com/path](https://example.com/path)。然后继续");

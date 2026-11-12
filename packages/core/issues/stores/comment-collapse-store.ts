@@ -9,6 +9,8 @@ import { defaultStorage } from "../../platform/storage";
  */
 interface CommentCollapseStore {
   collapsedByIssue: Record<string, string[]>;
+  initializedByIssue: Record<string, boolean>;
+  initializeDefaults: (issueId: string, commentIds: readonly string[]) => void;
   isCollapsed: (issueId: string, commentId: string) => boolean;
   toggle: (issueId: string, commentId: string) => void;
   /** Replace the issue's collapsed set with `commentIds` (fold-all). */
@@ -21,6 +23,16 @@ export const useCommentCollapseStore = create<CommentCollapseStore>()(
   persist(
     (set, get) => ({
       collapsedByIssue: {},
+      initializedByIssue: {},
+      initializeDefaults: (issueId, commentIds) => set((s) => {
+        if (s.initializedByIssue[issueId]) return s;
+        return {
+          initializedByIssue: { ...s.initializedByIssue, [issueId]: true },
+          collapsedByIssue: issueId in s.collapsedByIssue || commentIds.length === 0
+            ? s.collapsedByIssue
+            : { ...s.collapsedByIssue, [issueId]: [...new Set(commentIds)] },
+        };
+      }),
       isCollapsed: (issueId, commentId) => {
         const ids = get().collapsedByIssue[issueId];
         return ids ? ids.includes(commentId) : false;

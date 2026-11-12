@@ -92,6 +92,30 @@ export function rootCommentIds(entries: readonly TimelineEntry[]): string[] {
     .map((e) => e.id);
 }
 
+/** Default to the thread containing the most recently created comment or reply. */
+export function defaultCollapsedThreadIds(entries: readonly TimelineEntry[]): string[] {
+  const comments = entries.filter((entry) => entry.type === "comment");
+  const byId = new Map(comments.map((entry) => [entry.id, entry]));
+  const roots = comments.filter((entry) => !entry.parent_id);
+  if (roots.length < 2) return [];
+  let latestRoot: string | undefined;
+  let latestEntry: TimelineEntry | undefined;
+  for (const entry of sortTimelineEntriesAsc(comments)) {
+    let current = entry;
+    const seen = new Set<string>();
+    while (current.parent_id && !seen.has(current.id)) {
+      seen.add(current.id);
+      const parent = byId.get(current.parent_id);
+      if (!parent) break;
+      current = parent;
+    }
+    if (current.parent_id || seen.has(current.id)) continue;
+    latestEntry = entry;
+    latestRoot = current.id;
+  }
+  return latestEntry ? roots.filter((root) => root.id !== latestRoot).map((root) => root.id) : [];
+}
+
 /**
  * IDs of thread roots that carry a resolution (on the root itself or on a
  * reply) — the threads that render folded behind a bar until expanded via

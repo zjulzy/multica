@@ -12,6 +12,7 @@ import {
 } from "@multica/core/paths";
 import { isIssueIdentifier } from "@multica/ui/markdown";
 import type { LinkClickIntent } from "../../navigation/click-intent";
+import { openExternal } from "../../platform/open-external";
 
 /**
  * Top-level workspace-scoped routes. Used to detect "/{route}/..." paths that
@@ -266,7 +267,7 @@ export function openLink(
       }),
     );
   } else {
-    window.open(href, "_blank", "noopener,noreferrer");
+    openExternal(href);
   }
 }
 

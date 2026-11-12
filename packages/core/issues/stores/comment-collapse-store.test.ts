@@ -23,7 +23,7 @@ beforeAll(() => {
 
 describe("comment collapse store", () => {
   beforeEach(() => {
-    useCommentCollapseStore.setState({ collapsedByIssue: {} });
+    useCommentCollapseStore.setState({ collapsedByIssue: {}, initializedByIssue: {} });
   });
 
   it("toggle collapses and expands a single comment", () => {
@@ -36,6 +36,20 @@ describe("comment collapse store", () => {
     toggle("issue-1", "c1");
     expect(useCommentCollapseStore.getState().isCollapsed("issue-1", "c1")).toBe(false);
     expect(useCommentCollapseStore.getState().collapsedByIssue).toEqual({});
+  });
+  it("applies defaults once and preserves the user's later choice", () => {
+    const store = useCommentCollapseStore.getState();
+    store.initializeDefaults("issue-1", ["old"]);
+    expect(useCommentCollapseStore.getState().isCollapsed("issue-1", "old")).toBe(true);
+    store.toggle("issue-1", "old");
+    store.initializeDefaults("issue-1", ["old", "new"]);
+    expect(useCommentCollapseStore.getState().isCollapsed("issue-1", "old")).toBe(false);
+    expect(useCommentCollapseStore.getState().isCollapsed("issue-1", "new")).toBe(false);
+  });
+  it("preserves existing manually collapsed threads when upgrading", () => {
+    useCommentCollapseStore.setState({ collapsedByIssue: { "issue-1": ["manual"] } });
+    useCommentCollapseStore.getState().initializeDefaults("issue-1", ["old"]);
+    expect(useCommentCollapseStore.getState().collapsedByIssue["issue-1"]).toEqual(["manual"]);
   });
 
   it("collapseAll replaces the issue's collapsed set and dedupes ids", () => {

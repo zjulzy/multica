@@ -404,10 +404,17 @@ vi.mock("@multica/core/issues/stores", async () => ({
   // reader collapsed, so the card has to re-render when `toggle` runs.
   useCommentCollapseStore: (await vi.importActual<typeof import("zustand")>("zustand")).create<{
     collapsedByIssue: Record<string, string[]>;
+    initializedByIssue: Record<string, boolean>;
+    initializeDefaults: (issueId: string, ids: readonly string[]) => void;
     isCollapsed: (issueId: string, commentId: string) => boolean;
     toggle: (issueId: string, commentId: string) => void;
   }>()((set, get) => ({
     collapsedByIssue: {},
+    initializedByIssue: {},
+    initializeDefaults: (issueId, ids) => set((s) => s.initializedByIssue[issueId] ? s : ({
+      initializedByIssue: { ...s.initializedByIssue, [issueId]: true },
+      collapsedByIssue: issueId in s.collapsedByIssue || !ids.length ? s.collapsedByIssue : { ...s.collapsedByIssue, [issueId]: [...ids] },
+    })),
     isCollapsed: (issueId, commentId) => get().collapsedByIssue[issueId]?.includes(commentId) ?? false,
     toggle: (issueId, commentId) =>
       set((s) => {
@@ -531,7 +538,7 @@ beforeEach(() => {
   // The resolved-expand store is module-global (not per-mount like the old
   // useState); reset so one test's expansions can't leak into the next.
   useResolvedExpandStore.setState({ expandedByIssue: {} });
-  useCommentCollapseStore.setState({ collapsedByIssue: {} });
+  useCommentCollapseStore.setState({ collapsedByIssue: {}, initializedByIssue: {} });
 });
 
 // Mock modals
@@ -2548,6 +2555,26 @@ describe("IssueDetail (shared)", () => {
   });
 
   describe("highlightCommentId scroll-to-comment", () => {
+    it("initially folds older threads while keeping the most recently active thread open", async () => {
+      const older = { ...mockTimeline[0]!, id: "older-thread", parent_id: null, content: "Older root body", created_at: "2026-01-01T00:00:00Z" };
+      const newest = { ...older, id: "newer-thread", content: "Newer root body", created_at: "2026-01-02T00:00:00Z" };
+      const reply = { ...mockTimeline[1]!, id: "new-activity", parent_id: older.id, content: "Recent reply", created_at: "2026-01-03T00:00:00Z" };
+      mockApiObj.listTimeline.mockResolvedValue([older, newest, reply]);
+      renderIssueDetail();
+      await screen.findByText("Recent reply");
+      expect(useCommentCollapseStore.getState().isCollapsed("issue-1", newest.id)).toBe(true);
+      expect(useCommentCollapseStore.getState().isCollapsed("issue-1", older.id)).toBe(false);
+      expect(document.querySelector(`[data-comment-content="${newest.id}"]`)).toBeNull();
+    });
+    it("opens an initially folded older thread when a notification targets its reply", async () => {
+      const root = { ...mockTimeline[0]!, id: "older-root", parent_id: null, created_at: "2026-01-01T00:00:00Z" };
+      const target = { ...mockTimeline[1]!, id: "older-target", parent_id: root.id, content: "Target in old thread", created_at: "2026-01-02T00:00:00Z" };
+      const newest = { ...root, id: "newest-root", content: "Newest thread", created_at: "2026-01-03T00:00:00Z" };
+      mockApiObj.listTimeline.mockResolvedValue([root, target, newest]);
+      renderIssueDetailWithHighlight(target.id);
+      await waitFor(() => expect(hasHighlightedCommentBackground(document.getElementById(`comment-${target.id}`))).toBe(true));
+      expect(useCommentCollapseStore.getState().isCollapsed("issue-1", root.id)).toBe(false);
+    });
     it("temporarily reveals folded replies for issue search", async () => {
       const root = { ...mockTimeline[0]!, id: "find-fold-root" };
       const old = { ...mockTimeline[1]!, id: "find-fold-old", parent_id: root.id, content: "Searchable older reply", created_at: "2026-01-16T00:00:01Z" };

@@ -6,6 +6,7 @@ import { frozenIssueKey } from "../shared/frozen-issue-key";
 import { createRendererWebPreferences } from "./renderer-web-preferences";
 import { EmbeddedVisibleSet } from "./embedded-visible-set";
 import { parseEmbeddedIssuePresentation } from "../shared/embedded-issue-presentation";
+import { openExternalSafely } from "./external-url";
 
 type Dependencies = { isMain: (window: BrowserWindow) => boolean; userId: (window: BrowserWindow) => string | null; workspaceSlug: (window: BrowserWindow) => string | null; locale: () => string; rendererUrl: string };
 type Ticket = { owner: BrowserWindow; userId: string; workspaceId: string; key: string; context: IssueWindowContext; used: boolean; pool: boolean; poolReady: boolean };
@@ -79,7 +80,10 @@ export function installEmbeddedWebviewHost(owner: BrowserWindow) {
     contents.on("did-start-loading", () => console.info("[embedded-guest] loading"));
     contents.on("render-process-gone", (_event, details) => console.error("[embedded-guest] renderer-gone", details.reason));
     contents.on("unresponsive", () => console.error("[embedded-guest] unresponsive"));
-    contents.setWindowOpenHandler(() => ({ action: "deny" }));
+    contents.setWindowOpenHandler(({ url }) => {
+      void openExternalSafely(url);
+      return { action: "deny" };
+    });
     contents.on("will-navigate", (event, url) => { try { const destination = new URL(url), base = new URL(deps!.rendererUrl); if (destination.origin !== base.origin || destination.pathname !== base.pathname) event.preventDefault(); } catch { event.preventDefault(); } });
     contents.once("destroyed", () => { guests.delete(token); byContents.delete(contents); tickets.delete(token); active.get(owner)?.forget(token); });
   });

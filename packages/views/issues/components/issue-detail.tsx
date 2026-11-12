@@ -115,7 +115,7 @@ import { CommentInput } from "./comment-input";
 import { useCommentAnnotations } from "./use-comment-annotations";
 import { CurrentIssueRenderContextProvider } from "../current-issue-render-context";
 import { ResolvedThreadBar } from "./resolved-thread-bar";
-import { collectThreadReplies, deriveThreadResolution } from "./thread-utils";
+import { collectThreadReplies, defaultCollapsedThreadIds, deriveThreadResolution } from "./thread-utils";
 import { IssueAgentHeaderChip } from "./issue-agent-header-chip";
 import { IssueWakeupHeaderChip } from "./issue-wakeup-header-chip";
 import { IssueInboxRestoreButton } from "./issue-inbox-restore-button";
@@ -1628,6 +1628,11 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, def
     editComment, deleteComment, toggleResolveComment, toggleReaction: handleToggleReaction,
   } = useIssueTimeline(id, user?.id);
 
+  useLayoutEffect(() => {
+    if (timelineLoading || !timeline.some((entry) => entry.type === "comment" && !entry.parent_id)) return;
+    useCommentCollapseStore.getState().initializeDefaults(id, defaultCollapsedThreadIds(timeline));
+  }, [id, timeline, timelineLoading]);
+
   const readyIssueRef = useRef<string | null>(null);
 
   const loadTimingRef = useRef<{ id: string; startedAt: number; reported: boolean } | null>(null);
@@ -2359,6 +2364,12 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, def
     }
     if (didHighlightRef.current === highlightCommentId) return;
     const rootId = replyToRoot.get(highlightCommentId);
+    const rootToOpen = rootId ?? highlightCommentId;
+    const collapse = useCommentCollapseStore.getState();
+    if (collapse.isCollapsed(id, rootToOpen)) {
+      collapse.toggle(id, rootToOpen);
+      return;
+    }
     if (rootId && rootId !== highlightCommentId) {
       // Root resolved → the whole thread is a folded bar.
       const rootItem = items[targetIdx];
@@ -2469,7 +2480,7 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, def
       if (fade !== undefined) clearTimeout(fade);
       removeInterruptListeners();
     };
-  }, [highlightCommentId, highlightRequestToken, id, items, virtualItems, targetIdx, scrollContainerEl, replyToRoot, expandedResolved, timelineView, toggleResolvedExpand, isFlatTimeline]);
+  }, [highlightCommentId, highlightRequestToken, id, items, virtualItems, targetIdx, scrollContainerEl, replyToRoot, expandedResolved, timelineView, toggleResolvedExpand, isFlatTimeline, collapsedThreads]);
 
   const descEditorRef = useRef<ContentEditorRef>(null);
   const descriptionEditingRef = useRef(false);

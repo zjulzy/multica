@@ -41,6 +41,7 @@ beforeEach(() => {
 afterEach(() => {
   unbindWorkspaces();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("toInternalAppPath", () => {
@@ -90,6 +91,14 @@ describe("toInternalAppPath", () => {
 });
 
 describe("openLink", () => {
+  it("opens external links through the desktop bridge when popups are unavailable", () => {
+    const openExternal = vi.fn();
+    vi.stubGlobal("desktopAPI", { openExternal });
+    const url = "https://project.feishu.cn/zgame_new/issue/detail/7164851633";
+    openLink(url, "zgame", APP_ORIGIN);
+    expect(openExternal).toHaveBeenCalledWith(url);
+    expect(openSpy).not.toHaveBeenCalled();
+  });
   it("navigates in-app for a URL pointing back at this deployment (MUL-5208)", () => {
     openLink(`${APP_ORIGIN}/acme/issues/MUL-1`, "acme", APP_ORIGIN);
     expect(navigatedPaths()).toEqual(["/acme/issues/MUL-1"]);

@@ -1,10 +1,11 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 
-const ipc = vi.hoisted(() => ({ handlers: new Map<string, (...args: any[]) => any>(), listeners: new Map<string, (...args: any[]) => any>(), owner: null as any }));
+const ipc = vi.hoisted(() => ({ handlers: new Map<string, (...args: any[]) => any>(), listeners: new Map<string, (...args: any[]) => any>(), owner: null as any, openExternal: vi.fn() }));
 vi.mock("electron", () => ({
   BrowserWindow: { fromWebContents: () => ipc.owner },
   ipcMain: { handle: (name: string, fn: (...args: any[]) => any) => ipc.handlers.set(name, fn), on: (name: string, fn: (...args: any[]) => any) => ipc.listeners.set(name, fn) },
+  shell: { openExternal: ipc.openExternal },
 }));
 import { clearEmbeddedWebviews, installEmbeddedWebviewHost, setupEmbeddedWebviewExperiment } from "./embedded-webview-experiment";
 
@@ -21,6 +22,13 @@ describe("embedded issue warm pool", () => {
     contents.emit("will-attach-webview", attach, {}, { src: pool.url });
     expect(attach.preventDefault).not.toHaveBeenCalled();
     contents.emit("did-attach-webview", {}, guest);
+    const windowOpen = guest.setWindowOpenHandler.mock.calls[0][0];
+    ipc.openExternal.mockClear();
+    expect(windowOpen({ url: "https://project.feishu.cn/example" })).toEqual({ action: "deny" });
+    expect(ipc.openExternal).toHaveBeenCalledWith("https://project.feishu.cn/example");
+    ipc.openExternal.mockClear();
+    expect(windowOpen({ url: "file:///C:/secret" })).toEqual({ action: "deny" });
+    expect(ipc.openExternal).not.toHaveBeenCalled();
     const navigation = { preventDefault: vi.fn() };
     guest.emit("will-navigate", navigation, "file:///C:/elsewhere/other.html");
     expect(navigation.preventDefault).toHaveBeenCalled();

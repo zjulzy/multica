@@ -6,6 +6,7 @@ import {
   collectThreadReplies,
   resolvedThreadRootIds,
   rootCommentIds,
+  defaultCollapsedThreadIds,
 } from "./thread-utils";
 
 function comment(id: string, createdAt: string, parentId: string | null): TimelineEntry {
@@ -21,6 +22,17 @@ function comment(id: string, createdAt: string, parentId: string | null): Timeli
     comment_type: "comment",
   } as TimelineEntry;
 }
+
+describe("defaultCollapsedThreadIds", () => {
+  it("keeps the thread with the newest nested reply open", () => {
+    const entries = [comment("old", "2026-01-01T10:00:00Z", null), comment("new", "2026-01-01T11:00:00Z", null), comment("reply", "2026-01-01T12:00:00Z", "old"), comment("nested", "2026-01-01T13:00:00Z", "reply")];
+    expect(defaultCollapsedThreadIds(entries)).toEqual(["new"]);
+  });
+  it("returns nothing for an empty or single-thread timeline", () => {
+    expect(defaultCollapsedThreadIds([])).toEqual([]);
+    expect(defaultCollapsedThreadIds([comment("only", "2026-01-01T10:00:00Z", null)])).toEqual([]);
+  });
+});
 
 function bucketByParent(entries: TimelineEntry[]): Map<string, TimelineEntry[]> {
   const map = new Map<string, TimelineEntry[]>();
