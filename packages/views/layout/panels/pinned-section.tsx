@@ -12,11 +12,16 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { X } from "@multica/ui/icons";
+import { Bot, CircleUser, Layers, ListTodo, X } from "@multica/ui/icons";
 import { cn } from "@multica/ui/lib/utils";
 import { TooltipHint } from "@multica/ui/components/common/tooltip-hint";
 import { ShimmerText } from "@multica/ui/components/common/shimmer-text";
-import { ApiError } from "@multica/core/api";
+import { api, ApiError } from "@multica/core/api";
+import { pinnedViewScope, usePinnedSidebarViews } from "@multica/core/issue-views/pinned-sidebar-views";
+import { issueViewEverywhereOptions } from "@multica/core/issue-views/queries";
+import { issueViewTarget } from "@multica/core/issue-views/view-target";
+import type { BuiltinViewKey } from "@multica/core/issue-views/sidebar-views";
+import { useBuiltinViewNavigation } from "../../issue-views/builtin-views";
 import { useIssueStatuses } from "@multica/core/issue-statuses/hooks";
 import { issueDetailOptions } from "@multica/core/issues/queries";
 import { projectDetailOptions } from "@multica/core/projects/queries";
@@ -24,9 +29,10 @@ import { pinListOptions } from "@multica/core/pins/queries";
 import { useSidebarTreeStore } from "@multica/core/issues/stores/sidebar-tree-store";
 import { useDeletePin, useReorderPins } from "@multica/core/pins/mutations";
 import { useIssueUnread } from "@multica/core/issues/unread";
-import { useWorkspacePaths, type WorkspacePaths } from "@multica/core/paths";
+import { isMyAgentsSearch, useWorkspacePaths, type WorkspacePaths } from "@multica/core/paths";
+import { issueViewContainerKey, useActiveIssueViewStore } from "@multica/core/issue-views/active-view-store";
 import type { Issue, PinnedItem } from "@multica/core/types";
-import { AppLink } from "../../navigation";
+import { AppLink, useNavigation } from "../../navigation";
 import { IssueActionsContextMenu } from "../../issues/actions";
 import { useStatusLabel } from "../../issues/utils/status-label";
 import { ProjectIcon } from "../../projects/components/project-icon";
@@ -46,10 +52,11 @@ import {
 // Stable empty default: an inline `= []` on useQuery is a new reference every
 // render while the query is disabled, which re-fires the sync effect below.
 const EMPTY_PINS: PinnedItem[] = [];
+const EMPTY_VIEW_IDS: string[] = [];
 const PINNED_PREVIEW_LIMIT = 5;
 
 function pinHref(p: WorkspacePaths, pin: PinnedItem): string {
-  return pin.item_type === "issue" ? p.issueDetail(pin.item_id) : p.projectDetail(pin.item_id);
+  return pin.item_type === "issue" ? p.issueDetail(pin.item_id) : pin.item_type === "view" ? p.issues() : p.projectDetail(pin.item_id);
 }
 
 /**
@@ -72,9 +79,20 @@ export function usePanelPins(
     ...pinListOptions(wsId ?? "", userId ?? ""),
     enabled: !!wsId && !!userId,
   });
-  // View pins moved into the Views section's starred list; a reorder here
-  // still carries them so the cache keeps them.
-  const pinnedItems = useMemo(() => allPins.filter((pin) => pin.item_type !== "view"), [allPins]);
+  const scope = pinnedViewScope(api.getBaseUrl(), wsId ?? "", userId ?? "");
+  const pinnedViews = usePinnedSidebarViews((state) => state.byScope[scope] ?? EMPTY_VIEW_IDS);
+  const customOrder = usePinnedSidebarViews((state) => state.orderByScope?.[scope] ?? EMPTY_VIEW_IDS);
+  const { searchParams } = useNavigation();
+  const activeViews = useActiveIssueViewStore((state) => state.active);
+  const { data: allViews } = useQuery({ ...issueViewEverywhereOptions(wsId ?? ""), enabled: !!wsId && pinnedViews.some((id) => id.startsWith("view:")) });
+  const pinnedItems = useMemo(() => {
+    const base = allPins.filter((pin) => pin.item_type !== "view");
+    const local: PinnedItem[] = pinnedViews.map((id) => ({ id: `local-view:${id}`, workspace_id: wsId ?? "", user_id: userId ?? "", item_type: "view", item_id: id, position: 0, created_at: "" }));
+    const combined = [...base, ...local];
+    if (!customOrder.length) return combined;
+    const order = new Map(customOrder.map((id, index) => [id, index]));
+    return combined.sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity));
+  }, [allPins, pinnedViews, customOrder, wsId, userId]);
   const viewPins = useMemo(() => allPins.filter((pin) => pin.item_type === "view"), [allPins]);
 
   // Local presentational copy for drop-animation stability. Follows the query
@@ -95,10 +113,19 @@ export function usePanelPins(
   const visible = localPinnedWsId === (wsId ?? null) ? localPinned : EMPTY_PINS;
   const expanded = expandedWsId === (wsId ?? null);
   const displayed = persistentPins || expanded ? visible : visible.slice(0, PINNED_PREVIEW_LIMIT);
-  const isPinActive = (pin: PinnedItem) =>
-    pin.item_type === "issue"
-      ? pin.item_id === currentIssueId
-      : isPathWithin(pathname, pinHref(p, pin));
+  const isPinActive = (pin: PinnedItem) => {
+    if (pin.item_type === "issue") return pin.item_id === currentIssueId;
+    if (pin.item_type !== "view") return isPathWithin(pathname, pinHref(p, pin));
+    if (pin.item_id.startsWith("builtin:")) {
+      const key = pin.item_id.slice(8);
+      const container = issueViewContainerKey(wsId ?? "", { scope_type: key === "all_issues" ? "workspace" : "my" });
+      return (activeViews[container] ?? null) === null && (key === "all_issues" ? pathname === p.issues() : pathname === p.myIssues() && (key === "my_agents") === isMyAgentsSearch(searchParams));
+    }
+    const view = allViews?.find((item) => `view:${item.id}` === pin.item_id);
+    if (!view) return false;
+    const target = issueViewTarget(wsId ?? "", view, p);
+    return pathname === target.path && activeViews[target.containerKey] === view.id;
+  };
   // A collapsed section shows no rows, so it must not keep the tree unlit.
   const pinnedCollapsed = useSidebarTreeStore((s) => s.pinnedCollapsed);
   const isActivePinnedRoute = (persistentPins || !pinnedCollapsed) && displayed.some(isPinActive);
@@ -113,6 +140,7 @@ export function usePanelPins(
     setLocalPinned,
     isDraggingRef,
     viewPins,
+    scope,
   };
 }
 
@@ -125,7 +153,9 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
   const deletePin = useDeletePin();
   const reorderPins = useReorderPins();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const { visible, displayed, expanded, setExpanded, setLocalPinned, isDraggingRef, viewPins, isPinActive } = pins;
+  const { visible, displayed, expanded, setExpanded, setLocalPinned, isDraggingRef, viewPins, isPinActive, scope } = pins;
+  const unpinView = usePinnedSidebarViews((s) => s.unpin);
+  const reorderAll = usePinnedSidebarViews((s) => s.reorderAll);
   const collapsed = useSidebarTreeStore((s) => s.pinnedCollapsed);
   const setCollapsed = useSidebarTreeStore((s) => s.setPinnedCollapsed);
 
@@ -142,9 +172,10 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
       if (oldIndex === -1 || newIndex === -1) return;
       const reordered = arrayMove(visible, oldIndex, newIndex);
       setLocalPinned(reordered);
-      reorderPins.mutate([...reordered, ...viewPins]);
+      reorderAll(scope, reordered.map((pin) => pin.id));
+      reorderPins.mutate([...reordered.filter((pin) => pin.item_type !== "view"), ...viewPins]);
     },
-    [isDraggingRef, reorderPins, setLocalPinned, viewPins, visible],
+    [isDraggingRef, reorderPins, reorderAll, scope, setLocalPinned, viewPins, visible],
   );
 
   if (visible.length === 0) return null;
@@ -164,7 +195,7 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
                 pin={pin}
                 href={pinHref(p, pin)}
                 active={isPinActive(pin)}
-                onUnpin={() => deletePin.mutate({ itemType: pin.item_type, itemId: pin.item_id })}
+                onUnpin={() => pin.item_type === "view" ? unpinView(scope, pin.item_id) : deletePin.mutate({ itemType: pin.item_type, itemId: pin.item_id })}
                 wsId={wsId}
               />
             ))}
@@ -324,6 +355,16 @@ function PinRow({
   wsId: string;
 }) {
   const isIssue = pin.item_type === "issue";
+  const isView = pin.item_type === "view";
+  const builtin = isView && pin.item_id.startsWith("builtin:") ? pin.item_id.slice(8) as BuiltinViewKey : null;
+  const viewId = isView && pin.item_id.startsWith("view:") ? pin.item_id.slice(5) : "";
+  const viewsQuery = useQuery({ ...issueViewEverywhereOptions(wsId), enabled: !!viewId });
+  const builtinNav = useBuiltinViewNavigation();
+  const paths = useWorkspacePaths();
+  const { t } = useT("layout");
+  const { pathname, searchParams } = useNavigation();
+  const activeViews = useActiveIssueViewStore((s) => s.active);
+  const setActiveView = useActiveIssueViewStore((s) => s.setActive);
   const persistentPins = usePersistentPins();
   const agents = useIssueAgentState(wsId, isIssue ? pin.item_id : "");
   const unread = useIssueUnread(wsId, isIssue ? pin.item_id : "");
@@ -337,12 +378,27 @@ function PinRow({
 
   const triggeredRef = useRef(false);
   useEffect(() => {
-    const err = isIssue ? issueQuery.error : projectQuery.error;
+    const err = isIssue ? issueQuery.error : isView ? null : projectQuery.error;
     if (err instanceof ApiError && err.status === 404 && !triggeredRef.current) {
       triggeredRef.current = true;
       onUnpin();
     }
-  }, [isIssue, issueQuery.error, onUnpin, projectQuery.error]);
+  }, [isIssue, isView, issueQuery.error, onUnpin, projectQuery.error]);
+
+  if (isView) {
+    if (builtin) {
+      const label = builtin === "my_issues" ? t(($) => $.nav.my_issues) : builtin === "my_agents" ? t(($) => $.panels.work.my_agents) : t(($) => $.panels.work.all_issues);
+      const icon = builtin === "my_issues" ? <CircleUser className="size-4" /> : builtin === "my_agents" ? <Bot className="size-4" /> : <ListTodo className="size-4" />;
+      const containerKey = issueViewContainerKey(wsId, { scope_type: builtin === "all_issues" ? "workspace" : "my" });
+      const selected = (activeViews[containerKey] ?? null) === null && (builtin === "all_issues" ? pathname === paths.issues() : pathname === paths.myIssues() && (builtin === "my_agents") === isMyAgentsSearch(searchParams));
+      return <SortablePinItem pin={pin} href={builtinNav.hrefFor(builtin)} onUnpin={onUnpin} label={label} active={selected} iconNode={icon} onNavigate={() => builtinNav.prepare(builtin)} />;
+    }
+    if (viewsQuery.isPending) return <PinSkeleton />;
+    const view = viewsQuery.data?.find((item) => item.id === viewId);
+    if (!view) return null;
+    const target = issueViewTarget(wsId, view, paths);
+    return <SortablePinItem pin={pin} href={target.href} onUnpin={onUnpin} label={view.name} active={pathname === target.path && activeViews[target.containerKey] === view.id} iconNode={<Layers className="size-4" />} onNavigate={() => setActiveView(target.containerKey, view.id)} />;
+  }
 
   if (isIssue) {
     if (issueQuery.isPending) return <PinSkeleton />;
@@ -356,7 +412,7 @@ function PinRow({
     const baseTitle = shortened || issue.title;
     // Imported bug titles start with their build changelist, not the Multica ID.
     // Keep all following category tags and never turn a title into an empty row.
-    const withoutChangelist = baseTitle.replace(/^【CL\s*\d+】\s*/i, "");
+    const withoutChangelist = baseTitle.replace(/^(?:\[BUG-\d+\]\s*)?(?:【CL\s*\d+】\s*)?/i, "");
     const displayTitle = withoutChangelist || baseTitle;
     const tooltip = identifier && !shortened && issue.title.toUpperCase() !== identifier.toUpperCase()
       ? `${identifier} · ${issue.title}`

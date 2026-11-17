@@ -22,7 +22,6 @@ interface DesktopPrefsStore {
   sidebarFontSize: "small" | "standard" | "large";
   liworkMonitorEnabled: boolean;
   performanceMonitorEnabled: boolean;
-  meegoSyncEnabled: boolean;
   pinnedIssueCacheEnabled: boolean;
   setSingleTabMode: (enabled: boolean) => void;
   setInboxDockEnabled: (enabled: boolean) => void;
@@ -35,7 +34,6 @@ interface DesktopPrefsStore {
   setSidebarFontSize: (size: "small" | "standard" | "large") => void;
   setLiworkMonitorEnabled: (enabled: boolean) => void;
   setPerformanceMonitorEnabled: (enabled: boolean) => void;
-  setMeegoSyncEnabled: (enabled: boolean) => void;
   setPinnedIssueCacheEnabled: (enabled: boolean) => void;
 }
 
@@ -53,7 +51,6 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       sidebarFontSize: "standard",
       liworkMonitorEnabled: true,
       performanceMonitorEnabled: true,
-      meegoSyncEnabled: true,
       pinnedIssueCacheEnabled: true,
       setSingleTabMode: (enabled) => set({ singleTabMode: enabled }),
       setInboxDockEnabled: (enabled) =>
@@ -68,7 +65,6 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
       setSidebarFontSize: (size) => set({ sidebarFontSize: size }),
       setLiworkMonitorEnabled: (enabled) => set({ liworkMonitorEnabled: enabled }),
       setPerformanceMonitorEnabled: (enabled) => set({ performanceMonitorEnabled: enabled }),
-      setMeegoSyncEnabled: (enabled) => set({ meegoSyncEnabled: enabled }),
       setPinnedIssueCacheEnabled: (enabled) => set({ pinnedIssueCacheEnabled: enabled }),
     }),
     {
@@ -89,7 +85,6 @@ export const useDesktopPrefsStore = create<DesktopPrefsStore>()(
           sidebarFontSize: state.sidebarFontSize === "small" || state.sidebarFontSize === "large" ? state.sidebarFontSize : "standard",
           liworkMonitorEnabled: state.liworkMonitorEnabled ?? true,
           performanceMonitorEnabled: state.performanceMonitorEnabled ?? true,
-          meegoSyncEnabled: state.meegoSyncEnabled ?? true,
           pinnedIssueCacheEnabled: state.pinnedIssueCacheEnabled ?? true,
         } as DesktopPrefsStore;
       },

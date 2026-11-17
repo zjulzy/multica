@@ -9,6 +9,10 @@ import { renderWithI18n } from "../../test/i18n";
 import { IssueContextMenuProvider } from "../../issues/actions";
 import { PinnedSection, usePanelPins } from "./pinned-section";
 import { PersistentPinsProvider } from "../persistent-pins-context";
+import { pinnedViewScope, usePinnedSidebarViews } from "@multica/core/issue-views/pinned-sidebar-views";
+
+vi.mock("@multica/core/api", async (original) => ({ ...(await original<typeof import("@multica/core/api")>()), api: { getBaseUrl: () => "https://test.example" } }));
+vi.mock("../../issue-views/builtin-views", () => ({ useBuiltinViewNavigation: () => ({ hrefFor: () => "/acme/issues", prepare: vi.fn() }) }));
 
 vi.mock("../../issues/actions/issue-actions-menu-items", () => ({
   contextPrimitives: {},
@@ -22,6 +26,7 @@ const state = vi.hoisted(() => ({
   pins: [] as PinnedItem[],
   detail: { isPending: false, isError: false, data: null as unknown, error: null as unknown },
   project: { isPending: false, isError: false, data: null as unknown, error: null as unknown },
+  views: [] as Array<{ id: string; name: string; scope_type: string; scope_id: string | null }>,
   deletePin: vi.fn(),
 }));
 
@@ -43,6 +48,7 @@ vi.mock("@dnd-kit/sortable", () => ({
 }));
 vi.mock("@dnd-kit/utilities", () => ({ CSS: { Translate: { toString: () => undefined } } }));
 vi.mock("../../navigation", () => ({
+  useNavigation: () => ({ pathname: "/acme/issues", searchParams: new URLSearchParams() }),
   AppLink: ({ children, href, ...props }: { children: ReactNode; href: string } & React.ComponentProps<"a">) => (
     <a href={href} {...props}>
       {children}
@@ -66,6 +72,7 @@ vi.mock("@multica/core/issues/queries", () => ({ issueDetailOptions: () => ({ qu
 vi.mock("@multica/core/projects/queries", () => ({ projectDetailOptions: () => ({ queryKey: ["project"] }) }));
 vi.mock("@multica/core/issue-views/queries", () => ({
   issueViewDetailOptions: () => ({ queryKey: ["view"] }),
+  issueViewEverywhereOptions: () => ({ queryKey: ["views"] }),
 }));
 vi.mock("@tanstack/react-query", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-query")>()),
@@ -73,6 +80,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
     if (queryKey[0] === "pins") return { data: state.pins };
     if (queryKey[0] === "issue") return state.detail;
     if (queryKey[0] === "project") return state.project;
+    if (queryKey[0] === "views") return { isPending: false, isError: false, data: state.views };
     return { isPending: true, isError: false, data: undefined, error: null };
   },
 }));
@@ -103,11 +111,25 @@ beforeEach(() => {
   state.detail = { isPending: false, isError: false, data: null, error: null };
   state.project = { isPending: false, isError: false, data: null, error: null };
   state.deletePin.mockReset();
+  state.views = [];
+  usePinnedSidebarViews.setState({ byScope: {}, orderByScope: {} });
   activePinnedRoute = false;
   useSidebarTreeStore.setState({ pinnedCollapsed: false });
 });
 
 describe("PinnedSection", () => {
+  it("shows pinned builtin and saved views alongside issues and can unpin them", () => {
+    const scope = pinnedViewScope("https://test.example", "ws-1", "user-1");
+    usePinnedSidebarViews.getState().pin(scope, "builtin:all_issues");
+    usePinnedSidebarViews.getState().pin(scope, "view:saved-1");
+    state.views = [{ id: "saved-1", name: "My saved view", scope_type: "workspace", scope_id: null }];
+    state.detail = { isPending: false, isError: false, data: { identifier: "MUL-1", title: "Pinned issue", status: "todo" }, error: null };
+    renderWithI18n(<PersistentPinsProvider><Harness pathname="/acme/issues" /></PersistentPinsProvider>);
+    expect(screen.getByRole("link", { name: "My saved view" })).toHaveAttribute("href", "/acme/issues?view=saved-1");
+    expect(screen.getByRole("link", { name: "All issues" })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Unpin" })[2]!);
+    expect(screen.queryByRole("link", { name: "My saved view" })).toBeNull();
+  });
   it.each([
     ["MUL-123 修复加载问题", "修复加载问题", "MUL-123 修复加载问题"],
     ["mul-123：修复加载问题", "修复加载问题", "mul-123：修复加载问题"],
@@ -115,6 +137,8 @@ describe("PinnedSection", () => {
     ["MUL-123", "MUL-123", "MUL-123"],
     ["7141782723 外部缺陷编号", "7141782723 外部缺陷编号", "MUL-123 · 7141782723 外部缺陷编号"],
     ["【CL507334】【多人不同步】从远处来队友领地", "【多人不同步】从远处来队友领地", "MUL-123 · 【CL507334】【多人不同步】从远处来队友领地"],
+    ["[BUG-7170483147] 【CL521401】【相机】玩家在滑索上", "【相机】玩家在滑索上", "MUL-123 · [BUG-7170483147] 【CL521401】【相机】玩家在滑索上"],
+    ["[BUG-7170483147] 【CL521401】", "[BUG-7170483147] 【CL521401】", "MUL-123 · [BUG-7170483147] 【CL521401】"],
     ["【cl442360】【交互表现】出现两个按钮", "【交互表现】出现两个按钮", "MUL-123 · 【cl442360】【交互表现】出现两个按钮"],
     ["【CL507334】", "【CL507334】", "MUL-123 · 【CL507334】"],
     ["【CLIENT问题】连接失败", "【CLIENT问题】连接失败", "MUL-123 · 【CLIENT问题】连接失败"],

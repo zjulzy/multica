@@ -15,6 +15,7 @@ const actions = vi.hoisted(() => ({
 }));
 
 vi.mock("../../issue-views/use-view-actions", () => ({ useIssueViewActions: () => actions }));
+vi.mock("../../issue-views/use-pinned-view", () => ({ usePinnedView: () => ({ pinned: false, toggle: vi.fn() }) }));
 vi.mock("../../issue-views/delete-view-dialog", () => ({ DeleteViewDialog: () => null }));
 vi.mock("@dnd-kit/core", () => ({
   DndContext: ({ children }: { children: ReactNode }) => <>{children}</>,

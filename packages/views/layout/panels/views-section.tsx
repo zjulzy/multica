@@ -7,7 +7,7 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { restrictToFirstScrollableAncestor, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
-import { Bot, CircleUser, Copy, EyeOff, Layers, Link2, ListTodo, MoreHorizontal, Pencil, Plus, Trash2 } from "@multica/ui/icons";
+import { Bot, CircleUser, Copy, EyeOff, Layers, Link2, ListTodo, MoreHorizontal, Pencil, Pin, Plus, Trash2 } from "@multica/ui/icons";
 import { cn } from "@multica/ui/lib/utils";
 import { IconButton } from "@multica/ui/components/common/icon-button";
 import {
@@ -50,8 +50,9 @@ import { useIssueViewActions, type IssueViewActions } from "../../issue-views/us
 import { DeleteViewDialog } from "../../issue-views/delete-view-dialog";
 import { ViewNameInput } from "../../issue-views/view-name-input";
 import { useBuiltinViewNavigation } from "../../issue-views/builtin-views";
+import { usePinnedView } from "../../issue-views/use-pinned-view";
 import { useNavigation } from "../../navigation";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { PANEL_ROW_CLASS, PanelCount, PanelLink, PanelList, PanelSection, isPathWithin, panelRowStateClass } from "../panel-nav";
 import { SidebarIssueList, TREE_ROW_BUTTON_CLASS, TreeRow } from "./sidebar-tree";
 
@@ -291,6 +292,8 @@ function BuiltinViewRow({
   const linkRef = useRef<HTMLAnchorElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const builtinNav = useBuiltinViewNavigation();
+  const fixed = usePinnedView(wsId, builtinViewItemId(builtin));
+  const zh = useLocale().startsWith("zh");
   const { searchParams } = useNavigation();
   const myScope = useStore(myIssuesViewStore, (s) => myIssuesScopeFor(NO_SEARCH, s.scope));
   const workspaceKey = issueViewContainerKey(wsId, WORKSPACE_SCOPE);
@@ -349,6 +352,7 @@ function BuiltinViewRow({
         onNavigateInPlace={() => builtinNav.prepare(builtin)}
         trailing={
           <RowMenu label={t(($) => $.panels.work.view_actions, { name: label })} open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuItem onClick={fixed.toggle}><Pin className="size-3.5" />{fixed.pinned ? (zh ? "取消固定" : "Unpin") : (zh ? "固定到侧边栏" : "Pin to sidebar")}</DropdownMenuItem>
             <DropdownMenuItem onClick={() => actions.copyLink(href)}>
               <Link2 className="size-3.5" />
               {t(($) => $.panels.work.view_copy_link)}
@@ -400,6 +404,8 @@ function SavedViewRow({
   const { t } = useT("layout");
   const p = useWorkspacePaths();
   const { view } = item;
+  const fixed = usePinnedView(wsId, item.id);
+  const zh = useLocale().startsWith("zh");
   const listId = useId();
   const linkRef = useRef<HTMLAnchorElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -459,6 +465,7 @@ function SavedViewRow({
         onNavigateInPlace={() => setActive(target.containerKey, view.id)}
         trailing={
           <RowMenu label={t(($) => $.panels.work.view_actions, { name: view.name })} open={menuOpen} onOpenChange={setMenuOpen}>
+            <DropdownMenuItem onClick={fixed.toggle}><Pin className="size-3.5" />{fixed.pinned ? (zh ? "取消固定" : "Unpin") : (zh ? "固定到侧边栏" : "Pin to sidebar")}</DropdownMenuItem>
             {canManage && (
               <DropdownMenuItem onClick={() => startRename(view.id, "sidebar")}>
                 <Pencil className="size-3.5" />
