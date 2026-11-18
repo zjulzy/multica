@@ -13,6 +13,7 @@ import {
 } from "@multica/ui/components/ui/sidebar";
 import { ModalRegistry } from "@multica/views/modals/registry";
 import {
+  AppBottomBar,
   AppRail,
   AgentStatusHub,
   PageHeaderPortalProvider,
@@ -23,21 +24,21 @@ import {
   CompactNavSheet,
   GlobalShortcuts,
   NavigationProgress,
-  NewIssueButton,
-  SearchButton,
   ShellRouteDataPrefetch,
   SpacePanel,
 } from "@multica/views/layout";
 import { SearchCommand } from "@multica/views/search";
 import { FloatingChat } from "@multica/views/chat";
-import { WorkspaceSlugProvider, paths, useCurrentWorkspace } from "@multica/core/paths";
+import { StarPrompt } from "@multica/views/star-prompt";
+import { WhatsNewDeck } from "@multica/views/whats-new";
+import { WorkspaceSlugProvider, useCurrentWorkspace } from "@multica/core/paths";
 import { workspaceListOptions } from "@multica/core/workspace";
 import {
   AppLink,
   useNavigation,
   type LinkClickIntent,
 } from "@multica/views/navigation";
-import { getCurrentSlug, subscribeToCurrentSlug } from "@multica/core/platform";
+import { getCurrentSlug, subscribeToCurrentSlug, systemNotificationPath } from "@multica/core/platform";
 import { useDesktopUnreadBadge } from "@multica/views/platform";
 import { useLocale, useT } from "@multica/views/i18n";
 import { Activity } from "@multica/ui/icons";
@@ -61,9 +62,7 @@ import { isWindowsDesktop, WINDOWS_CONTROLS_CLEARANCE } from "@/platform/desktop
 import liworkLogo from "../assets/liwork-logo.svg?raw";
 
 const TOP_BAR_HEIGHT_CLASS = "h-10";
-const RAIL_WIDTH = 64;
-const TITLE_BAR_ACTION_CLASS =
-  "flex size-7 items-center justify-center rounded-md text-faint-foreground transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 [&_svg]:size-4";
+const RAIL_WIDTH = 56;
 
 function RailTopSpacer() {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
@@ -100,7 +99,7 @@ function DesktopRail({ hub, dockEnabled, slug }: { hub: React.ReactNode; dockEna
       globalActions={false}
       bottomSlot={hub}
       extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>}
-      hiddenSpaces={dockEnabled ? ["inbox", "chat"] : []}
+      hiddenSpaces={dockEnabled ? ["chat"] : []}
       className={cn("hidden pt-0 md:flex", singleTabMode ? "[--rail-divider-offset:3rem]" : "[--rail-divider-offset:2.5rem]")}
     />
   );
@@ -138,6 +137,7 @@ function MainTopBar({ railMounted, headerSlotRef }: { railMounted: boolean; head
   return (
     <header
       data-slot="main-top-bar"
+      data-mc="tab-bar"
       className={cn("relative shrink-0 flex items-center gap-2", singleTabMode ? "h-12" : TOP_BAR_HEIGHT_CLASS)}
       style={{ paddingLeft: toolbarClearance, paddingRight: isWindowsDesktop() ? WINDOWS_CONTROLS_CLEARANCE : 0 }}
     >
@@ -157,16 +157,6 @@ function MainTopBar({ railMounted, headerSlotRef }: { railMounted: boolean; head
       >
         {singleTabMode ? <SingleTabHeaderSlot headerSlotRef={headerSlotRef} /> : <TabBar />}
       </div>
-      {railMounted && (
-        <div
-          data-slot="title-bar-actions"
-          className="relative z-10 ml-auto flex shrink-0 items-center gap-2 pr-3"
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-        >
-          <NewIssueButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
-          <SearchButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
-        </div>
-      )}
     </header>
   );
 }
@@ -220,9 +210,13 @@ function MainCanvas({
   return (
     <div
       data-slot="main-canvas"
+      data-mc="page"
       className={cn(
         "relative mr-2 mb-2 flex min-h-0 flex-1 flex-row",
         railMounted && !isCompact ? "ml-0" : "ml-2",
+        // In a workspace the bottom bar takes the place of the bottom margin
+        // from `md` up.
+        railMounted ? "mb-2 md:mb-0" : "mb-2",
       )}
     >
       {railMounted && <SpacePanel />}
@@ -263,26 +257,10 @@ function useInternalLinkHandler() {
 }
 
 /**
- * Bridge between the renderer and the Electron main process for inbox-level
- * OS integration. Mounted inside WorkspaceSlugProvider so it can resolve the
- * current workspace's id for the badge hook.
- *
- * Two responsibilities:
- *   1. Mirror the unread inbox count onto the dock/taskbar badge.
- *   2. When the user clicks an OS notification, open the notified
- *      workspace's inbox focused on that item. The route uses the `slug`
- *      that the notification was *emitted* with — not the currently active
- *      workspace — so a notification from workspace A always opens A's
- *      inbox even if the user has since switched to workspace B. Marking
- *      the row read is handled by InboxPage's selected-item effect, which
- *      covers both click-to-select and URL-param-select paths.
- *
- * The click routes through `useNavigation().push` — NOT the
- * `multica:navigate` event, whose handler `openTab`s into the ACTIVE
- * workspace's tab group. The navigation adapter detects a cross-workspace
- * path and translates it into `switchWorkspace(slug, path)`, so clicking a
- * workspace-A notification while B is active performs a real workspace
- * switch instead of mounting A's inbox inside B's tab group (#3766).
+ * Mirrors Inbox and Chat unread badges and routes native notification clicks. Chat alerts
+ * open Chat directly; inbox alerts retain their row selector. The shared path
+ * resolver uses the source workspace, and the navigation adapter performs a
+ * workspace switch when needed. Each destination owns its mark-read behavior.
  */
 function DesktopInboxBridge() {
   const workspace = useCurrentWorkspace();
@@ -296,10 +274,9 @@ function DesktopInboxBridge() {
   }, [push]);
 
   useEffect(() => {
-    return window.desktopAPI.onInboxOpen(({ slug, issueKey }) => {
-      if (!slug) return;
-      const inboxPath = `${paths.workspace(slug).inbox()}?issue=${encodeURIComponent(issueKey)}`;
-      pushRef.current(inboxPath);
+    return window.desktopAPI.onInboxOpen((payload) => {
+      const path = systemNotificationPath(payload);
+      if (path) pushRef.current(path);
     });
   }, []);
 
@@ -412,8 +389,10 @@ export function DesktopShell() {
           IndexRedirect, not a route. */}
       <WorkspaceSlugProvider slug={slug}>
         <DesktopInboxBridge />
-        <div className="flex h-screen bg-app-shell">
-          {/* bg-app-shell is the wrapper's non-inset fill, so it also owns the
+        <div className="flex h-screen">
+          {/* The wrapper alone paints the frame: a second fill under it would
+              double the frame's glass over a theme's backdrop.
+              bg-app-shell is the wrapper's non-inset fill, so it also owns the
               non-inset half of --sidebar-wrapper-fill. sidebar.tsx supplies the
               inset half of both. Anything that has to paint an opaque layer
               over this wrapper (the tab flares) reads the variable rather than
@@ -436,7 +415,7 @@ export function DesktopShell() {
                 {slug && (
                   <DesktopRail slug={slug} dockEnabled={inboxDockEnabled} hub={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />
                 )}
-                {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["inbox", "chat"] : []} extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
+                {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["chat"] : []} extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
                 {/* Right side: header + content card */}
                 <div className="flex flex-1 min-w-0 flex-col">
                   <MainTopBar railMounted={Boolean(slug)} headerSlotRef={setHeaderSlot} />
@@ -462,8 +441,11 @@ export function DesktopShell() {
                         <TabContent />
                       </PageHeaderPortalProvider>
                       {slug && <FloatingChat />}
+                      {slug && <StarPrompt />}
+                      {slug && <WhatsNewDeck />}
                     </DesktopInboxDockLayout></MaybeEmbeddedGuestHost></LightweightInboxProvider>
                   </MainCanvas>
+                  {slug && <AppBottomBar />}
                 </div>
               </ShellRouteDataPrefetch>
               </PersistentPinsProvider>

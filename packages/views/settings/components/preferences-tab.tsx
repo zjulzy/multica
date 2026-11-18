@@ -24,12 +24,12 @@ import {
   CommandItem,
   CommandList,
 } from "@multica/ui/components/ui/command";
-import { useTheme } from "@multica/ui/components/common/theme-provider";
 import type { SupportedLocale } from "@multica/core/i18n";
 import { useAuthStore } from "@multica/core/auth";
 import { useChatStore } from "@multica/core/chat";
 import {
   useCommentComposerStore,
+  type CommentImageLayout,
   type RunningAgentReply,
 } from "@multica/core/issues/stores";
 import {
@@ -48,6 +48,7 @@ import { browserTimezone, timezoneOptions } from "../../common/timezone-select";
 import { useLanguageSwitch } from "../../common/use-language-switch";
 import { SegmentedToggle } from "../../common/segmented-toggle";
 import { useT } from "../../i18n";
+import { QuickChatAgentRow } from "./quick-chat-agent-row";
 import {
   SettingsCard,
   SettingsRow,
@@ -57,9 +58,10 @@ import {
 
 /**
  * Preferences on one page. The settings here are stored in three different
- * places — the account (language, timezone), this device (theme, composer,
- * chat) and this device for the current workspace (create-dialog fields) —
- * so each section carries a scope badge instead of splitting them into tabs.
+ * places — the account (language, timezone), this device (composer, chat,
+ * opening issues) and this device for the current workspace (create-dialog
+ * fields) — so each section carries a scope badge instead of splitting them
+ * into tabs. Theme, style and frame colour live on the Appearance page.
  * Changes apply immediately; only failures are announced.
  */
 export function PreferencesTab() {
@@ -78,16 +80,6 @@ export function PreferencesTab() {
       </SettingsSection>
 
       <SettingsSection
-        title={t(($) => $.preferences.appearance_title)}
-        scope="device"
-        anchor="appearance"
-      >
-        <SettingsCard>
-          <ThemeRow />
-        </SettingsCard>
-      </SettingsSection>
-
-      <SettingsSection
         title={t(($) => $.preferences.comments_title)}
         scope="device"
         anchor="comments"
@@ -95,7 +87,9 @@ export function PreferencesTab() {
         <SettingsCard>
           <StickyCommentBarRow />
           <RunningAgentReplyRow />
+          <CommentImageLayoutRow />
           <FloatingChatRow />
+          <QuickChatAgentRow />
         </SettingsCard>
       </SettingsSection>
 
@@ -118,44 +112,6 @@ export function PreferencesTab() {
         <IssueFieldsMatrix />
       </SettingsSection>
     </SettingsTab>
-  );
-}
-
-function ThemeRow() {
-  const { t } = useT("settings");
-  const { theme, setTheme, themes } = useTheme();
-  const extraThemes = [
-    ["graphite-copper", t(($) => $.preferences.theme.graphite_copper)],
-    ["mist-celadon", t(($) => $.preferences.theme.mist_celadon)],
-    ["cream-gold", t(($) => $.preferences.theme.cream_gold)],
-    ["sakura-blush", t(($) => $.preferences.theme.sakura_blush)],
-    ["moon-lavender", t(($) => $.preferences.theme.moon_lavender)],
-    ["deep-ocean", t(($) => $.preferences.theme.deep_ocean)],
-    ["daisy-garden", t(($) => $.preferences.theme.daisy_garden)],
-    ["hydrangea-rain", t(($) => $.preferences.theme.hydrangea_rain)],
-    ["osmanthus-courtyard", t(($) => $.preferences.theme.osmanthus_courtyard)],
-    ["starlit-dream", t(($) => $.preferences.theme.starlit_dream)],
-  ] as const;
-  const value = theme && themes?.includes(theme) ? theme : "system";
-  return (
-    <SettingsRow anchor="theme" label={t(($) => $.preferences.theme.title)}>
-      <div role="group" aria-label={t(($) => $.preferences.theme.title)} className="flex flex-col gap-2">
-        <SegmentedToggle
-          value={value}
-          onChange={setTheme}
-          buttonClassName="px-3 py-1 text-label"
-          options={[
-            ["light", t(($) => $.preferences.theme.light)],
-            ["dark", t(($) => $.preferences.theme.dark)],
-            ["system", t(($) => $.preferences.theme.system)],
-          ]}
-        />
-        {[extraThemes.slice(0, 3), extraThemes.slice(3, 6), extraThemes.slice(6, 9), extraThemes.slice(9, 12)].map((row) => {
-          const options = row.filter(([key]) => themes?.includes(key));
-          return options.length ? <SegmentedToggle key={options[0]![0]} value={value} onChange={setTheme} buttonClassName="px-3 py-1 text-label" options={options} /> : null;
-        })}
-      </div>
-    </SettingsRow>
   );
 }
 
@@ -260,6 +216,32 @@ function RunningAgentReplyRow() {
           ))}
         </SelectContent>
       </Select>
+    </SettingsRow>
+  );
+}
+
+function CommentImageLayoutRow() {
+  const { t } = useT("settings");
+  const value = useCommentComposerStore((s) => s.imageLayout);
+  const setValue = useCommentComposerStore((s) => s.setImageLayout);
+  const label = t(($) => $.preferences.comment_images.title);
+  return (
+    <SettingsRow
+      anchor="comment-images"
+      label={label}
+      description={t(($) => $.preferences.comment_images.hint)}
+    >
+      <div role="group" aria-label={label}>
+        <SegmentedToggle<CommentImageLayout>
+          value={value}
+          onChange={setValue}
+          buttonClassName="px-3 py-1 text-label"
+          options={[
+            ["thumbnails", t(($) => $.preferences.comment_images.thumbnails)],
+            ["full", t(($) => $.preferences.comment_images.full)],
+          ]}
+        />
+      </div>
     </SettingsRow>
   );
 }

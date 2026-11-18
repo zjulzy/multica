@@ -6,7 +6,9 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { usePinnedIssueEligibility } from "@/components/use-pinned-issue-eligibility";
 
 export function IssueDetailPage({ onDelete, onDone, onInitialContentReady, inboxPresentation }: { onDelete?: () => void; onDone?: () => void; onInitialContentReady?: () => void; inboxPresentation?: { surface: "page" | "dock"; highlightCommentId?: string; highlightRequestToken?: number } }) {
-  const { id } = useParams<{ id: string }>();
+  // React Router hands `name` over decoded; on the plain issue route it is
+  // undefined.
+  const { id, name } = useParams<{ id: string; name?: string }>();
   const wsId = useWorkspaceId();
   // `id` may be an identifier (`MUL-123`); resolving here means the title
   // watches the same UUID-keyed entry realtime events patch. Shares its
@@ -20,7 +22,7 @@ export function IssueDetailPage({ onDelete, onDone, onInitialContentReady, inbox
   // Render errors bubble to the root route errorElement (DesktopRouteErrorPage),
   // which contains the crash inside the tab content pane. No page-level boundary
   // here — a whole-page wrapper duplicates the route-level error UI.
-  return <IssueDetailRoute routeId={id} onDelete={onDelete} onDone={onDone} suppressDetail={cached} onInitialContentReady={onInitialContentReady}
+  return <IssueDetailRoute routeId={id} onDelete={onDelete} onDone={onDone} suppressDetail={cached} onInitialContentReady={onInitialContentReady} deliverable={name}
     highlightCommentId={inboxPresentation?.highlightCommentId} highlightRequestToken={inboxPresentation?.highlightRequestToken}
     defaultSidebarOpen={inboxPresentation ? false : undefined} layoutId={inboxPresentation ? `multica_inbox_${inboxPresentation.surface}_issue_detail_layout` : undefined}
     leadingAction={inboxPresentation ? false : undefined} />;

@@ -1,5 +1,5 @@
 /* Desktop themes use the existing semantic tokens so all surfaces and portals follow along. */
-html[data-desktop-theme="graphite-copper"] {
+html:root[data-desktop-theme="graphite-copper"] {
   --app-shell:#191a1d; --page-canvas:#28282b; --surface:#323135; --surface-raised:#3c3a3c;
   --surface-hover:#403d3e; --surface-selected:#46403c; --surface-border:#62574e;
   --foreground:#f0ece7; --surface-foreground:#f0ece7; --surface-selected-foreground:#f0ece7;
@@ -11,7 +11,7 @@ html[data-desktop-theme="graphite-copper"] {
   --sidebar-accent:#46403c; --sidebar-accent-foreground:#f0ece7; --sidebar-border:#514a45; --sidebar-ring:#dfaf80;
   --brand:#e0ae7c; --brand-foreground:#302013; --tooltip:#3c3531; --theme-glow:rgba(219,164,107,.10);
 }
-html[data-desktop-theme="mist-celadon"] {
+html:root[data-desktop-theme="mist-celadon"] {
   --app-shell:#e8f0ef; --page-canvas:#f8fbfa; --surface:#ffffff; --surface-raised:#ffffff;
   --surface-hover:#edf6f3; --surface-selected:#e5f1ee; --surface-border:#cadbd7;
   --foreground:#203c3b; --surface-foreground:#203c3b; --surface-selected-foreground:#203c3b;
@@ -23,7 +23,7 @@ html[data-desktop-theme="mist-celadon"] {
   --sidebar-accent:#e1efeb; --sidebar-accent-foreground:#203c3b; --sidebar-border:#cadbd7; --sidebar-ring:#167f79;
   --brand:#167f79; --brand-foreground:#ffffff; --tooltip:#274440; --theme-glow:rgba(50,159,147,.09);
 }
-html[data-desktop-theme="cream-gold"] {
+html:root[data-desktop-theme="cream-gold"] {
   --app-shell:#eeeae4; --page-canvas:#fcfaf7; --surface:#ffffff; --surface-raised:#ffffff;
   --surface-hover:#f8f2eb; --surface-selected:#f3e9dc; --surface-border:#e1d5c7;
   --foreground:#3f352e; --surface-foreground:#3f352e; --surface-selected-foreground:#3f352e;
@@ -35,7 +35,7 @@ html[data-desktop-theme="cream-gold"] {
   --sidebar-accent:#f2e7d9; --sidebar-accent-foreground:#3f352e; --sidebar-border:#e1d5c7; --sidebar-ring:#965c2d;
   --brand:#965c2d; --brand-foreground:#ffffff; --tooltip:#4a382d; --theme-glow:rgba(191,136,75,.09);
 }
-html[data-desktop-theme="sakura-blush"] {
+html:root[data-desktop-theme="sakura-blush"] {
   --app-shell:#f6dfe9; --page-canvas:#fff7fa; --surface:#fffafd; --surface-raised:#ffffff;
   --surface-hover:#fcecf3; --surface-selected:#f3d1e0; --surface-border:#e8c7d5;
   --foreground:#513342; --surface-foreground:#513342; --surface-selected-foreground:#513342;
@@ -47,7 +47,7 @@ html[data-desktop-theme="sakura-blush"] {
   --sidebar-accent:#f3d1e0; --sidebar-accent-foreground:#513342; --sidebar-border:#e8c7d5; --sidebar-ring:#c04a7f;
   --brand:#c04a7f; --brand-foreground:#ffffff; --tooltip:#5c3548; --theme-glow:rgba(224,116,160,.10);
 }
-html[data-desktop-theme="moon-lavender"] {
+html:root[data-desktop-theme="moon-lavender"] {
   --app-shell:#ece8f2; --page-canvas:#f9f7fc; --surface:#ffffff; --surface-raised:#ffffff;
   --surface-hover:#f2edf8; --surface-selected:#e9e1f3; --surface-border:#d9cee5;
   --foreground:#3e374c; --surface-foreground:#3e374c; --surface-selected-foreground:#3e374c;
@@ -59,7 +59,7 @@ html[data-desktop-theme="moon-lavender"] {
   --sidebar-accent:#e9e1f3; --sidebar-accent-foreground:#3e374c; --sidebar-border:#d9cee5; --sidebar-ring:#70568e;
   --brand:#70568e; --brand-foreground:#ffffff; --tooltip:#44354f; --theme-glow:rgba(141,111,181,.09);
 }
-html[data-desktop-theme="deep-ocean"] {
+html:root[data-desktop-theme="deep-ocean"] {
   --app-shell:#19232f; --page-canvas:#202d3b; --surface:#283747; --surface-raised:#304153;
   --surface-hover:#33465a; --surface-selected:#304153; --surface-border:#536b7e;
   --foreground:#ecf3f7; --surface-foreground:#ecf3f7; --surface-selected-foreground:#ecf3f7;
@@ -71,7 +71,7 @@ html[data-desktop-theme="deep-ocean"] {
   --sidebar-accent:#304153; --sidebar-accent-foreground:#ecf3f7; --sidebar-border:#485f71; --sidebar-ring:#74b5cb;
   --brand:#74b5cb; --brand-foreground:#152b36; --tooltip:#263b4b; --theme-glow:rgba(114,184,207,.10);
 }
-html[data-desktop-theme="daisy-garden"] {
+html:root[data-desktop-theme="daisy-garden"] {
   --app-shell:#e4eddd; --page-canvas:#fcfdf7; --surface:#ffffff; --surface-raised:#ffffff;
   --surface-hover:#f0f5e9; --surface-selected:#e2edda; --surface-border:#ccd9c2;
   --foreground:#2e4032; --surface-foreground:#2e4032; --surface-selected-foreground:#2e4032;
@@ -83,7 +83,7 @@ html[data-desktop-theme="daisy-garden"] {
   --sidebar-accent:#dfebd8; --sidebar-accent-foreground:#2e4032; --sidebar-border:#ccd9c2; --sidebar-ring:#46774c;
   --brand:#46774c; --brand-foreground:#ffffff; --tooltip:#314b37; --theme-glow:rgba(115,159,99,.09);
 }
-html[data-desktop-theme="hydrangea-rain"] {
+html:root[data-desktop-theme="hydrangea-rain"] {
   --app-shell:#e3ebf5; --page-canvas:#f8fbff; --surface:#ffffff; --surface-raised:#ffffff;
   --surface-hover:#edf3fb; --surface-selected:#e2eaf7; --surface-border:#ccd8e9;
   --foreground:#304055; --surface-foreground:#304055; --surface-selected-foreground:#304055;
@@ -95,7 +95,7 @@ html[data-desktop-theme="hydrangea-rain"] {
   --sidebar-accent:#e2eaf7; --sidebar-accent-foreground:#304055; --sidebar-border:#ccd8e9; --sidebar-ring:#4d6fa2;
   --brand:#4d6fa2; --brand-foreground:#ffffff; --tooltip:#35465f; --theme-glow:rgba(108,139,191,.09);
 }
-html[data-desktop-theme="osmanthus-courtyard"] {
+html:root[data-desktop-theme="osmanthus-courtyard"] {
   --app-shell:#f3e8d6; --page-canvas:#fffaf2; --surface:#fffefa; --surface-raised:#ffffff;
   --surface-hover:#fbf2e5; --surface-selected:#f5e8d3; --surface-border:#e5d3b7;
   --foreground:#4b3c2e; --surface-foreground:#4b3c2e; --surface-selected-foreground:#4b3c2e;
@@ -107,7 +107,7 @@ html[data-desktop-theme="osmanthus-courtyard"] {
   --sidebar-accent:#f5e8d3; --sidebar-accent-foreground:#4b3c2e; --sidebar-border:#e5d3b7; --sidebar-ring:#92611f;
   --brand:#92611f; --brand-foreground:#ffffff; --tooltip:#55422e; --theme-glow:rgba(192,142,66,.09);
 }
-html[data-desktop-theme="starlit-dream"] {
+html:root[data-desktop-theme="starlit-dream"] {
   --app-shell:#181d31; --page-canvas:#22283c; --surface:#2b3249; --surface-raised:#343b54;
   --surface-hover:#39415c; --surface-selected:#414967; --surface-border:#55607d;
   --foreground:#edf0fb; --surface-foreground:#edf0fb; --surface-selected-foreground:#edf0fb;
@@ -123,17 +123,17 @@ html[data-desktop-theme] :is([data-slot="button"], [data-slot="input"], [data-sl
   background-image:linear-gradient(140deg,var(--theme-glow),transparent 70%);
 }
 html[data-desktop-theme] [data-slot="sidebar-inner"] { background-image:radial-gradient(ellipse at 100% 0,var(--theme-glow),transparent 50%); }
-html[data-desktop-theme="graphite-copper"] .bg-brand.text-white { color:var(--brand-foreground); }
-html[data-desktop-theme="deep-ocean"] .bg-brand.text-white { color:var(--brand-foreground); }
-html[data-desktop-theme="starlit-dream"] .bg-brand.text-white { color:var(--brand-foreground); }
+html:root[data-desktop-theme="graphite-copper"] .bg-brand.text-white { color:var(--brand-foreground); }
+html:root[data-desktop-theme="deep-ocean"] .bg-brand.text-white { color:var(--brand-foreground); }
+html:root[data-desktop-theme="starlit-dream"] .bg-brand.text-white { color:var(--brand-foreground); }
 
 /* Botanical artwork remains visible with motion disabled; the small drifting
    details only run when the existing motion preference allows them. */
 [data-nature-theme] { display:none; position:absolute; inset:0; overflow:hidden; }
-html[data-desktop-theme="daisy-garden"] [data-nature-theme="daisy-garden"],
-html[data-desktop-theme="hydrangea-rain"] [data-nature-theme="hydrangea-rain"],
-html[data-desktop-theme="osmanthus-courtyard"] [data-nature-theme="osmanthus-courtyard"],
-html[data-desktop-theme="starlit-dream"] [data-nature-theme="starlit-dream"] { display:block; }
+html:root[data-desktop-theme="daisy-garden"] [data-nature-theme="daisy-garden"],
+html:root[data-desktop-theme="hydrangea-rain"] [data-nature-theme="hydrangea-rain"],
+html:root[data-desktop-theme="osmanthus-courtyard"] [data-nature-theme="osmanthus-courtyard"],
+html:root[data-desktop-theme="starlit-dream"] [data-nature-theme="starlit-dream"] { display:block; }
 .nature-art { position:absolute; right:-12px; top:24px; width:250px; height:auto; opacity:.56; pointer-events:none; }
 .nature-hydrangea-art { right:-2px; top:20px; width:245px; opacity:.5; }
 .nature-osmanthus-art { right:-6px; top:10px; width:260px; opacity:.54; }
@@ -174,14 +174,14 @@ html[data-desktop-theme="starlit-dream"] [data-nature-theme="starlit-dream"] { d
 
 /* Decorative layer stays out of input handling and never changes layout. */
 [data-sakura-decoration] { display:none; }
-html[data-desktop-theme="sakura-blush"] [data-sakura-decoration] { display:block; }
+html:root[data-desktop-theme="sakura-blush"] [data-sakura-decoration] { display:block; }
 [data-sakura-decoration] .sakura-bloom { position:absolute; color:#e99abc; opacity:.2; }
 [data-sakura-decoration] .sakura-bloom-one { right:12px; top:53px; width:100px; transform:rotate(18deg); }
 [data-sakura-decoration] .sakura-bloom-two { right:78px; top:111px; width:43px; transform:rotate(-18deg); }
 [data-sakura-decoration] .sakura-bloom-three { right:18px; bottom:22px; width:54px; opacity:.13; transform:rotate(12deg); }
 [data-sakura-petal] { display:none; position:absolute; top:-18px; width:9px; height:13px; border-radius:90% 20% 90% 20%; background:#ef9fbd; opacity:0; }
 @media (prefers-reduced-motion: no-preference) {
-  html[data-desktop-theme="sakura-blush"][data-interface-motion="on"] [data-sakura-petal] { display:block; animation:sakura-petal-fall 13s linear infinite; }
+  html:root[data-desktop-theme="sakura-blush"][data-interface-motion="on"] [data-sakura-petal] { display:block; animation:sakura-petal-fall 13s linear infinite; }
   [data-sakura-petal]:nth-of-type(1) { left:35%; animation-delay:-2s !important; }
   [data-sakura-petal]:nth-of-type(2) { left:55%; animation-delay:-7s !important; width:7px; height:10px; }
   [data-sakura-petal]:nth-of-type(3) { left:76%; animation-delay:-11s !important; }
@@ -198,11 +198,11 @@ html[data-desktop-theme="sakura-blush"] [data-sakura-decoration] { display:block
 [data-ambience-theme] { display:none; position:absolute; inset:0; overflow:hidden; }
 [data-ambience-theme] > i { position:absolute; display:block; pointer-events:none; }
 @media (prefers-reduced-motion: no-preference) {
-  html[data-desktop-theme="graphite-copper"][data-interface-motion="on"] [data-ambience-theme="graphite-copper"],
-  html[data-desktop-theme="mist-celadon"][data-interface-motion="on"] [data-ambience-theme="mist-celadon"],
-  html[data-desktop-theme="cream-gold"][data-interface-motion="on"] [data-ambience-theme="cream-gold"],
-  html[data-desktop-theme="moon-lavender"][data-interface-motion="on"] [data-ambience-theme="moon-lavender"],
-  html[data-desktop-theme="deep-ocean"][data-interface-motion="on"] [data-ambience-theme="deep-ocean"] { display:block; }
+  html:root[data-desktop-theme="graphite-copper"][data-interface-motion="on"] [data-ambience-theme="graphite-copper"],
+  html:root[data-desktop-theme="mist-celadon"][data-interface-motion="on"] [data-ambience-theme="mist-celadon"],
+  html:root[data-desktop-theme="cream-gold"][data-interface-motion="on"] [data-ambience-theme="cream-gold"],
+  html:root[data-desktop-theme="moon-lavender"][data-interface-motion="on"] [data-ambience-theme="moon-lavender"],
+  html:root[data-desktop-theme="deep-ocean"][data-interface-motion="on"] [data-ambience-theme="deep-ocean"] { display:block; }
 
   .ambient-glint, .ambient-sun { width:5px; height:5px; border-radius:50%; opacity:0; animation:ambient-glimmer 8s ease-in-out infinite; }
   .ambient-glint { background:#efba80; box-shadow:0 0 7px 2px #e6a36266; }

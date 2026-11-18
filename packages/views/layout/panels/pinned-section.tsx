@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Bot, CircleUser, Layers, ListTodo, X } from "@multica/ui/icons";
+import { Archive, Bot, CircleUser, Folder, Layers, X } from "@multica/ui/icons";
 import { cn } from "@multica/ui/lib/utils";
 import { TooltipHint } from "@multica/ui/components/common/tooltip-hint";
 import { ShimmerText } from "@multica/ui/components/common/shimmer-text";
@@ -20,8 +20,8 @@ import { api, ApiError } from "@multica/core/api";
 import { pinnedViewScope, usePinnedSidebarViews } from "@multica/core/issue-views/pinned-sidebar-views";
 import { issueViewEverywhereOptions } from "@multica/core/issue-views/queries";
 import { issueViewTarget } from "@multica/core/issue-views/view-target";
-import type { BuiltinViewKey } from "@multica/core/issue-views/sidebar-views";
-import { useBuiltinViewNavigation } from "../../issue-views/builtin-views";
+import { BUILTIN_VIEW_KEYS, type BuiltinViewKey } from "@multica/core/issue-views/sidebar-views";
+import { BUILTIN_VIEW_ICON, useBuiltinViewLabel, useBuiltinViewNavigation } from "../../issue-views/builtin-views";
 import { useIssueStatuses } from "@multica/core/issue-statuses/hooks";
 import { issueDetailOptions } from "@multica/core/issues/queries";
 import { projectDetailOptions } from "@multica/core/projects/queries";
@@ -37,15 +37,19 @@ import { IssueActionsContextMenu } from "../../issues/actions";
 import { useStatusLabel } from "../../issues/utils/status-label";
 import { ProjectIcon } from "../../projects/components/project-icon";
 import { useT } from "../../i18n";
-import { PANEL_ROW_CLASS, PanelList, PanelSection, isPathWithin, panelRowStateClass } from "../panel-nav";
+import { PANEL_ROW_CLASS, PanelList, PanelSection, isPathWithin, panelRowAnchor, panelRowStateClass } from "../panel-nav";
 import { usePersistentPins } from "../persistent-pins-context";
+import { useDragClickGuard } from "../use-drag-click-guard";
+import { PinnedSectionSettings, SECTION_SETTINGS_REVEAL_CLASS } from "./sidebar-settings";
 import {
   ISSUE_ROW_LINK_CLASS,
   IssueAgentBadge,
   IssueUnreadDot,
+  PrivateProjectLock,
   SIDEBAR_SHIMMER_CLASS,
   SidebarIssueStatus,
   issueRowMenuOpenClass,
+  unreadIssueHref,
   useIssueAgentState,
 } from "./sidebar-tree";
 
@@ -53,7 +57,6 @@ import {
 // render while the query is disabled, which re-fires the sync effect below.
 const EMPTY_PINS: PinnedItem[] = [];
 const EMPTY_VIEW_IDS: string[] = [];
-const PINNED_PREVIEW_LIMIT = 5;
 
 function pinHref(p: WorkspacePaths, pin: PinnedItem): string {
   return pin.item_type === "issue" ? p.issueDetail(pin.item_id) : pin.item_type === "view" ? p.issues() : p.projectDetail(pin.item_id);
@@ -112,14 +115,17 @@ export function usePanelPins(
 
   const visible = localPinnedWsId === (wsId ?? null) ? localPinned : EMPTY_PINS;
   const expanded = expandedWsId === (wsId ?? null);
-  const displayed = persistentPins || expanded ? visible : visible.slice(0, PINNED_PREVIEW_LIMIT);
+  const limit = useSidebarTreeStore((s) => s.pinnedLimit);
+  const displayed = persistentPins || expanded ? visible : visible.slice(0, limit);
   const isPinActive = (pin: PinnedItem) => {
     if (pin.item_type === "issue") return pin.item_id === currentIssueId;
     if (pin.item_type !== "view") return isPathWithin(pathname, pinHref(p, pin));
     if (pin.item_id.startsWith("builtin:")) {
       const key = pin.item_id.slice(8);
-      const container = issueViewContainerKey(wsId ?? "", { scope_type: key === "all_issues" ? "workspace" : "my" });
-      return (activeViews[container] ?? null) === null && (key === "all_issues" ? pathname === p.issues() : pathname === p.myIssues() && (key === "my_agents") === isMyAgentsSearch(searchParams));
+      if (key === "my_issues" || key === "my_agents") return pathname === p.myIssues() && (key === "my_agents") === isMyAgentsSearch(searchParams);
+      if (!BUILTIN_VIEW_KEYS.includes(key as BuiltinViewKey)) return false;
+      const container = issueViewContainerKey(wsId ?? "", { scope_type: "workspace" });
+      return pathname === p.issues() && (activeViews[container] ?? null) === (key === "all_issues" ? null : key);
     }
     const view = allViews?.find((item) => `view:${item.id}` === pin.item_id);
     if (!view) return false;
@@ -134,6 +140,7 @@ export function usePanelPins(
     visible,
     displayed,
     expanded,
+    limit,
     isActivePinnedRoute,
     isPinActive,
     setExpanded: (next: boolean) => setExpandedWsId(next ? wsId ?? null : null),
@@ -153,18 +160,25 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
   const deletePin = useDeletePin();
   const reorderPins = useReorderPins();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const { visible, displayed, expanded, setExpanded, setLocalPinned, isDraggingRef, viewPins, isPinActive, scope } = pins;
+  const { visible, displayed, expanded, limit, setExpanded, setLocalPinned, isDraggingRef, viewPins, isPinActive, scope } = pins;
   const unpinView = usePinnedSidebarViews((s) => s.unpin);
   const reorderAll = usePinnedSidebarViews((s) => s.reorderAll);
   const collapsed = useSidebarTreeStore((s) => s.pinnedCollapsed);
   const setCollapsed = useSidebarTreeStore((s) => s.setPinnedCollapsed);
+  const { arm: armClickGuard, release: releaseClickGuard } = useDragClickGuard();
 
   const handleDragStart = useCallback(() => {
     isDraggingRef.current = true;
-  }, [isDraggingRef]);
+    armClickGuard();
+  }, [armClickGuard, isDraggingRef]);
+  const handleDragCancel = useCallback(() => {
+    isDraggingRef.current = false;
+    releaseClickGuard();
+  }, [isDraggingRef, releaseClickGuard]);
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       isDraggingRef.current = false;
+      releaseClickGuard();
       const { active, over } = event;
       if (!over || active.id === over.id) return;
       const oldIndex = visible.findIndex((pin) => pin.id === active.id);
@@ -175,7 +189,7 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
       reorderAll(scope, reordered.map((pin) => pin.id));
       reorderPins.mutate([...reordered.filter((pin) => pin.item_type !== "view"), ...viewPins]);
     },
-    [isDraggingRef, reorderPins, reorderAll, scope, setLocalPinned, viewPins, visible],
+    [isDraggingRef, releaseClickGuard, reorderPins, reorderAll, scope, setLocalPinned, viewPins, visible],
   );
 
   if (visible.length === 0) return null;
@@ -185,8 +199,15 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
       label={t(($) => $.sidebar.pinned_label)}
       collapsed={persistentPins ? false : collapsed}
       onCollapsedChange={persistentPins ? undefined : setCollapsed}
+      action={<PinnedSectionSettings className={SECTION_SETTINGS_REVEAL_CLASS} />}
     >
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
         <SortableContext items={displayed.map((pin) => pin.id)} strategy={verticalListSortingStrategy}>
           <PanelList>
             {displayed.map((pin) => (
@@ -202,7 +223,7 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
           </PanelList>
         </SortableContext>
       </DndContext>
-      {!persistentPins && visible.length > PINNED_PREVIEW_LIMIT && (
+      {!persistentPins && visible.length > limit && (
         <button
           type="button"
           aria-expanded={expanded}
@@ -211,7 +232,7 @@ export function PinnedSection({ pins, wsId }: { pins: PanelPins; wsId: string })
         >
           {expanded
             ? t(($) => $.sidebar.show_fewer_pins)
-            : t(($) => $.sidebar.show_more_pins, { count: visible.length - PINNED_PREVIEW_LIMIT })}
+            : t(($) => $.sidebar.show_more_pins, { count: visible.length - limit })}
         </button>
       )}
     </PanelSection>
@@ -229,9 +250,10 @@ function SortablePinItem({
   active,
   running = false,
   unread = false,
+  labelSuffix,
   trailing,
-  onNavigate,
   issue,
+  onNavigate,
 }: {
   pin: PinnedItem;
   href: string;
@@ -245,22 +267,19 @@ function SortablePinItem({
   running?: boolean;
   /** Brightens the label while the issue has an unread agent result. */
   unread?: boolean;
+  /** Right after the label, which truncates before it. */
+  labelSuffix?: React.ReactNode;
   trailing?: React.ReactNode;
-  /** Runs on a real click (not a drag-release) before navigation. */
-  onNavigate?: () => void;
   /** A pinned issue's row opens the issue context menu on right-click. */
   issue?: Issue;
+  onNavigate?: () => void;
 }) {
   const { t } = useT("layout");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: pin.id });
-  const wasDragged = useRef(false);
-
-  useEffect(() => {
-    if (isDragging) wasDragged.current = true;
-  }, [isDragging]);
 
   const row = (
     <div
+      {...panelRowAnchor(active)}
       className={cn(
         PANEL_ROW_CLASS,
         panelRowStateClass(active),
@@ -273,26 +292,22 @@ function SortablePinItem({
       {iconNode}
       <AppLink
         href={href}
+        onNavigateInPlace={onNavigate}
         newTabTitle={label}
         title={tooltip}
         draggable={false}
         aria-current={active ? "page" : undefined}
-        onClick={(event) => {
-          if (wasDragged.current) {
-            wasDragged.current = false;
-            event.preventDefault();
-            return;
-          }
-          onNavigate?.();
-        }}
         className={cn(ISSUE_ROW_LINK_CLASS, "gap-2.5")}
       >
-        <ShimmerText
-          active={running}
-          className={cn("min-w-0 flex-1 truncate", SIDEBAR_SHIMMER_CLASS, unread && "text-foreground")}
-        >
-          {displayLabel}
-        </ShimmerText>
+        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+          <ShimmerText
+            active={running}
+            className={cn("min-w-0 truncate", SIDEBAR_SHIMMER_CLASS, unread && "text-foreground")}
+          >
+            {displayLabel}
+          </ShimmerText>
+          {labelSuffix}
+        </span>
         {/* Holds the same right-edge slot as a tree row's avatars, and yields
             it to the unpin button on hover. */}
         {trailing && (
@@ -354,14 +369,17 @@ function PinRow({
   onUnpin: () => void;
   wsId: string;
 }) {
+  const { t: tProjects } = useT("projects");
   const isIssue = pin.item_type === "issue";
   const isView = pin.item_type === "view";
-  const builtin = isView && pin.item_id.startsWith("builtin:") ? pin.item_id.slice(8) as BuiltinViewKey : null;
+  const builtin = isView && pin.item_id.startsWith("builtin:") ? pin.item_id.slice(8) : null;
   const viewId = isView && pin.item_id.startsWith("view:") ? pin.item_id.slice(5) : "";
   const viewsQuery = useQuery({ ...issueViewEverywhereOptions(wsId), enabled: !!viewId });
   const builtinNav = useBuiltinViewNavigation();
+  const builtinLabel = useBuiltinViewLabel();
   const paths = useWorkspacePaths();
   const { t } = useT("layout");
+  const { t: tIssues } = useT("issues");
   const { pathname, searchParams } = useNavigation();
   const activeViews = useActiveIssueViewStore((s) => s.active);
   const setActiveView = useActiveIssueViewStore((s) => s.setActive);
@@ -387,11 +405,18 @@ function PinRow({
 
   if (isView) {
     if (builtin) {
-      const label = builtin === "my_issues" ? t(($) => $.nav.my_issues) : builtin === "my_agents" ? t(($) => $.panels.work.my_agents) : t(($) => $.panels.work.all_issues);
-      const icon = builtin === "my_issues" ? <CircleUser className="size-4" /> : builtin === "my_agents" ? <Bot className="size-4" /> : <ListTodo className="size-4" />;
-      const containerKey = issueViewContainerKey(wsId, { scope_type: builtin === "all_issues" ? "workspace" : "my" });
-      const selected = (activeViews[containerKey] ?? null) === null && (builtin === "all_issues" ? pathname === paths.issues() : pathname === paths.myIssues() && (builtin === "my_agents") === isMyAgentsSearch(searchParams));
-      return <SortablePinItem pin={pin} href={builtinNav.hrefFor(builtin)} onUnpin={onUnpin} label={label} active={selected} iconNode={icon} onNavigate={() => builtinNav.prepare(builtin)} />;
+      if (builtin === "my_issues" || builtin === "my_agents") {
+        const agent = builtin === "my_agents";
+        return <SortablePinItem pin={pin} href={agent ? paths.myAgents() : paths.myIssues()} onUnpin={onUnpin}
+          label={agent ? tIssues(($) => $.scope.agents_label) : t(($) => $.nav.my_issues)}
+          active={pathname === paths.myIssues() && agent === isMyAgentsSearch(searchParams)}
+          iconNode={agent ? <Bot className="size-4" /> : <CircleUser className="size-4" />} />;
+      }
+      if (!BUILTIN_VIEW_KEYS.includes(builtin as BuiltinViewKey)) return null;
+      const key = builtin as BuiltinViewKey;
+      const containerKey = issueViewContainerKey(wsId, { scope_type: "workspace" });
+      const selected = pathname === paths.issues() && (activeViews[containerKey] ?? null) === (key === "all_issues" ? null : key);
+      return <SortablePinItem pin={pin} href={builtinNav.hrefFor(key)} onUnpin={onUnpin} label={builtinLabel(key)} active={selected} iconNode={BUILTIN_VIEW_ICON[key]} onNavigate={() => builtinNav.prepare(key)} />;
     }
     if (viewsQuery.isPending) return <PinSkeleton />;
     const view = viewsQuery.data?.find((item) => item.id === viewId);
@@ -420,7 +445,7 @@ function PinRow({
     return (
       <SortablePinItem
         pin={pin}
-        href={href}
+        href={unreadIssueHref(href, unread)}
         onUnpin={onUnpin}
         label={issue.title}
         displayLabel={persistentPins ? displayTitle : issue.title}
@@ -453,7 +478,19 @@ function PinRow({
       onUnpin={onUnpin}
       label={project.title}
       active={active}
-      iconNode={<ProjectIcon project={project} size="sm" />}
+      labelSuffix={project.visibility === "private" && <PrivateProjectLock />}
+      trailing={
+        project.archived_at ? (
+          <Archive
+            role="img"
+            aria-label={tProjects(($) => $.archive.badge)}
+            className="size-3 shrink-0 text-muted-foreground"
+          />
+        ) : undefined
+      }
+      iconNode={
+        project.icon ? <ProjectIcon project={project} size="md" /> : <Folder className="size-4 shrink-0" />
+      }
     />
   );
 }

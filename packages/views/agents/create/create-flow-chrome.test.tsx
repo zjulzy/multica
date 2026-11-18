@@ -4,6 +4,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "@multica/ui/components/ui/button";
 import { renderWithI18n } from "../../test/i18n";
+import { mockViewportMedia } from "../../test/viewport";
 import { AgentCreateShell } from "./create-shell";
 import { CreateAgentFooter, CreateFlowFooter } from "./create-agent-footer";
 import { BuilderWorkspaceLayout } from "./builder-workspace-layout";
@@ -18,6 +19,7 @@ vi.mock("../../chat/components/use-visual-viewport-keyboard", () => ({
 afterEach(() => {
   cleanup();
   h.keyboard = null;
+  vi.restoreAllMocks();
 });
 
 describe("AgentCreateShell", () => {
@@ -65,6 +67,7 @@ describe("AgentCreateShell", () => {
 
   it("keeps the close header and workspace together inside the mobile keyboard viewport", () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    const viewport = mockViewportMedia();
     h.keyboard = { occludedBottom: 300, viewportHeight: 420 };
     const onClose = vi.fn();
     const onCreate = vi.fn();
@@ -103,6 +106,7 @@ describe("AgentCreateShell", () => {
     view.rerender(shell());
     expect(layout.style.position).toBe("");
     expect(layout.style.height).toBe("");
+    viewport.mockRestore();
     expect(layout.style.bottom).toBe("");
   });
 

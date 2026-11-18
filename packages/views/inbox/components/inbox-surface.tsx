@@ -45,12 +45,13 @@ import {
 } from "@multica/core/inbox/mutations";
 import {
   filterInboxItems,
-  inboxFiltersForArchive,
-  inboxFiltersForPrioritySupport,
+  effectiveInboxFilters,
+  inboxIssueFieldsSupport,
   inboxFilterCount,
   inboxPriorityFilterSupport,
   useInboxFilters,
   useInboxFilterStore,
+  type InboxAgentFilter,
 } from "@multica/core/inbox/filter-store";
 
 import { IssueDetail, issueHighlightMementoKey } from "../../issues/components/issue-detail";
@@ -105,6 +106,7 @@ import { InboxList } from "./inbox-list";
 import { beginIssuePerformance } from "@multica/core/issue-performance";
 import { InboxFilterMenu } from "./inbox-filter-menu";
 import { InboxContextMenuProvider } from "./inbox-context-menu";
+import { InboxDeleteDialog } from "./inbox-delete-dialog";
 import type { InboxView } from "./inbox-view";
 import { useTypeLabels } from "./inbox-detail-label";
 import {
@@ -165,6 +167,7 @@ export function InboxSurface({
     "autopilot_quota",
   );
   const { view, selectedKey, setView, setSelectedKey, onUnresolvedSelection } = controller;
+  const [deleteTarget, setDeleteTarget] = useState<InboxItem | null>(null);
   // The row the user opened under the unread filter. Opening it marks it read,
   // so the filter would otherwise drop the row before the detail finishes
   // mounting. Scoped to the selection: moving away releases it.
@@ -173,7 +176,7 @@ export function InboxSurface({
   // can start an agent on its issue, which would otherwise drop the row the
   // user is working in. Set once the open row has passed the idle filter, so
   // turning the filter on over a busy row still filters it out.
-  const pinnedIdleKeyRef = useRef<string | null>(null);
+  const pinnedAgentRef = useRef<{ key: string; agent: InboxAgentFilter } | null>(null);
 
   const wsId = useWorkspaceId();
   const isArchivedView = view === "archived";
@@ -197,15 +200,14 @@ export function InboxSurface({
   // The paginated endpoint guarantees the projection, including on empty pages.
   const priorityFilterSupport = isArchivedView ? "supported" : inboxPriorityFilterSupport(rawItems);
   const effectiveFilters = useMemo(() => {
-    const supported = inboxFiltersForPrioritySupport(filters, priorityFilterSupport);
-    return isArchivedView ? inboxFiltersForArchive(supported) : supported;
-  }, [filters, priorityFilterSupport, isArchivedView]);
+    return effectiveInboxFilters(filters, { priority: priorityFilterSupport, issueFields: inboxIssueFieldsSupport(viewItems), archived: isArchivedView });
+  }, [filters, priorityFilterSupport, isArchivedView, viewItems]);
   // "Active" is the same running-or-queued rule the row's activity badge uses.
   const { activityByIssueId } = useIssueSurfaceActivity();
   const activeIssueIds = useMemo(() => new Set(activityByIssueId.keys()), [activityByIssueId]);
   // Only an idle selection reads the snapshot, so task churn leaves the list
   // alone while it is off.
-  const idleFilterIssueIds = effectiveFilters.idleOnly ? activeIssueIds : undefined;
+  const idleFilterIssueIds = effectiveFilters.agent ? activeIssueIds : undefined;
   // The open row survives the unread and idle dimensions while it stays
   // selected; see the pin refs above. Each pin is passed separately so it
   // only crosses its own dimension.
@@ -213,14 +215,14 @@ export function InboxSurface({
     effectiveFilters.unreadOnly && pinnedUnreadKeyRef.current === selectedKey
       ? selectedKey
       : null;
-  const pinnedIdleKey =
-    effectiveFilters.idleOnly && pinnedIdleKeyRef.current === selectedKey
+  const pinnedAgentKey =
+    effectiveFilters.agent && pinnedAgentRef.current?.key === selectedKey && pinnedAgentRef.current.agent === effectiveFilters.agent
       ? selectedKey
       : null;
-  const pinnedKey = pinnedUnreadKey ?? pinnedIdleKey;
+  const pinnedKey = pinnedUnreadKey ?? pinnedAgentKey;
   const filterContext = useMemo(
-    () => ({ activeIssueIds: idleFilterIssueIds, pinnedUnreadKey, pinnedIdleKey }),
-    [idleFilterIssueIds, pinnedUnreadKey, pinnedIdleKey],
+    () => ({ activeIssueIds: idleFilterIssueIds, pinnedUnreadKey, pinnedAgentKey }),
+    [idleFilterIssueIds, pinnedUnreadKey, pinnedAgentKey],
   );
   const normallyFilteredItems = useMemo(
     () => filterInboxItems(viewItems, effectiveFilters, filterContext),
@@ -396,27 +398,27 @@ export function InboxSurface({
     if (pinnedUnreadKeyRef.current && pinnedUnreadKeyRef.current !== selectedKey) {
       pinnedUnreadKeyRef.current = null;
     }
-    if (pinnedIdleKeyRef.current && pinnedIdleKeyRef.current !== selectedKey) {
-      pinnedIdleKeyRef.current = null;
+    if (pinnedAgentRef.current && pinnedAgentRef.current.key !== selectedKey) {
+      pinnedAgentRef.current = null;
     }
   }, [selectedId, selectedKey]);
 
   // `selected` only exists once the open row passed every filter, so under
   // the idle filter this pins a row that was idle when the user opened it.
-  const idleOnlyActive = effectiveFilters.idleOnly;
+  const agentFilter = effectiveFilters.agent;
   const unreadOnlyActive = effectiveFilters.unreadOnly;
   const hasSelected = selected != null;
   useEffect(() => {
-    if (idleOnlyActive && hasSelected && selectedKey) {
-      pinnedIdleKeyRef.current = selectedKey;
+    if (agentFilter && hasSelected && selectedKey) {
+      pinnedAgentRef.current = { key: selectedKey, agent: agentFilter };
     }
-  }, [idleOnlyActive, hasSelected, selectedKey]);
+  }, [agentFilter, hasSelected, selectedKey]);
 
   // Turning a filter off releases its pin, so turning it back on judges the
   // open row by its current state instead of an exemption from earlier.
   useEffect(() => {
-    if (!idleOnlyActive) pinnedIdleKeyRef.current = null;
-  }, [idleOnlyActive]);
+    if (!agentFilter) pinnedAgentRef.current = null;
+  }, [agentFilter]);
   useEffect(() => {
     if (!unreadOnlyActive) pinnedUnreadKeyRef.current = null;
   }, [unreadOnlyActive]);
@@ -725,6 +727,7 @@ export function InboxSurface({
         onMarkRead: handleMarkRead,
         onMarkUnread: handleMarkUnread,
         onAction: isArchivedView ? handleUnarchive : handleArchive,
+        onDelete: (id) => setDeleteTarget(selectionItems.find((item) => item.id === id) ?? null),
       }}
     >
       <InboxList
@@ -753,6 +756,9 @@ export function InboxSurface({
           ) : undefined
         }
       />
+      {deleteTarget && <InboxDeleteDialog key={deleteTarget.id} item={deleteTarget} view={view}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={(id) => { advanceSelectionPast(id, selectionItems); toast.success(t(($) => $.toasts.deleted)); }} />}
     </InboxContextMenuProvider>
   );
 

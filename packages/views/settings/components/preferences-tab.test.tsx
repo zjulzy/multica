@@ -30,15 +30,9 @@ const mockReload = vi.hoisted(() => vi.fn());
 const mockToastWarning = vi.hoisted(() => vi.fn());
 const mockToastError = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
-const mockSetTheme = vi.hoisted(() => vi.fn());
-const themeState = vi.hoisted(() => ({ theme: "light", themes: ["light", "dark", "system"] }));
 const mockSetUser = vi.hoisted(() => vi.fn());
 const userRef = vi.hoisted(() => ({
   current: null as { id: string; timezone?: string | null } | null,
-}));
-
-vi.mock("@multica/ui/components/common/theme-provider", () => ({
-  useTheme: () => ({ ...themeState, setTheme: mockSetTheme }),
 }));
 
 vi.mock("@multica/core/i18n/react", async () => {
@@ -67,6 +61,9 @@ vi.mock("@multica/core/chat", () => ({
     { getState: () => chatState },
   ),
 }));
+
+// Reads the workspace's agents; covered by its own test.
+vi.mock("./quick-chat-agent-row", () => ({ QuickChatAgentRow: () => null }));
 
 vi.mock("@multica/core/paths", () => ({
   useCurrentWorkspace: () => ({ id: "ws-1", name: "Acme" }),
@@ -129,8 +126,6 @@ function I18nWrapper({ children }: { children: ReactNode }) {
 describe("PreferencesTab — Language switcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    themeState.theme = "light";
-    themeState.themes = ["light", "dark", "system"];
     userRef.current = null;
     vi.useFakeTimers({ shouldAdvanceTime: true });
     Object.defineProperty(window, "location", {
@@ -163,42 +158,6 @@ describe("PreferencesTab — Language switcher", () => {
     expect(mockReload).not.toHaveBeenCalled();
   });
 
-  it("applies the theme on this device without announcing success", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    render(<PreferencesTab />, { wrapper: I18nWrapper });
-
-    const group = screen.getByRole("group", { name: "Theme" });
-    expect(within(group).getByRole("button", { name: "Light" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await user.click(within(group).getByRole("button", { name: "Dark" }));
-
-    expect(mockSetTheme).toHaveBeenCalledWith("dark");
-    expect(mockToastSuccess).not.toHaveBeenCalled();
-  });
-
-  it("shows desktop themes only when supported and preserves their selection", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const view = render(<PreferencesTab />, { wrapper: I18nWrapper });
-    expect(screen.queryByRole("button", { name: "Graphite Copper" })).not.toBeInTheDocument();
-    themeState.themes = ["light", "dark", "graphite-copper", "mist-celadon", "cream-gold", "sakura-blush", "moon-lavender", "deep-ocean", "daisy-garden", "hydrangea-rain", "osmanthus-courtyard", "starlit-dream", "system"];
-    view.rerender(<PreferencesTab />);
-    await user.click(screen.getByRole("button", { name: "Graphite Copper" }));
-    expect(mockSetTheme).toHaveBeenCalledWith("graphite-copper");
-    themeState.theme = "graphite-copper";
-    view.rerender(<PreferencesTab />);
-    expect(screen.getByRole("button", { name: "Graphite Copper" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Mist Celadon" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cream Gold" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sakura Blush" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Moon Lavender" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Deep Ocean" })).toBeInTheDocument();
-    for (const name of ["Daisy Garden", "Hydrangea Rain", "Osmanthus Courtyard", "Starlit Dream"]) expect(screen.getByRole("button", { name })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Hydrangea Rain" }));
-    expect(mockSetTheme).toHaveBeenCalledWith("hydrangea-rain");
-  });
-
   it.each([
     { name: "한국어", locale: "ko" },
     { name: "日本語", locale: "ja" },
@@ -220,6 +179,7 @@ describe("PreferencesTab — Language switcher", () => {
     { name: "简体中文", locale: "zh-Hans" },
     { name: "繁體中文", locale: "zh-Hant" },
     { name: "Français", locale: "fr" },
+    { name: "Español", locale: "es" },
   ])("when logged in: saves $locale before reloading", async ({ name, locale }) => {
     userRef.current = { id: "user-1" };
     mockUpdateMe.mockResolvedValueOnce({});
@@ -455,8 +415,8 @@ describe("PreferencesTab — Scope", () => {
   it("labels where each group of settings is stored", () => {
     render(<PreferencesTab />, { wrapper: I18nWrapper });
     expect(screen.getByText("Account · synced")).toBeInTheDocument();
-    // Appearance, opening issues, comments & chat.
-    expect(screen.getAllByText("This device only")).toHaveLength(3);
+    // Opening issues, comments & chat.
+    expect(screen.getAllByText("This device only")).toHaveLength(2);
   });
 
   it("switches what clicking a card or row opens, and says what Shift does", async () => {

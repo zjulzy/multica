@@ -1,50 +1,121 @@
-import { fireEvent, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TooltipProvider } from "@multica/ui/components/ui/tooltip";
+import type { ReactNode } from "react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_APPEARANCE, useAppearanceStore, useInstalledThemesStore } from "@multica/core/appearance";
 import { renderWithI18n } from "../test/i18n";
 import { AccountMenu } from "./account-menu";
 
-const state = vi.hoisted(() => ({ theme: "sakura-blush", themes: ["light", "dark", "system", "sakura-blush", "deep-ocean"], setTheme: vi.fn() }));
-vi.mock("@multica/ui/components/common/theme-provider", () => ({ useTheme: () => state }));
-vi.mock("@multica/core/auth", () => ({ useAuthStore: (selector: (state: unknown) => unknown) => selector({ user: { name: "Test", email: "test@example.com" } }) }));
-vi.mock("@multica/core/paths", () => ({ useWorkspacePaths: () => ({ settings: () => "/settings" }) }));
-vi.mock("../auth", () => ({ useLogout: () => vi.fn() }));
-vi.mock("../common/use-language-switch", () => ({ useLanguageSwitch: () => ({ options: [], currentLocale: "en", changeLanguage: vi.fn() }) }));
-vi.mock("../navigation", () => ({ AppLink: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a> }));
-vi.mock("../platform/local-directory", () => ({ isDesktopShell: () => true }));
-vi.mock("@multica/ui/components/common/actor-avatar", () => ({ ActorAvatar: () => <span>Avatar</span> }));
-vi.mock("@multica/core/workspace/avatar-url", () => ({ resolvePublicFileUrl: () => null }));
-vi.mock("@multica/ui/components/ui/dropdown-menu", () => {
-  const Container = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
+const theme = vi.hoisted(() => ({ current: "light", setTheme: vi.fn() }));
+
+vi.mock("@multica/ui/components/common/theme-provider", () => ({
+  useTheme: () => ({
+    theme: theme.current,
+    resolvedTheme: theme.current,
+    setTheme: theme.setTheme,
+  }),
+}));
+vi.mock("@multica/core/auth", () => {
+  const state = { user: { id: "user-1", name: "Jiayuan", email: "jiayuan@example.com", avatar_url: null } };
   return {
-    DropdownMenu: Container, DropdownMenuContent: Container, DropdownMenuGroup: Container,
-    DropdownMenuSub: Container, DropdownMenuSubContent: Container, DropdownMenuSubTrigger: Container,
-    DropdownMenuSeparator: () => null,
-    DropdownMenuItem: Container,
-    DropdownMenuTrigger: ({ children, ...props }: React.PropsWithChildren<React.ButtonHTMLAttributes<HTMLButtonElement>>) => <button {...props}>{children}</button>,
-    DropdownMenuRadioGroup: ({ value, onValueChange, children }: { value: string; onValueChange: (value: string) => void; children: React.ReactNode }) =>
-      <div data-value={value} onChange={(event) => onValueChange((event.target as HTMLInputElement).value)}>{children}</div>,
-    DropdownMenuRadioItem: ({ value, children }: { value: string; children: React.ReactNode }) =>
-      <label><input type="radio" role="menuitemradio" value={value} name="theme-test" />{children}</label>,
+    useAuthStore: Object.assign((selector: (s: typeof state) => unknown) => selector(state), {
+      getState: () => state,
+    }),
   };
 });
+vi.mock("@multica/core/workspace/avatar-url", () => ({ resolvePublicFileUrl: () => undefined }));
+vi.mock("@multica/ui/components/common/tooltip-hint", () => ({
+  TooltipHint: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+vi.mock("../navigation", () => ({
+  AppLink: ({ children, href, ...props }: { children: ReactNode; href: string } & React.ComponentProps<"a">) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+vi.mock("@multica/core/paths", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@multica/core/paths")>();
+  return { ...actual, useWorkspacePaths: () => actual.paths.workspace("acme") };
+});
+vi.mock("../auth", () => ({ useLogout: () => vi.fn() }));
+vi.mock("../common/use-language-switch", () => ({
+  useLanguageSwitch: () => ({
+    currentLocale: "en",
+    options: [{ value: "en", label: "English" }],
+    changeLanguage: vi.fn(),
+  }),
+}));
 
-beforeEach(() => { state.setTheme.mockReset(); state.theme = "sakura-blush"; state.themes = ["light", "dark", "system", "sakura-blush", "deep-ocean"]; });
+function openThemeMenu() {
+  renderWithI18n(<AccountMenu />);
+  fireEvent.click(screen.getByRole("button", { name: "Account" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: /Theme/ }));
+}
 
-describe("account theme menu", () => {
-  it("offers all three nature themes in the desktop theme menu", () => {
-    state.themes = [...state.themes, "daisy-garden", "hydrangea-rain", "osmanthus-courtyard", "starlit-dream"];
-    renderWithI18n(<TooltipProvider><AccountMenu /></TooltipProvider>);
-    for (const label of ["Daisy Garden", "Hydrangea Rain", "Osmanthus Courtyard", "Starlit Dream"]) {
-      expect(screen.getByRole("menuitemradio", { name: label })).toBeInTheDocument();
-    }
+beforeEach(() => {
+  theme.current = "light";
+  useAppearanceStore.setState(DEFAULT_APPEARANCE);
+  useInstalledThemesStore.setState({ themes: [], folders: {}, fromStore: {} });
+});
+
+afterEach(() => {
+  theme.setTheme.mockReset();
+});
+
+describe("AccountMenu theme submenu", () => {
+  it("shows the mode and the active colour theme on the Theme row", () => {
+    theme.current = "dark";
+    useAppearanceStore.setState({ theme: "github" });
+    renderWithI18n(<AccountMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Account" }));
+
+    expect(screen.getByRole("menuitem", { name: /Theme/ })).toHaveTextContent("Dark·GitHub");
   });
-  it("shows the selected custom theme and switches to an available custom theme", async () => {
-    renderWithI18n(<TooltipProvider><AccountMenu /></TooltipProvider>);
-    expect(screen.getAllByText("Sakura Blush")).toHaveLength(2);
-    const item = screen.getByRole("menuitemradio", { name: "Deep Ocean" });
-    fireEvent.click(item);
-    expect(state.setTheme).toHaveBeenCalledWith("deep-ocean");
-    expect(screen.queryByRole("menuitemradio", { name: "Graphite Copper" })).toBeNull();
+
+  it("truncates a long installed theme name instead of the row label", () => {
+    const name = "A very long community theme name, forty!";
+    useInstalledThemesStore.setState({
+      themes: [{ apiVersion: 1, id: "long", name, css: "" }],
+      folders: {},
+      fromStore: {},
+    });
+    useAppearanceStore.setState({ theme: "long" });
+    renderWithI18n(<AccountMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Account" }));
+
+    const row = screen.getByRole("menuitem", { name: /Theme/ });
+    expect(within(row).getByText("Theme")).toHaveClass("shrink-0");
+    expect(within(row).getByText(name)).toHaveClass("truncate");
+  });
+
+  it("switches the colour theme and keeps the menu open to compare", async () => {
+    openThemeMenu();
+
+    const pop = await screen.findByRole("menuitemradio", { name: "Pop" });
+    expect(screen.getByRole("menuitemradio", { name: "Default" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(pop);
+
+    expect(useAppearanceStore.getState().theme).toBe("pop");
+    expect(screen.getByRole("menuitemradio", { name: "Pop" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("switches between light, dark and system and closes like before", async () => {
+    openThemeMenu();
+
+    const mode = (await screen.findByText("Mode")).closest("[role=group]") as HTMLElement;
+    expect(within(mode).getByRole("menuitemradio", { name: "Light" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(within(mode).getByRole("menuitemradio", { name: "Dark" }));
+
+    expect(theme.setTheme).toHaveBeenCalledWith("dark");
+    await waitFor(() => expect(screen.queryByRole("menuitemradio", { name: "Pop" })).not.toBeInTheDocument());
+  });
+
+  it("links to the appearance settings", async () => {
+    openThemeMenu();
+
+    expect(await screen.findByRole("menuitem", { name: "Appearance settings" })).toHaveAttribute(
+      "href",
+      "/acme/settings?tab=appearance",
+    );
   });
 });

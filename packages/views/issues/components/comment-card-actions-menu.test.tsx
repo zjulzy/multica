@@ -12,10 +12,10 @@ vi.mock("@multica/ui/components/ui/dropdown-menu", async (importOriginal) => {
   return { ...actual, DropdownMenuContent: (props: React.ComponentProps<typeof actual.DropdownMenuContent>) => { menuMetrics.created++; return createElement(actual.DropdownMenuContent, props); } };
 });
 
-// Comment "more actions" menu layout, in three groups: act on the comment
-// (Edit, then Resolve), take it elsewhere (Copy, Copy link, Create sub-issue),
-// and Delete alone at the bottom. Edit only shows on comments the viewer may
-// edit, so on anyone else's comment Resolve leads the menu.
+// Comment "more actions" menu layout, in four groups: respond (Reply, Add
+// reaction, Edit), act on the thread (Resolve, Create sub-issue), share (Copy,
+// Copy link), and Delete alone at the bottom. Edit and Delete only show on
+// comments the viewer may change.
 
 vi.mock("@multica/core/api", () => ({
   api: { uploadFile: vi.fn() },
@@ -59,6 +59,7 @@ vi.mock("../../editor", async () => ({
 }));
 
 import { CommentCard } from "./comment-card";
+import { findContextMenuScope } from "../../common/context-menu-scope";
 
 function comment(
   id: string,
@@ -122,9 +123,9 @@ const agentAuthor = { actor_type: "agent", actor_id: "agent-1" } as const;
 it("does not create a reply menu until it is opened", async () => {
   menuMetrics.created = 0;
   renderThread(comment("root", null), [comment("reply", "root")]);
-  expect(menuMetrics.created).toBe(1);
+    expect(menuMetrics.created).toBe(0);
   await openMenuLayout(1);
-  expect(menuMetrics.created).toBeGreaterThan(1);
+    expect(menuMetrics.created).toBeGreaterThan(0);
 });
 
 it("opens the reply actions by keyboard", async () => {
@@ -136,16 +137,19 @@ it("opens the reply actions by keyboard", async () => {
 });
 
 describe("CommentCard — actions menu layout", () => {
-  it("groups the author's root menu as edit/resolve, copy/derive, delete", async () => {
+  it("groups the author's root menu as respond, act, share, delete", async () => {
     renderThread(comment("root", null), []);
 
     expect(await openMenuLayout(0)).toEqual([
+      "Reply",
+      "Add reaction",
       "Edit",
+      SEPARATOR,
       "Resolve thread",
+      "Create sub-issue from here",
       SEPARATOR,
       "Copy",
       "Copy link",
-      "Create sub-issue from here",
       SEPARATOR,
       "Delete",
     ]);
@@ -156,32 +160,101 @@ describe("CommentCard — actions menu layout", () => {
 
     // Menus render in order: root first, then the reply.
     expect(await openMenuLayout(1)).toEqual([
+      "Reply",
+      "Add reaction",
       "Edit",
+      SEPARATOR,
       "Resolve thread with comment",
+      "Create sub-issue from here",
       SEPARATOR,
       "Copy",
       "Copy link",
-      "Create sub-issue from here",
       SEPARATOR,
       "Delete",
     ]);
   });
 
-  it("leads with Resolve on someone else's comment", async () => {
+  it("offers no Edit or Delete on someone else's comment", async () => {
     renderThread(comment("root", null, agentAuthor), []);
 
     expect(await openMenuLayout(0)).toEqual([
+      "Reply",
+      "Add reaction",
+      SEPARATOR,
       "Resolve thread",
+      "Create sub-issue from here",
       SEPARATOR,
       "Copy",
       "Copy link",
-      "Create sub-issue from here",
     ]);
   });
 
-  it("drops the leading separator when there is nothing to edit or resolve", async () => {
+  it("keeps Create sub-issue when the thread cannot be resolved", async () => {
     renderThread(comment("root", null, agentAuthor), [], { resolvable: false });
 
-    expect(await openMenuLayout(0)).toEqual(["Copy", "Copy link", "Create sub-issue from here"]);
+    expect(await openMenuLayout(0)).toEqual([
+      "Reply",
+      "Add reaction",
+      SEPARATOR,
+      "Create sub-issue from here",
+      SEPARATOR,
+      "Copy",
+      "Copy link",
+    ]);
+  });
+});
+
+describe("CommentCard — right-click", () => {
+  function menuItems(menu: HTMLElement) {
+    return Array.from(menu.querySelectorAll('[role="menuitem"]'), (el) => el.textContent?.trim() ?? "");
+  }
+
+  it("opens the same menu as the ⋯ button at the cursor", async () => {
+    renderThread(comment("root", null), []);
+
+    fireEvent.contextMenu(screen.getByText("body root"), { clientX: 40, clientY: 60 });
+    const menu = await screen.findByRole("menu");
+    expect(menuItems(menu)).toEqual([
+      "Reply",
+      "Add reaction",
+      "Edit",
+      "Resolve thread",
+      "Create sub-issue from here",
+      "Copy",
+      "Copy link",
+      "Delete",
+    ]);
+  });
+
+  it("leaves a right-click something inside already handled", () => {
+    renderThread(comment("root", null), []);
+
+    const body = screen.getByText("body root");
+    body.addEventListener("contextmenu", (event) => event.preventDefault());
+    fireEvent.contextMenu(body);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+});
+
+describe("CommentCard — menus opened inside a comment", () => {
+  it("offers the comment's actions as the submenu and adds selection entries", () => {
+    renderThread(comment("root", null, agentAuthor), [comment("reply", "root")]);
+
+    const scope = findContextMenuScope(screen.getByText("body reply"));
+    expect(scope.submenu?.label).toBe("Comment actions");
+    expect(scope.submenu?.groups.flat().map((action) => action.label)).toEqual([
+      "Reply",
+      "Add reaction",
+      "Edit",
+      "Resolve thread with comment",
+      "Create sub-issue from here",
+      "Copy",
+      "Copy link",
+      "Delete",
+    ]);
+    expect(scope.selectionActions("quoted").map((action) => action.label)).toEqual([
+      "Add to reply",
+      "Create sub-issue from selection",
+    ]);
   });
 });

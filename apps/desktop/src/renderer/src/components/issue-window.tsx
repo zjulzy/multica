@@ -14,7 +14,9 @@ import { Button } from "@multica/ui/components/ui/button";
 import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
 import { ModalRegistry } from "@multica/views/modals/registry";
 import { WorkspacePresencePrefetch } from "@multica/views/layout";
-import { DragStrip } from "@multica/views/platform";
+import { VoiceWorkspaceWords } from "@multica/views/voice";
+import { DragStrip, WindowTitleBarProvider } from "@multica/views/platform";
+import { TRAFFIC_LIGHT_CLEARANCE } from "./window-toolbar";
 import { parseIssueWindowRequest, type IssueWindowContext } from "../../../shared/issue-window";
 import { DesktopAuthRecoveryPage } from "../pages/auth-recovery";
 import { IssueDetailPage } from "../pages/issue-detail-page";
@@ -93,7 +95,7 @@ function IssueWindowRoute() {
     return (
       <IssueWindowFrame>
         <div className="flex min-h-0 flex-1 items-center justify-center">
-          <MulticaIcon mode="launch" size={40} />
+          <MulticaIcon mode="think" size={40} />
         </div>
       </IssueWindowFrame>
     );
@@ -105,9 +107,10 @@ function IssueWindowRoute() {
 
   return (
     <WorkspaceSlugProvider slug={workspaceSlug}>
-      {window.desktopAPI.isEmbeddedIssue ? <EmbeddedIssueContent workspaceSlug={workspaceSlug} workspaceId={workspace.id} /> : <IssueWindowNavigationProvider>
+      {window.desktopAPI?.isEmbeddedIssue ? <EmbeddedIssueContent workspaceSlug={workspaceSlug} workspaceId={workspace.id} /> : <IssueWindowNavigationProvider>
         <WorkspacePresencePrefetch />
-        <IssueWindowFrame>
+        <VoiceWorkspaceWords />
+        <IssueWindowFrame pageOwnsTitleBar>
           <IssueDetailPage onDelete={() => window.desktopAPI.closeWindow()} />
         </IssueWindowFrame>
         <ModalRegistry />
@@ -143,14 +146,29 @@ function EmbeddedIssueContent({ workspaceSlug, workspaceId }: { workspaceSlug: s
   </EmbeddedIssueNavigationProvider>;
 }
 
-function IssueWindowFrame({ children, embedded = false }: { children: React.ReactNode; embedded?: boolean }) {
+const ISSUE_WINDOW_TITLE_BAR = { leadingInset: TRAFFIC_LIGHT_CLEARANCE };
+
+// The issue page's 48px header is the title bar: trafficLightPosition centres
+// the lights on it, so stacking a separate drag strip above it would leave
+// the lights alone in an empty row. States with no page header keep the strip.
+function IssueWindowFrame({
+  children,
+  pageOwnsTitleBar = false,
+  embedded = false,
+}: {
+  children: React.ReactNode;
+  pageOwnsTitleBar?: boolean;
+  embedded?: boolean;
+}) {
   return (
     <div
       data-dedicated-issue-window="true"
       className="flex h-screen min-h-0 flex-col bg-page-canvas text-foreground"
     >
-      {!embedded && <DragStrip />}
-      <div className="flex min-h-0 flex-1 overflow-hidden">{children}</div>
+      {!embedded && !pageOwnsTitleBar && <DragStrip />}
+      <WindowTitleBarProvider value={pageOwnsTitleBar ? ISSUE_WINDOW_TITLE_BAR : null}>
+        <div className="flex min-h-0 flex-1 overflow-hidden">{children}</div>
+      </WindowTitleBarProvider>
     </div>
   );
 }

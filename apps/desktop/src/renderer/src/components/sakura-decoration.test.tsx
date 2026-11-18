@@ -13,7 +13,7 @@ describe("SakuraDecoration", () => {
   });
   it("only animates petals for the sakura theme when motion is enabled", () => {
     const css = readFileSync("src/renderer/src/desktop-themes.css", "utf8");
-    expect(css).toContain('html[data-desktop-theme="sakura-blush"][data-interface-motion="on"] [data-sakura-petal]');
+    expect(css).toContain('html:root[data-desktop-theme="sakura-blush"][data-interface-motion="on"] [data-sakura-petal]');
     expect(css).toContain("prefers-reduced-motion: no-preference");
   });
 });

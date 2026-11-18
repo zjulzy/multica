@@ -3,9 +3,25 @@ import { useEffect, useState } from "react";
 import { useT } from "@multica/views/i18n";
 import { SettingsCard, SettingsRow, SettingsTab } from "@multica/views/settings";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
+import { useTheme } from "@multica/ui/components/common/theme-provider";
+import { useAppearanceStore } from "@multica/core/appearance";
 
 export function AppearanceSettingsTab() {
   const { t } = useT("settings");
+  const { theme, setTheme, themes } = useTheme();
+  const setAppearance = useAppearanceStore((state) => state.set);
+  const customThemes = [
+    ["graphite-copper", t(($) => $.preferences.theme.graphite_copper)],
+    ["mist-celadon", t(($) => $.preferences.theme.mist_celadon)],
+    ["cream-gold", t(($) => $.preferences.theme.cream_gold)],
+    ["sakura-blush", t(($) => $.preferences.theme.sakura_blush)],
+    ["moon-lavender", t(($) => $.preferences.theme.moon_lavender)],
+    ["deep-ocean", t(($) => $.preferences.theme.deep_ocean)],
+    ["daisy-garden", t(($) => $.preferences.theme.daisy_garden)],
+    ["hydrangea-rain", t(($) => $.preferences.theme.hydrangea_rain)],
+    ["osmanthus-courtyard", t(($) => $.preferences.theme.osmanthus_courtyard)],
+    ["starlit-dream", t(($) => $.preferences.theme.starlit_dream)],
+  ] as const;
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   const setSingleTabMode = useDesktopPrefsStore((s) => s.setSingleTabMode);
   const lightweightInboxEnabled = useDesktopPrefsStore((s) => s.lightweightInboxEnabled);
@@ -32,6 +48,15 @@ export function AppearanceSettingsTab() {
   return (
     <SettingsTab title={t(($) => $.desktop.appearance.title)}>
       <SettingsCard>
+        <SettingsRow label={t(($) => $.preferences.theme.title)}>
+          <select aria-label={t(($) => $.preferences.theme.title)} value={theme ?? "system"}
+            onChange={(event) => { const value = event.target.value; if (!["system", "light", "dark"].includes(value)) setAppearance({ theme: "default" }); setTheme(value); }} className="h-9 rounded-md border bg-background px-3 text-body text-foreground">
+            <option value="system">{t(($) => $.preferences.theme.system)}</option>
+            <option value="light">{t(($) => $.preferences.theme.light)}</option>
+            <option value="dark">{t(($) => $.preferences.theme.dark)}</option>
+            {customThemes.filter(([key]) => themes?.includes(key)).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </SettingsRow>
         <SettingsRow label={t(($) => $.desktop.appearance.performance_title)} description={t(($) => $.desktop.appearance.performance_description)}>
           <Switch checked={performanceMonitorEnabled} onCheckedChange={setPerformanceMonitorEnabled} aria-label={t(($) => $.desktop.appearance.performance_title)} />
         </SettingsRow>

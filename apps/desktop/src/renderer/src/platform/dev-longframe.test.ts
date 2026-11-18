@@ -13,8 +13,8 @@ describe("development long-frame diagnostics", () => {
       { duration: 50, sourceURL: "https://example.test/private.js", sourceFunctionName: "work" },
     ] });
     expect(result).toEqual({ kind: "long-frame-global", durationMs: 321, scripts: [
-      { source: "issue-detail.tsx", function: "render", durationMs: 210 },
-      { source: "other", function: "work", durationMs: 50 },
+      { source: "issue-detail.tsx", function: "render", durationMs: 210, forcedLayoutMs: 0 },
+      { source: "other", function: "work", durationMs: 50, forcedLayoutMs: 0 },
     ] });
   });
 });

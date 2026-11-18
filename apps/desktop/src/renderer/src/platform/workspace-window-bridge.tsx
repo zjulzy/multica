@@ -35,10 +35,12 @@ export function WorkspaceWindowBridge() {
 
   useEffect(
     () =>
-      window.desktopAPI.onOpenWorkspacePath?.((path) => {
-        if (tryRouteToChatDock(path)) return;
+      window.desktopAPI.onOpenWorkspacePath?.(({ path, navigate }) => {
+        if (navigate && tryRouteToChatDock(path)) return;
         const slug = workspaceSlugForPath(path);
-        if (slug) useTabStore.getState().switchWorkspace(slug, path);
+        if (!slug) return;
+        useTabStore.getState().switchWorkspace(slug, path);
+        if (navigate) useTabStore.getState().navigateActiveSession(path);
       }),
     [],
   );

@@ -3,6 +3,7 @@ export { AgentStatusHub } from "./agent-status-hub";
 export { AppShellProvider, useAppShell, useListColumnCollapsed } from "./app-shell-context";
 export { ListColumn } from "./list-column";
 export { SharedPinnedSection } from "./panels/shared-pinned-section";
+export { AppBottomBar } from "./bottom-bar";
 export { CompactNavSheet } from "./compact-nav-sheet";
 export { ShellRouteDataPrefetch } from "./route-data-prefetch";
 export { SpacePanel } from "./space-panel";

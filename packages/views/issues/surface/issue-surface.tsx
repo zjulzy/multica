@@ -22,6 +22,12 @@ import {
   seedIssueSurfaceViewState,
 } from "@multica/core/issues/stores/surface-view-store";
 import { useActiveIssueView } from "@multica/core/issue-views/use-active-view";
+import { filteredBuiltinBaseline } from "@multica/core/issue-views/builtin-issue-views";
+import {
+  issueViewDefinitionFromState,
+  issueViewSeedDefinition,
+  sameFilterMeaning,
+} from "@multica/core/issue-views/definition";
 import { ViewBaselineProvider, useViewBaseline } from "./view-baseline-context";
 import type { IssueViewScope } from "@multica/core/issue-views/queries";
 import {
@@ -48,6 +54,7 @@ import { ColumnStatusesProvider } from "./column-statuses-context";
 import type { IssueCreateDefaults, IssueSurfaceProps } from "./types";
 import {
   useIssueSurfaceController,
+  type FilterDependencyKind,
   type IssueSurfaceController,
 } from "./use-issue-surface-controller";
 
@@ -84,6 +91,7 @@ export function IssueSurface({
   modes,
   surfaceKey,
   createDefaults,
+  allowCreate = true,
   search,
   renderHeader,
   renderEmpty,
@@ -126,6 +134,7 @@ export function IssueSurface({
       : activeView && scope.type === "my"
         ? { ...scope, relation: myRelationForViewVariant(activeView.scope_variant) }
         : scope;
+  const viewBaseline = filteredBuiltinBaseline(activeView);
   const store = useMemo(() => {
     // First-open seeding happens HERE, at store-creation time for this key:
     // no React component has subscribed to the new key's store yet, so the
@@ -134,9 +143,19 @@ export function IssueSurface({
     if (seedDefinition) {
       seedIssueSurfaceViewState(resolvedSurfaceKey, seedDefinition);
     }
-    return getIssueSurfaceViewStore(resolvedSurfaceKey);
+    const viewStore = getIssueSurfaceViewStore(resolvedSurfaceKey);
+    if (viewBaseline) keepFixedFilters(viewStore, viewBaseline);
+    return viewStore;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seed identity follows the key
   }, [resolvedSurfaceKey]);
+  // Seeding happens once per key, but the stored state can be replaced later:
+  // a workspace switch reloads it from that workspace's preferences, which may
+  // never have held the condition. Re-apply it whenever it goes missing.
+  useEffect(() => {
+    if (!viewBaseline) return;
+    keepFixedFilters(store, viewBaseline);
+    return store.subscribe(() => keepFixedFilters(store, viewBaseline));
+  }, [store, viewBaseline]);
 
   // Every change of this key tears down and remounts the ENTIRE surface
   // (providers, DnD, all columns/cards) — by design for data-window changes,
@@ -152,39 +171,69 @@ export function IssueSurface({
 
   return (
     <ViewStoreProvider store={store}>
-      {/* Remount on data-window change: the list queries keep the previous
-          key's data as a placeholder (keepPreviousData) so sort/filter
-          changes within ONE surface never flash a skeleton — but reusing the
-          mounted observer across windows made project A's cards impersonate
-          project B (with isLoading=false, so no skeleton either) until B's
-          fetch landed. A window-keyed remount gives the new window a fresh
-          observer: cold window → skeleton, warm window → instant cache hit.
-          The window identity is wsId + scope — wsId is required because the
-          workspace layout does not remount on workspace switch and two
-          workspaces share the same scope key (e.g. "workspace:all"). Keyed
-          by data identity, not surfaceKey (view-preference identity). */}
-      <IssueSurfaceContent
-        key={contentKey}
-        scope={effectiveScope}
-        modes={modes}
-        createDefaults={createDefaults}
-        search={search}
-        renderHeader={renderHeader}
-        renderEmpty={renderEmpty}
-        renderLoading={renderLoading}
-        clientFilter={clientFilter}
-        showClientEmpty={showClientEmpty}
-        batchToolbar={batchToolbar}
-        contentClassName={contentClassName}
-      />
+      <ViewBaselineProvider baseline={viewBaseline}>
+        {/* Remount on data-window change: the list queries keep the previous
+            key's data as a placeholder (keepPreviousData) so sort/filter
+            changes within ONE surface never flash a skeleton — but reusing the
+            mounted observer across windows made project A's cards impersonate
+            project B (with isLoading=false, so no skeleton either) until B's
+            fetch landed. A window-keyed remount gives the new window a fresh
+            observer: cold window → skeleton, warm window → instant cache hit.
+            The window identity is wsId + scope — wsId is required because the
+            workspace layout does not remount on workspace switch and two
+            workspaces share the same scope key (e.g. "workspace:all"). Keyed
+            by data identity, not surfaceKey (view-preference identity). */}
+        <IssueSurfaceContent
+          key={contentKey}
+          scope={effectiveScope}
+          modes={modes}
+          createDefaults={createDefaults}
+          allowCreate={allowCreate}
+          search={search}
+          renderHeader={renderHeader}
+          renderEmpty={renderEmpty}
+          renderLoading={renderLoading}
+          clientFilter={clientFilter}
+          showClientEmpty={showClientEmpty}
+          batchToolbar={batchToolbar}
+          contentClassName={contentClassName}
+        />
+      </ViewBaselineProvider>
     </ViewStoreProvider>
   );
+}
+
+/**
+ * Holds a built-in view to its condition: exactly the relations and agent
+ * filter it is defined by. Other dimensions narrow it; these would widen it,
+ * since a dimension's values are ORed (Subscribed + Assigned is "subscribed
+ * or assigned").
+ */
+function keepFixedFilters(store: StoreApi<IssueViewState>, baseline: IssueViewBaseline) {
+  const state = store.getState();
+  const patch: Partial<IssueViewState> = {};
+  if (baseline.agentRunning && (!state.agentRunningFilter || state.agentIdleFilter)) {
+    Object.assign(patch, { agentRunningFilter: true, agentIdleFilter: false });
+  }
+  const relations = baseline.raw.relationFilters;
+  if (
+    relations.length > 0 &&
+    (relations.length !== state.relationFilters.length ||
+      relations.some((relation) => !state.relationFilters.includes(relation)))
+  ) {
+    patch.relationFilters = [...relations];
+  }
+  if (relations.length > 0 && state.negatedFilters.includes("relation")) {
+    patch.negatedFilters = state.negatedFilters.filter((dimension) => dimension !== "relation");
+  }
+  if (Object.keys(patch).length > 0) store.setState(patch);
 }
 
 function IssueSurfaceContent({
   scope,
   modes,
   createDefaults,
+  allowCreate = true,
   search,
   renderHeader,
   renderEmpty,
@@ -298,10 +347,11 @@ function IssueSurfaceContent({
           </div>
         ) : needsExtendedFilterCheck && filterSupport.isPending ? (
           <IssueSurfaceSkeleton mode={controller.viewMode} />
-        ) : controller.isStatusCatalogError ? (
-          <FilterDependencyErrorState kind="status" onRetry={controller.retryStatusCatalog} />
-        ) : controller.isWorkingFilterError ? (
-          <FilterDependencyErrorState kind="working" onRetry={controller.retryWorkingFilter} />
+        ) : controller.filterDependencyError ? (
+          <FilterDependencyErrorState
+            kind={controller.filterDependencyError.kind}
+            onRetry={controller.filterDependencyError.retry}
+          />
         ) : controller.isLoading ? (
           renderLoading ? (
             renderLoading(renderContext)
@@ -325,7 +375,7 @@ function IssueSurfaceContent({
               title={t(($) => $.detail.empty_issues_title)}
               description={t(($) => $.detail.empty_issues_hint)}
               actions={
-                <>
+                allowCreate && <>
                   <Button size="sm" onClick={() => controller.openCreateIssue()}>
                     <Plus aria-hidden="true" />
                     {t(($) => $.detail.empty_issues_new_button)}
@@ -357,7 +407,7 @@ function IssueSurfaceContent({
                 childProgressMap={controller.childProgressMap}
                 projectMap={controller.projectMap}
                 projectId={controller.projectId}
-                onCreateIssue={openCreateIssue}
+                onCreateIssue={allowCreate ? openCreateIssue : undefined}
                 statusPagination={controller.statusPagination}
                 groupBranches={controller.groupBranches}
               />
@@ -370,7 +420,7 @@ function IssueSurfaceContent({
                 projectMap={controller.projectMap}
                 projectId={controller.projectId}
                 onMoveIssue={controller.moveIssue}
-                onCreateIssue={openCreateIssue}
+                onCreateIssue={allowCreate ? openCreateIssue : undefined}
                 statusPagination={controller.statusPagination!}
               />
             )}
@@ -399,7 +449,7 @@ function IssueSurfaceContent({
                 childProgressMap={controller.childProgressMap}
                 projectMap={controller.projectMap}
                 projectId={controller.projectId}
-                onCreateIssue={openCreateIssue}
+                onCreateIssue={allowCreate ? openCreateIssue : undefined}
                 groupBranches={controller.groupBranches}
               />
             )}
@@ -428,7 +478,7 @@ function FilterDependencyErrorState({
   kind,
   onRetry,
 }: {
-  kind: "status" | "working";
+  kind: FilterDependencyKind;
   onRetry: () => void;
 }) {
   const { t } = useT("issues");
@@ -440,9 +490,19 @@ function FilterDependencyErrorState({
       title={
         kind === "working"
           ? t(($) => $.working_filter_error.title)
-          : t(($) => $.status_catalog_error.title)
+          : kind === "unread"
+            ? t(($) => $.unread_filter_error.title)
+            : kind === "relation"
+              ? t(($) => $.relation_filter_error.title)
+              : t(($) => $.status_catalog_error.title)
       }
-      description={kind === "status" ? t(($) => $.status_catalog_error.hint) : undefined}
+      description={
+        kind === "status"
+          ? t(($) => $.status_catalog_error.hint)
+          : kind === "relation"
+            ? t(($) => $.relation_filter_error.hint)
+            : undefined
+      }
       actions={
         <Button variant="outline" size="sm" onClick={onRetry}>
           {t(($) => $.status_catalog_error.retry)}
@@ -456,22 +516,42 @@ function FilteredEmptyState() {
   const { t } = useT("issues");
   const clearFilters = useViewStore((s) => s.clearFilters);
   const resetFiltersTo = useViewStore((s) => s.resetFiltersTo);
+  const setDateFilter = useViewStore((s) => s.setDateFilter);
   // Inside a saved view "clear" returns to the view's own conditions — the
   // baseline is not clearable from here (only the edit dialog changes it).
   const baseline = useViewBaseline();
   const handleClear = baseline
-    ? () => resetFiltersTo(baseline.raw)
+    ? () => {
+        resetFiltersTo(baseline.raw);
+        setDateFilter(null);
+      }
     : clearFilters;
+  const baselineQuery = useMemo(
+    () => (baseline ? issueViewSeedDefinition({ query: { ...baseline.raw }, display: {} }).query : null),
+    [baseline],
+  );
+  // Only the view's own conditions are on, so there is nothing to clear.
+  const atBaseline = useViewStore(
+    // Date intervals are user filters, but intentionally live outside the
+    // saved-view definition and its baseline snapshot.
+    (s) => !s.dateFilter && !!baselineQuery && sameFilterMeaning(baselineQuery, issueViewDefinitionFromState(s).query),
+  );
 
   return (
     <CollectionPageState
       size="compact"
       icon={FilterX}
-      title={t(($) => $.filtered_empty.title)}
+      title={
+        atBaseline && baseline?.unread
+          ? t(($) => $.filtered_empty.unread_title)
+          : t(($) => $.filtered_empty.title)
+      }
       actions={
-        <Button variant="outline" size="sm" onClick={handleClear}>
-          {t(($) => $.filtered_empty.clear_button)}
-        </Button>
+        atBaseline ? undefined : (
+          <Button variant="outline" size="sm" onClick={handleClear}>
+            {t(($) => $.filtered_empty.clear_button)}
+          </Button>
+        )
       }
     />
   );

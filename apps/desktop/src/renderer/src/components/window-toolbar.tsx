@@ -37,8 +37,9 @@ import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
 // Controls sit left-aligned just past the macOS traffic lights, which end
 // around x=76 with trafficLightPosition { x: 16 }. The clearance covers that
 // macOS traffic lights are on the left; Windows window buttons are on the right.
+export const TRAFFIC_LIGHT_CLEARANCE = 88;
 function leadingClearance(): number {
-  return isWindowsDesktop() ? 12 : 88;
+  return isWindowsDesktop() ? 12 : TRAFFIC_LIGHT_CLEARANCE;
 }
 export const WINDOW_TOOLBAR_CLEARANCE = 200;
 export function windowToolbarClearance(): number {
@@ -167,17 +168,17 @@ function HistoryMenuItem({
   const { visual, title } = useTabPresentation(url, fallbackTitle);
 
   return (
-    <DropdownMenuItem
-      className="h-8 min-w-0 gap-2 px-2"
-      onClick={onSelect}
-    >
-      <ResourceLeadingVisual visual={visual} />
-      <TruncatedTooltip content={title}>
+    <TruncatedTooltip content={title}>
+      <DropdownMenuItem
+        className="h-8 min-w-0 gap-2 px-2"
+        onClick={onSelect}
+      >
+        <ResourceLeadingVisual visual={visual} />
         <span className="min-w-0 flex-1 truncate">
           {title}
         </span>
-      </TruncatedTooltip>
-    </DropdownMenuItem>
+      </DropdownMenuItem>
+    </TruncatedTooltip>
   );
 }
 
@@ -261,6 +262,7 @@ export function WindowToolbar() {
   return (
     <div
       data-slot="window-toolbar"
+      data-mc="window-toolbar"
       className={cn(
         "fixed left-0 top-0 z-30 flex shrink-0 items-center pr-3",
         singleTabMode ? "h-12" : "h-10",

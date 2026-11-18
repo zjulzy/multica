@@ -14,7 +14,7 @@ import { IndependentIssueProviders } from "./independent-issue-providers";
 describe("independent issue providers", () => {
   it("bridges the existing query client, connection, locale, workspace and shell navigation", async () => {
     const query = new QueryClient();
-    const ws = { subscribe: vi.fn(() => vi.fn()), onReconnect: vi.fn(() => vi.fn()) };
+    const ws = { subscribe: vi.fn(() => vi.fn()), onReconnect: vi.fn(() => vi.fn()), subscribeStatus: vi.fn(() => vi.fn()), getStatus: () => "connected" as const };
     const i18n = createInstance(); await i18n.init({ lng: "en", resources: { en: { translation: { title: "Test title" } } } });
     const report = vi.fn();
     const navigation = { navigation: { pathname: "/team/issues/a", searchParams: new URLSearchParams(), hash: "", push: vi.fn(), replace: vi.fn(), back: vi.fn(), getShareableUrl: (p: string) => p }, pending: false, report };
@@ -38,7 +38,7 @@ describe("independent issue providers", () => {
   });
   it("shows only the current real page header across issue and normal-page switches", async () => {
     const query = new QueryClient();
-    const ws = { subscribe: vi.fn(() => vi.fn()), onReconnect: vi.fn(() => vi.fn()) };
+    const ws = { subscribe: vi.fn(() => vi.fn()), onReconnect: vi.fn(() => vi.fn()), subscribeStatus: vi.fn(() => vi.fn()), getStatus: () => "connected" as const };
     const i18n = createInstance(); await i18n.init({ lng: "en", resources: { en: { translation: {} } } });
     const navigation = { navigation: { pathname: "/team/issues/a", searchParams: new URLSearchParams(), hash: "", push: vi.fn(), replace: vi.fn(), back: vi.fn(), getShareableUrl: (p: string) => p }, pending: false, report: null };
     const host = document.createElement("div"), header = document.createElement("div");

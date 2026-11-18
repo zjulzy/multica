@@ -6,7 +6,7 @@ const context = vi.hoisted(() => ({
   beforeQuit: null as null | ((event: { preventDefault: () => void }) => void),
   quit: vi.fn(), emit: vi.fn(), dialog: vi.fn(), exec: vi.fn(), health: vi.fn(), readPort: vi.fn(), exists: vi.fn(), install: vi.fn(),
   pid: null as number | null,
-  autoStart: false, autoStop: true, locale: "en", holdStart: false,
+  autoStart: false, autoStop: true, locale: "en", holdStart: false, isPackaged: false,
   windows: [] as Array<{
     isDestroyed: () => boolean; isVisible: () => boolean;
     hide: () => void; show: () => void;
@@ -16,6 +16,7 @@ const context = vi.hoisted(() => ({
 }));
 vi.mock("electron", () => ({
   app: {
+    get isPackaged() { return context.isPackaged; },
     getAppPath: () => "/test/desktop", getPreferredSystemLanguages: () => [context.locale],
     on: (_event: string, handler: (event: { preventDefault: () => void }) => void) => { context.beforeQuit = handler; },
     quit: context.quit, emit: context.emit,
@@ -80,7 +81,7 @@ function addWindow(initiallyVisible = true) {
 describe("desktop quit uses the CLI lifecycle", () => {
   beforeEach(() => {
     vi.resetModules(); vi.clearAllMocks(); vi.useFakeTimers(); context.handlers.clear();
-    context.autoStart = false; context.autoStop = true; context.locale = "en"; context.holdStart = false;
+    context.autoStart = false; context.autoStop = true; context.locale = "en"; context.holdStart = false; context.isPackaged = false;
     context.windows = [];
     context.pid = null; context.readPort.mockResolvedValue(null);
     context.exists.mockReturnValue(true); context.install.mockReset();
@@ -96,7 +97,35 @@ describe("desktop quit uses the CLI lifecycle", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
-  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); });
+  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllEnvs(); });
+
+  it("keeps the existing daemon untouched in read-only development previews", async () => {
+    vi.stubEnv("MULTICA_PREVIEW_READ_ONLY", "1");
+    context.autoStart = true;
+    const { setupDaemonManager } = await import("./daemon-manager");
+    setupDaemonManager(() => null);
+    await context.handlers.get("daemon:set-target-api-url")!({}, "https://example.test");
+    await context.handlers.get("daemon:sync-token")!({}, "token", "user-1");
+    await context.handlers.get("daemon:auto-start")!({});
+    for (const name of ["daemon:start", "daemon:stop", "daemon:restart"]) {
+      expect(await context.handlers.get(name)!({})).toMatchObject({ success: false });
+    }
+    const event = { preventDefault: vi.fn() };
+    context.beforeQuit!(event);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(context.exec).not.toHaveBeenCalled();
+    expect(context.install).not.toHaveBeenCalled();
+    expect(context.health).not.toHaveBeenCalled();
+  });
+
+  it("does not enable preview isolation for packaged clients", async () => {
+    vi.stubEnv("MULTICA_PREVIEW_READ_ONLY", "1");
+    context.isPackaged = true;
+    const { setupDaemonManager } = await import("./daemon-manager");
+    setupDaemonManager(() => null);
+    expect(await context.handlers.get("daemon:is-cli-installed")!({})).toBe(true);
+    expect(context.exec).toHaveBeenCalled();
+  });
 
   it("leaves an already prevented quit to the Windows updater", async () => {
     await setup();

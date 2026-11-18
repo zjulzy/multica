@@ -58,6 +58,8 @@ import {
   isAuthStatusError,
   type AuthProbeResult,
 } from "./daemon-auth-probe";
+import { daemonSpawnEnv } from "./daemon-spawn-env";
+import { focusEnvironmentAt, type FocusEnvironmentResult } from "./environment-focus";
 
 const POLL_INTERVAL_MS = 5_000;
 const PREFS_PATH = join(homedir(), ".multica", "desktop_prefs.json");
@@ -226,6 +228,21 @@ async function fetchProfileHealth(
   return probeProfileHealth(active.name, (port) =>
     fetchHealthAtPort(port, timeoutMs),
   );
+}
+
+/** Brings forward a desktop app this profile's daemon detected. */
+async function focusEnvironment(key: unknown): Promise<FocusEnvironmentResult> {
+  if (typeof key !== "string" || key === "" || key.length > 128) {
+    return { ok: false, reason: "failed", error: "invalid environment key" };
+  }
+  const active = await ensureActiveProfile();
+  if (!active) return { ok: false, reason: "unavailable" };
+  const health = await probeProfileHealth(active.name, async (port) => {
+    const payload = await fetchHealthAtPort(port);
+    return payload ? { ...payload, port } : null;
+  });
+  if (!health || health.status !== "running") return { ok: false, reason: "unavailable" };
+  return focusEnvironmentAt(health.port, key);
 }
 
 /**
@@ -970,7 +987,7 @@ async function probeLocalRuntimes(): Promise<LocalRuntimeProbe> {
 // applied by fix-path in main/index.ts — as a top-level const it would
 // snapshot process.env at import time, before that block runs.
 function desktopSpawnEnv(): NodeJS.ProcessEnv {
-  return { ...process.env, MULTICA_LAUNCHED_BY: "desktop" };
+  return daemonSpawnEnv(process.env);
 }
 
 function scheduleStatusRefresh(): void {
@@ -1452,8 +1469,13 @@ export function setupDaemonManager(
 ): void {
   getMainWindow = windowGetter;
   getStatusWindows = statusWindowsGetter;
+  // A development preview shares the user's machine with the installed app.
+  // It must not rotate credentials, install a CLI or manage the live daemon.
+  const readOnlyPreview = !app.isPackaged && process.env.MULTICA_PREVIEW_READ_ONLY === "1";
+  const previewBlocked = { success: false, error: "Daemon management is disabled in this development preview" };
 
   ipcMain.handle("daemon:set-target-api-url", async (_e, url: string) => {
+    if (readOnlyPreview) return;
     const normalized = url || null;
     if (targetApiBaseUrl !== normalized) {
       console.log(`[daemon] target API URL set to ${normalized ?? "(none)"}`);
@@ -1464,12 +1486,14 @@ export function setupDaemonManager(
     }
   });
   ipcMain.handle("daemon:start", () => {
+    if (readOnlyPreview) return previewBlocked;
     if (desiredRunningBeforeUpdateStop !== null) return UPDATE_IN_PROGRESS;
     externalDaemonObserved = false;
     setDesiredDaemonRunning(true, true);
     return lifecycleOperations.runForeground(() => startDaemon());
   });
   ipcMain.handle("daemon:stop", () => {
+    if (readOnlyPreview) return previewBlocked;
     if (desiredRunningBeforeUpdateStop !== null) {
       desiredRunningBeforeUpdateStop = false;
       return { success: true };
@@ -1478,6 +1502,7 @@ export function setupDaemonManager(
     return lifecycleOperations.runForeground(() => stopDaemon());
   });
   ipcMain.handle("daemon:restart", () => {
+    if (readOnlyPreview) return previewBlocked;
     if (desiredRunningBeforeUpdateStop !== null) return UPDATE_IN_PROGRESS;
     externalDaemonObserved = false;
     setDesiredDaemonRunning(true, true);
@@ -1485,6 +1510,7 @@ export function setupDaemonManager(
   });
   ipcMain.handle("daemon:get-status", () => fetchHealth());
   ipcMain.handle("daemon:probe-runtimes", () => probeLocalRuntimes());
+  ipcMain.handle("daemon:focus-environment", (_e, key: unknown) => readOnlyPreview ? { ok: false, reason: "unavailable" } : focusEnvironment(key));
   // The host's OS name, available regardless of daemon state. The Runtimes
   // page uses it as a fallback identity for "this machine" when no
   // app-managed daemon is reporting a device name (e.g. the daemon runs
@@ -1493,6 +1519,7 @@ export function setupDaemonManager(
   ipcMain.handle(
     "daemon:sync-token",
     async (_event, token: string, userId: string) => {
+      if (readOnlyPreview) return;
       const result = await syncToken(token, userId);
       if (result.userChanged) {
         await restartDaemonAfterUserSwitch(result.active);
@@ -1500,12 +1527,14 @@ export function setupDaemonManager(
     },
   );
   ipcMain.handle("daemon:clear-token", () => {
+    if (readOnlyPreview) return;
     setDesiredDaemonRunning(false, true);
     return clearToken();
   });
   ipcMain.handle(
     "daemon:reauthenticate",
     async (_event, token: string, userId: string): Promise<ReauthResult> => {
+      if (readOnlyPreview) return { ok: false, reason: "transient", message: previewBlocked.error };
       setDesiredDaemonRunning(true, true);
       return lifecycleOperations.runForeground(() =>
         reauthenticate(token, userId),
@@ -1513,10 +1542,12 @@ export function setupDaemonManager(
     },
   );
   ipcMain.handle("daemon:is-cli-installed", async () => {
+    if (readOnlyPreview) return false;
     const bin = await resolveCliBinary();
     return bin !== null;
   });
   ipcMain.handle("daemon:retry-install", async () => {
+    if (readOnlyPreview) return;
     cachedCliBinary = undefined;
     cliResolvePromise = null;
     // A retry-install may land a new CLI at a different version; drop the
@@ -1530,6 +1561,7 @@ export function setupDaemonManager(
     (_event, prefs: Partial<DaemonPrefs>) =>
       loadPrefs().then((cur) => {
         const merged = { ...cur, ...prefs };
+        if (readOnlyPreview) return cur;
         // Changing the preference still affects the next logged-in launch; it
         // does not start/stop the current session. The Settings copy explicitly
         // states that a launched daemon is supervised while Desktop stays open.
@@ -1537,6 +1569,7 @@ export function setupDaemonManager(
       }),
   );
   ipcMain.handle("daemon:auto-start", async () => {
+    if (readOnlyPreview) return;
     const prefs = await loadPrefs();
     if (quitting || autoStartSuppressedAfterQuit) return;
     setDesiredDaemonRunning(prefs.autoStart);
@@ -1591,9 +1624,11 @@ export function setupDaemonManager(
 
   // First-run CLI install kicks off here. Status bar shows "Setting up…"
   // until the managed binary is on disk (instant on subsequent launches).
-  currentState = "installing_cli";
-  sendStatus({ state: "installing_cli" });
-  void lifecycleOperations.runBackground(() => bootstrapCli());
+  if (!readOnlyPreview) {
+    currentState = "installing_cli";
+    sendStatus({ state: "installing_cli" });
+    void lifecycleOperations.runBackground(() => bootstrapCli());
+  }
 
   let desiredBeforeQuit = false;
   const language = app.getPreferredSystemLanguages()[0] ?? "en";
@@ -1677,6 +1712,7 @@ export function setupDaemonManager(
     quit: () => { stopLogTail(); app.quit(); },
   });
   app.on("before-quit", (event) => {
+    if (readOnlyPreview) return;
     // The Windows updater registers first and owns its pending or approved quit.
     if (event.defaultPrevented) return;
     if (desiredRunningBeforeUpdateStop !== null) {

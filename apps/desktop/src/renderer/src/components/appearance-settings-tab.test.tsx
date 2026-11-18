@@ -2,6 +2,13 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const translations = {
+  preferences: { theme: {
+    title: "Theme", system: "System", light: "Light", dark: "Dark",
+    graphite_copper: "Graphite Copper", mist_celadon: "Mist Celadon", cream_gold: "Cream Gold",
+    sakura_blush: "Sakura Blush", moon_lavender: "Moon Lavender", deep_ocean: "Deep Ocean",
+    daisy_garden: "Daisy Garden", hydrangea_rain: "Hydrangea Rain",
+    osmanthus_courtyard: "Osmanthus Courtyard", starlit_dream: "Starlit Dream",
+  } },
   desktop: {
     appearance: {
       title: "Appearance",

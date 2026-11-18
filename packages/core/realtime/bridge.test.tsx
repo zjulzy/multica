@@ -10,7 +10,9 @@ describe("websocket context bridge", () => {
     const subscribe = vi.fn(() => unsubscribe);
     const onReconnect = vi.fn(() => vi.fn());
     function Probe() { useWSEvent("comment:created", () => {}); return null; }
-    const { unmount } = render(<WSContextBridge value={{ subscribe, onReconnect }}><Probe /></WSContextBridge>);
+    const subscribeStatus = vi.fn(() => vi.fn());
+    const getStatus = () => "connected" as const;
+    const { unmount } = render(<WSContextBridge value={{ subscribe, onReconnect, subscribeStatus, getStatus }}><Probe /></WSContextBridge>);
     expect(subscribe).toHaveBeenCalledWith("comment:created", expect.any(Function));
     unmount();
     expect(unsubscribe).toHaveBeenCalledTimes(1);

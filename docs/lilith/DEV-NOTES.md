@@ -53,7 +53,8 @@ corepack pnpm run package -- --win --x64 --publish never
 4. 渲染层控制台会打进 electron-vite 的 stdout，把 `pnpm dev` 的输出直接重定向到文件就能看；别接 `grep | tail` 管道，会被缓冲到进程退出。
 5. 热更新 `src/renderer/src/components/desktop-layout.tsx` 会丢工作区单例，界面停在「正在加载工作区」，重启开发实例即可，打包版不受影响。
 6. 主进程文件改动会让开发实例自动重启一次。
-7. 打包前 electron-builder 要解压 `winCodeSign`，其中两个 macOS 符号链接在 Windows 上解压失败会让整个打包中止。已手动解压到 `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0`，清缓存后要重做。
+7. 如需只验收界面且不能影响本机守护进程，可给开发进程设置 `MULTICA_PREVIEW_READ_ONLY=1`：跳过守护进程启动、令牌同步与 CLI 安装，窗口以不抢焦点的方式显示。此模式不反映本地守护进程状态，仅对未打包的开发实例生效。
+8. 打包前 electron-builder 要解压 `winCodeSign`，其中两个 macOS 符号链接在 Windows 上解压失败会让整个打包中止。已手动解压到 `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign\winCodeSign-2.6.0`，清缓存后要重做。
 
 ## 代码地图（本 fork 动过的地方）
 

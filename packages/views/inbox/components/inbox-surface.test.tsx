@@ -81,6 +81,8 @@ vi.mock("@multica/core/inbox/mutations", () => {
 
 vi.mock("@multica/core/inbox/filter-store", () => ({
   filterInboxItems: (items: InboxItem[]) => state.filterOut ? [] : items,
+  effectiveInboxFilters: (filters: unknown) => filters,
+  inboxIssueFieldsSupport: () => "supported",
   inboxFiltersForArchive: (filters: unknown) => filters,
   inboxFiltersForPrioritySupport: (filters: unknown) => filters,
   inboxFilterCount: () => 0,

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithI18n } from "../../test/i18n";
+import { mockViewportMedia } from "../../test/viewport";
 import { BuilderWorkspaceLayout } from "./builder-workspace-layout";
 
 function Editor({ label }: { label: string }) {
@@ -12,6 +13,7 @@ function Editor({ label }: { label: string }) {
 }
 function mount(width: number) {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  mockViewportMedia();
   return renderWithI18n(<BuilderWorkspaceLayout
     conversation={<Editor label="Message" />}
     configuration={<Editor label="Name" />}
@@ -19,7 +21,7 @@ function mount(width: number) {
   />);
 }
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe("responsive builder workspace", () => {
   it.each([320, 390, 767])("shows one pane at %ipx and retains both editors across switches", (width) => {

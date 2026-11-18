@@ -33,11 +33,13 @@ import { ChatSessionHeader } from "./components/chat-session-header";
 import { EmptyState } from "./components/chat-empty-state";
 import { NewChatButton } from "./components/new-chat-button";
 import { useChatController } from "./components/use-chat-controller";
+import { useChatAnnotations } from "./components/use-chat-annotations";
 import { OfflineBanner } from "./components/offline-banner";
 import { NoAgentBanner } from "./components/no-agent-banner";
 import { ArchivedAgentBanner } from "./components/archived-agent-banner";
 import { AgentAccessRevokedBanner } from "./components/agent-access-revoked-banner";
 import { RuntimeRequiredBanner } from "./components/runtime-required-banner";
+import { ChatAppRequests } from "../common/app-requests";
 import { useRegisterCommandBarContext } from "../search/register-context";
 import { useChatDockVisible } from "./chat-dock-visibility";
 
@@ -86,6 +88,11 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
   // Toast when an accepted refresh later fails in the daemon (async half).
   useQuickActionsFailureToast(c.activeSessionId ?? null);
   const regenerateQuickActions = useRegenerateChatQuickActions();
+  const annotations = useChatAnnotations({
+    sessionId: c.activeSessionId,
+    agentName: c.activeAgent?.name,
+    enabled: !c.isSessionArchived && !c.isAgentArchived && !c.isAgentAccessRevoked && c.isAgentRuntimeBound && !c.noAgent,
+  });
   const urlSession = searchParams.get("session") || null;
   const urlAgent = searchParams.get("agent") || null;
 
@@ -263,7 +270,7 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
   );
 
   const listBody = (
-    <div className="px-2 py-1">
+    <div className="min-h-0 flex-1 px-2 py-1">
       <ChatThreadList
         sessions={c.sessions}
         agents={c.agents}
@@ -356,13 +363,13 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
               : undefined
           }
           quickActionsPendingMessageId={quickActionsPending?.message_id ?? null}
+          annotations={annotations}
         />
       ) : (
         <EmptyState
           agent={c.activeAgent}
           hasSessions={c.sessions.length > 0}
           onPickPrompt={c.sendConversationStarter}
-          customizeHref={c.customizeConversationStartersHref}
         />
       )}
 
@@ -380,6 +387,10 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
       ) : (
         <OfflineBanner agentName={c.activeAgent?.name} availability={c.availability} />
       )}
+
+      <div className="px-4">
+        <ChatAppRequests sessionId={c.activeSessionId} />
+      </div>
 
       <ChatQueue
         tasks={queuedTasks}
@@ -418,6 +429,7 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
         onProjectChange={changeProjectContext}
         isProjectUpdating={c.isProjectUpdating}
         focusRequest={c.focusInputRequest}
+        annotations={annotations}
       />
     </div>
   );
@@ -452,7 +464,7 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
         {noAgentPage ? (
           noAgentState
         ) : (
-          <div className="flex-1 min-h-0 overflow-y-auto">{listBody}</div>
+          <div className="flex min-h-0 flex-1 flex-col">{listBody}</div>
         )}
       </div>
     );
@@ -468,7 +480,7 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
       {dock ? <aside className="flex h-full w-56 shrink-0 flex-col overflow-hidden border-r">
         {listHeader}
         <div className="flex-1 min-h-0 overflow-y-auto">{listBody}</div>
-      </aside> : <ListColumn collapsed={listCollapsed}>
+      </aside> : <ListColumn collapsed={listCollapsed} width="list">
         {listHeader}
         <div className="flex-1 min-h-0 overflow-y-auto">{listBody}{persistentPins && <div className="px-2"><SharedPinnedSection /></div>}</div>
       </ListColumn>}

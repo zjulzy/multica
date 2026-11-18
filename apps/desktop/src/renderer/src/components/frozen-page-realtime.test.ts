@@ -6,7 +6,7 @@ describe("frozen issue realtime", () => {
   it("disconnects page subscriptions while hidden and resubscribes on return", () => {
     const unsubscribe = vi.fn();
     const disconnectReconnect = vi.fn();
-    const ws = { subscribe: vi.fn(() => unsubscribe), onReconnect: vi.fn(() => disconnectReconnect) };
+    const ws = { subscribe: vi.fn(() => unsubscribe), onReconnect: vi.fn(() => disconnectReconnect), subscribeStatus: vi.fn(() => vi.fn()), getStatus: () => "connected" as const };
     const lifecycle = new FrozenPageLifecycle();
     const gated = frozenRealtime(ws, lifecycle);
     const handler = vi.fn();
