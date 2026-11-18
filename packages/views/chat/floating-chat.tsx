@@ -19,7 +19,7 @@ import { useChatDockVisible } from "./chat-dock-visibility";
  *     owns the conversation, so a floating copy of the same `activeSessionId`
  *     would be pure duplication — hide it there.
  */
-export function FloatingChat() {
+export function FloatingChat({ placement = "bottom" }: { placement?: "top" | "bottom" } = {}) {
   const enabled = useChatStore((s) => s.floatingChatEnabled);
   const { pathname } = useNavigation();
   const wsPaths = useWorkspacePaths();
@@ -31,7 +31,7 @@ export function FloatingChat() {
 
   return (
     <>
-      <ChatWindow />
+      <ChatWindow placement={placement} />
       <ChatFab />
     </>
   );

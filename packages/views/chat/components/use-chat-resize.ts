@@ -26,6 +26,7 @@ function renderedSize(
 
 export function useChatResize(
   windowRef: React.RefObject<HTMLDivElement | null>,
+  placement: "top" | "bottom" = "bottom",
 ) {
   const chatWidth = useChatStore((s) => s.chatWidth);
   const chatHeight = useChatStore((s) => s.chatHeight);
@@ -123,7 +124,7 @@ export function useChatResize(
             : d.startW;
         const rawH =
           dir === "top" || dir === "corner"
-            ? d.startH - (ev.clientY - d.startY)
+            ? d.startH + (placement === "top" ? 1 : -1) * (ev.clientY - d.startY)
             : d.startH;
 
         setChatSize(clamp(rawW, CHAT_MIN_W, mw), clamp(rawH, CHAT_MIN_H, mh));
@@ -144,12 +145,12 @@ export function useChatResize(
       const cursorMap: Record<DragDir, string> = {
         left: "col-resize",
         top: "row-resize",
-        corner: "nw-resize",
+        corner: placement === "top" ? "nesw-resize" : "nw-resize",
       };
       document.body.style.cursor = cursorMap[dir];
       document.body.style.userSelect = "none";
     },
-    [renderWidth, renderHeight, setChatSize],
+    [renderWidth, renderHeight, setChatSize, placement],
   );
 
   return { renderWidth, renderHeight, isAtMax, boundsReady, isDragging, toggleExpand, startDrag };

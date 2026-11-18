@@ -73,7 +73,7 @@ const uiLogger = createLogger("chat.ui");
 const apiLogger = createLogger("chat.api");
 
 
-export function ChatWindow() {
+export function ChatWindow({ placement = "bottom" }: { placement?: "top" | "bottom" } = {}) {
   const { t } = useT("chat");
   const isOpen = useChatStore((s) => s.isOpen);
   const isExpanded = useChatStore((s) => s.isExpanded);
@@ -150,7 +150,7 @@ export function ChatWindow() {
     c.archiveSession(session.id);
   };
 
-  const { renderWidth, renderHeight, isAtMax, boundsReady, isDragging, toggleExpand, startDrag } = useChatResize(windowRef);
+  const { renderWidth, renderHeight, isAtMax, boundsReady, isDragging, toggleExpand, startDrag } = useChatResize(windowRef, placement);
   const reduceMotion = useReducedMotion();
   const { contentReady, markContentReady } = useChatOpenReveal(isOpen);
 
@@ -186,7 +186,7 @@ export function ChatWindow() {
   const keyboard = useVisualViewportKeyboard();
   const anchorRight = useChatWindowAnchor(windowRef, isOpen, renderWidth, isDragging);
   const containerStyle: React.CSSProperties = {
-    transformOrigin: "bottom right",
+    transformOrigin: placement === "top" ? "top right" : "bottom right",
     pointerEvents: isOpen ? "auto" : "none",
     ...(isMobile
       ? {
@@ -199,9 +199,9 @@ export function ChatWindow() {
         }
       : {
           // Floating card; only the anchor and the height cap live here.
-          top: "auto",
+          top: placement === "top" && !keyboard ? CHAT_WINDOW_INSET : "auto",
           right: anchorRight,
-          bottom: keyboard ? keyboard.occludedBottom + CHAT_WINDOW_INSET : CHAT_WINDOW_INSET,
+          bottom: keyboard ? keyboard.occludedBottom + CHAT_WINDOW_INSET : placement === "top" ? "auto" : CHAT_WINDOW_INSET,
           maxHeight: keyboard ? keyboard.viewportHeight - 16 : "none",
         }),
   };
@@ -252,7 +252,7 @@ export function ChatWindow() {
         opacity: { duration: 0.15 },
       }}
     >
-      {!isMobile && <ChatResizeHandles onDragStart={startDrag} />}
+      {!isMobile && <ChatResizeHandles onDragStart={startDrag} placement={placement} />}
       {/* Header — ⊕ new + session dropdown | window tools */}
       <div className="flex items-center justify-between border-b px-4 py-2.5 gap-2">
         <div className="flex items-center gap-1 min-w-0">

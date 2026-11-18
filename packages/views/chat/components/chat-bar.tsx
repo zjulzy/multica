@@ -44,20 +44,22 @@ function maxChipsForWidth(width: number): number {
   return Math.min(4, Math.max(1, Math.floor((width - 560) / 170)));
 }
 
-function useMaxChips(ref: React.RefObject<HTMLElement | null>): number {
+function useMaxChips(ref: React.RefObject<HTMLElement | null>, placement: "top" | "bottom"): number {
   const [max, setMax] = useState(DEFAULT_MAX_CHIPS);
   useEffect(() => {
     const bar = ref.current?.parentElement;
     if (!bar || typeof ResizeObserver === "undefined") return;
     const update = () => {
       // Unmeasured (hidden, or no layout): keep the default.
-      if (bar.clientWidth > 0) setMax(maxChipsForWidth(bar.clientWidth));
+      if (bar.clientWidth > 0) setMax(placement === "top"
+        ? Math.min(4, Math.max(0, Math.floor((bar.clientWidth - 180) / 170)))
+        : maxChipsForWidth(bar.clientWidth));
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(bar);
     return () => observer.disconnect();
-  }, [ref]);
+  }, [ref, placement]);
   return max;
 }
 
@@ -87,7 +89,7 @@ function SessionMark({ item }: { item: ChatBarSession }) {
  * `useChatWindowAnchor` finds it by `data-chat-anchor`, and re-places the
  * window on a click that carries that attribute or `data-chat-anchor-trigger`.
  */
-export function ChatBar() {
+export function ChatBar({ placement = "bottom" }: { placement?: "top" | "bottom" } = {}) {
   const { t } = useT("chat");
   const wsId = useWorkspaceId();
   const isOpen = useChatStore((s) => s.isOpen);
@@ -102,7 +104,7 @@ export function ChatBar() {
   const keepChatInBar = useChatStore((s) => s.keepChatInBar);
   const dismissChatFromBar = useChatStore((s) => s.dismissChatFromBar);
   const rootRef = useRef<HTMLDivElement>(null);
-  const maxVisible = useMaxChips(rootRef);
+  const maxVisible = useMaxChips(rootRef, placement);
 
   const { data: sessions = EMPTY_SESSIONS } = useQuery(chatSessionsOptions(wsId));
   // Per-chat running state needs the task list, not the boolean the launcher
@@ -122,11 +124,11 @@ export function ChatBar() {
 
   const { visible, overflow } = useMemo(
     () =>
-      selectChatBarSessions({ sessions, runningSessionIds, openSessionId, kept, dismissed, maxVisible }),
-    [sessions, runningSessionIds, openSessionId, kept, dismissed, maxVisible],
+      selectChatBarSessions({ sessions, runningSessionIds, openSessionId, kept, dismissed, maxVisible, allowEmpty: placement === "top" }),
+    [sessions, runningSessionIds, openSessionId, kept, dismissed, maxVisible, placement],
   );
   const openOnChip = visible.some((item) => item.open);
-  const askPressed = isOpen && !openOnChip;
+  const askPressed = isOpen && !openOnChip && !activeSessionId;
 
   const openSession = (session: ChatSession) => {
     // A chat is bound to its agent, so opening it selects that agent too.
@@ -202,7 +204,7 @@ export function ChatBar() {
           >
             +{overflow.length}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" sideOffset={8} className="max-w-72 min-w-48">
+          <DropdownMenuContent align="end" side={placement === "top" ? "bottom" : "top"} sideOffset={8} className="max-w-72 min-w-48">
             {overflow.map((item) => (
               <DropdownMenuItem
                 key={item.session.id}
@@ -236,7 +238,7 @@ export function ChatBar() {
           {askLabel}
         </button>
       </TooltipHint>
-      <ChatBarHistory sessions={sessions} runningSessionIds={runningSessionIds} onSelect={openSession} />
+      <ChatBarHistory sessions={sessions} runningSessionIds={runningSessionIds} onSelect={openSession} placement={placement} />
     </div>
   );
 }

@@ -48,7 +48,7 @@ function TeamStatus({ wsId }: { wsId: string }) {
  * used to take. Below `md` there is no bar and quick chat is the floating
  * launcher.
  */
-export function AppBottomBar() {
+export function AppBottomBar({ placement = "bottom" }: { placement?: "top" | "bottom" } = {}) {
   const { t } = useT("layout");
   const wsId = useCurrentWorkspace()?.id;
   const isMobile = useIsMobile();
@@ -64,14 +64,17 @@ export function AppBottomBar() {
   return (
     <footer
       aria-label={t(($) => $.bottom_bar.label)}
-      data-slot="app-bottom-bar"
+      data-slot={placement === "top" ? "app-top-controls" : "app-bottom-bar"}
       data-mc="bottom-bar"
+      style={placement === "top" ? { WebkitAppRegion: "no-drag" } as React.CSSProperties : undefined}
       // pr: the card's mr-2 plus a gutter that puts the last icon on the same
       // column as the page header's trailing action.
-      className="hidden h-8 shrink-0 items-center justify-between gap-4 pr-[18px] pl-3 md:flex"
+      className={placement === "top"
+        ? "relative z-10 hidden h-full w-[min(45%,42rem)] min-w-0 shrink items-center justify-end gap-2 pr-2 md:flex"
+        : "hidden h-8 shrink-0 items-center justify-between gap-4 pr-[18px] pl-3 md:flex"}
     >
       <TeamStatus wsId={wsId} />
-      {showChat && <ChatBar />}
+      {showChat && <ChatBar placement={placement} />}
     </footer>
   );
 }

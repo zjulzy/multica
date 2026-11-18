@@ -36,6 +36,7 @@ export function selectChatBarSessions({
   kept,
   dismissed,
   maxVisible,
+  allowEmpty = false,
 }: {
   sessions: ChatSession[];
   runningSessionIds: ReadonlySet<string>;
@@ -46,6 +47,7 @@ export function selectChatBarSessions({
   /** Closed chips: sessionId to the chat's activity when it was closed. */
   dismissed: Readonly<Record<string, string>>;
   maxVisible: number;
+  allowEmpty?: boolean;
 }): ChatBarSessions {
   const items = sessions
     .filter((session) => session.status !== "archived")
@@ -66,9 +68,9 @@ export function selectChatBarSessions({
         new Date(b.session.created_at).getTime() - new Date(a.session.created_at).getTime(),
     );
 
-  const limit = Math.max(1, maxVisible);
+  const limit = Math.max(allowEmpty ? 0 : 1, maxVisible);
   const openIndex = items.findIndex((item) => item.open);
-  if (openIndex >= limit) {
+  if (limit > 0 && openIndex >= limit) {
     const [open] = items.splice(openIndex, 1);
     if (open) items.unshift(open);
   }

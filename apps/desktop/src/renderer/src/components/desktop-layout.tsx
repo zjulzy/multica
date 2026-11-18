@@ -157,6 +157,7 @@ function MainTopBar({ railMounted, headerSlotRef }: { railMounted: boolean; head
       >
         {singleTabMode ? <SingleTabHeaderSlot headerSlotRef={headerSlotRef} /> : <TabBar />}
       </div>
+      {railMounted && <AppBottomBar placement="top" />}
     </header>
   );
 }
@@ -214,9 +215,6 @@ function MainCanvas({
       className={cn(
         "relative mr-2 mb-2 flex min-h-0 flex-1 flex-row",
         railMounted && !isCompact ? "ml-0" : "ml-2",
-        // In a workspace the bottom bar takes the place of the bottom margin
-        // from `md` up.
-        railMounted ? "mb-2 md:mb-0" : "mb-2",
       )}
     >
       {railMounted && <SpacePanel />}
@@ -440,12 +438,11 @@ export function DesktopShell() {
                       <PageHeaderPortalProvider value={singleTabMode ? headerSlot : null}>
                         <TabContent />
                       </PageHeaderPortalProvider>
-                      {slug && <FloatingChat />}
+                      {slug && <FloatingChat placement="top" />}
                       {slug && <StarPrompt />}
                       {slug && <WhatsNewDeck />}
                     </DesktopInboxDockLayout></MaybeEmbeddedGuestHost></LightweightInboxProvider>
                   </MainCanvas>
-                  {slug && <AppBottomBar />}
                 </div>
               </ShellRouteDataPrefetch>
               </PersistentPinsProvider>

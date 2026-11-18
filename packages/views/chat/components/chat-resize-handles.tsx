@@ -6,9 +6,10 @@ type DragDir = "left" | "top" | "corner";
 
 interface ChatResizeHandlesProps {
   onDragStart: (e: React.PointerEvent, dir: DragDir) => void;
+  placement?: "top" | "bottom";
 }
 
-export function ChatResizeHandles({ onDragStart }: ChatResizeHandlesProps) {
+export function ChatResizeHandles({ onDragStart, placement = "bottom" }: ChatResizeHandlesProps) {
   return (
     <>
       {/* Left edge — expands width when dragged left */}
@@ -21,13 +22,13 @@ export function ChatResizeHandles({ onDragStart }: ChatResizeHandlesProps) {
       <div
         aria-hidden
         onPointerDown={(e) => onDragStart(e, "top")}
-        className="absolute top-0 left-4 right-0 h-1 z-10 cursor-row-resize"
+        className={`absolute ${placement === "top" ? "bottom-0" : "top-0"} left-4 right-0 h-1 z-10 cursor-row-resize`}
       />
       {/* Top-left corner — expands both width and height */}
       <div
         aria-hidden
         onPointerDown={(e) => onDragStart(e, "corner")}
-        className="absolute top-0 left-0 size-4 z-20 cursor-nw-resize"
+        className={`absolute ${placement === "top" ? "bottom-0 cursor-nesw-resize" : "top-0 cursor-nw-resize"} left-0 size-4 z-20`}
       />
     </>
   );

@@ -50,10 +50,12 @@ export function ChatBarHistory({
   sessions,
   runningSessionIds,
   onSelect,
+  placement = "bottom",
 }: {
   sessions: ChatSession[];
   runningSessionIds: ReadonlySet<string>;
   onSelect: (session: ChatSession) => void;
+  placement?: "top" | "bottom";
 }) {
   const { t } = useT("chat");
   const p = useWorkspacePaths();
@@ -75,7 +77,7 @@ export function ChatBarHistory({
       </TooltipHint>
       <PopoverContent
         align="end"
-        side="top"
+        side={placement === "top" ? "bottom" : "top"}
         sideOffset={8}
         aria-label={label}
         className="max-h-[min(28rem,var(--available-height))] w-80 gap-0 overflow-hidden p-1"

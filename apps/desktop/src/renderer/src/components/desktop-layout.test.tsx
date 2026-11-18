@@ -72,7 +72,7 @@ vi.mock("@multica/views/layout", () => ({
   AgentStatusHub: ({ compact }: { compact?: boolean }) => <div data-testid={compact ? "compact-hub" : "expanded-hub"} />,
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   PersistentPinsProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
-  AppBottomBar: () => null,
+  AppBottomBar: ({ placement }: { placement?: string }) => <div data-testid="official-bar" data-placement={placement} />,
   AppShellProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   CompactNavSheet: () => null,
   GlobalShortcuts: () => null,
@@ -157,6 +157,12 @@ beforeEach(() => {
 });
 
 describe("DesktopShell sidebar trigger", () => {
+  it("places the official chat controls in the top bar", () => {
+    const view = renderShell();
+    const bar = view.getByTestId("official-bar");
+    expect(bar).toHaveAttribute("data-placement", "top");
+    expect(bar.closest('[data-slot="main-top-bar"]')).not.toBeNull();
+  });
   it("offers the performance entry and respects its preference", () => {
     const view = renderShell();
     expect(view.getByRole("link", { name: "Performance" })).toHaveAttribute("href", "/acme/performance");

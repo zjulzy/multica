@@ -94,13 +94,13 @@ const session: ChatSession = {
   updated_at: "2026-11-01T00:00:00Z",
 };
 
-function renderWindow() {
+function renderWindow(placement: "top" | "bottom" = "bottom") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(chatSessionsOptions("ws-1").queryKey, [session]);
   return render(
     <QueryClientProvider client={qc}>
       <I18nProvider locale="en" resources={TEST_RESOURCES}>
-        <ChatWindow />
+        <ChatWindow placement={placement} />
       </I18nProvider>
     </QueryClientProvider>,
   );
@@ -114,6 +114,10 @@ beforeEach(() => {
 });
 
 describe("ChatWindow header buttons", () => {
+  it("opens below the top bar when the controls are at the top", () => {
+    const view = renderWindow("top");
+    expect(view.container.querySelector('[data-mc="chat-window"]')).toHaveStyle({ top: "8px", bottom: "auto" });
+  });
   it("names the new chat, expand, minimize and close buttons after their tooltips", () => {
     renderWindow();
 

@@ -34,6 +34,11 @@ function select(
 }
 
 describe("selectChatBarSessions", () => {
+  it("keeps chats available in overflow when no chip fits", () => {
+    const result = select({ sessions: [session("open", 1)], openSessionId: "open", maxVisible: 0, allowEmpty: true });
+    expect(result.visible).toHaveLength(0);
+    expect(ids(result.overflow)).toEqual(["open"]);
+  });
   it("keeps only chats that are running, unread or open", () => {
     const { visible, overflow } = select({
       sessions: [
