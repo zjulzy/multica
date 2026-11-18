@@ -1335,10 +1335,9 @@ export const IssueTriggerPreviewSchema = z.object({
   total_count: z.number().default(0),
 }).loose();
 
-// Metadata is primitive-only by API/DB contract. Stay lenient on shape:
-// unknown keys land as `unknown` to a caller, but the field itself defaults
-// to {} so consumers never need to nil-guard `issue.metadata`.
-const IssueMetadataSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({});
+// Newer servers may add nested JSON metadata, e.g. integration handoff state.
+// Preserve those values so one additive field cannot hide the whole issue.
+const IssueMetadataSchema = z.record(z.string(), z.json()).default({});
 
 const SourceContextAttachmentSchema = z.object({
   id: z.string(),

@@ -345,12 +345,13 @@ describe("IssueSchema (via ListIssuesResponseSchema)", () => {
     expect(parsed.issues[0]?.metadata).toEqual({});
   });
 
-  it("rejects metadata with non-primitive values (nested object)", () => {
+  it("preserves nested metadata from newer servers", () => {
+    const handoff = { owner: "user@example.test", phase: "manual", generation: 1, error: "" };
     const payload = {
-      issues: [{ ...baseIssue, metadata: { nested: { x: 1 } } }],
+      issues: [{ ...baseIssue, metadata: { feishu_owner_handoff: handoff, pipeline_status: "waiting" } }],
       total: 1,
     };
-    expect(ListIssuesResponseSchema.safeParse(payload).success).toBe(false);
+    expect(ListIssuesResponseSchema.parse(payload).issues[0]?.metadata).toEqual({ feishu_owner_handoff: handoff, pipeline_status: "waiting" });
   });
 
   it("accepts a numeric stage", () => {
