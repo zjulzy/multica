@@ -1485,7 +1485,8 @@
   "desktop": {
     "tabs": {
       "updates": "Обновления",
-      "appearance": "Appearance"
+      "appearance": "Appearance",
+      "custom_options": "Пользовательские настройки"
     },
     "tab_bar": {
       "pin": "Закрепить вкладку",

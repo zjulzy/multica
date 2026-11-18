@@ -1463,7 +1463,8 @@
   "desktop": {
     "tabs": {
       "appearance": "Appearance",
-      "updates": "Updates"
+      "updates": "Updates",
+      "custom_options": "Custom options"
     },
     "tab_bar": {
       "pin": "Pin tab",

@@ -32,13 +32,7 @@ import { SquadsPage, SquadDetailPage as SquadDetailPageView } from "@multica/vie
 import { AllViewsPage } from "@multica/views/issue-views";
 import { InboxPage } from "@multica/views/inbox";
 import { ChatPage } from "@multica/views/chat";
-import { SettingsPage } from "@multica/views/settings";
-import { useT } from "@multica/views/i18n";
-import { Download, Server } from "@multica/ui/icons";
-import { PanelTop } from "lucide-react";
-import { AppearanceSettingsTab } from "./components/appearance-settings-tab";
-import { DaemonSettingsTab } from "./components/daemon-settings-tab";
-import { UpdatesSettingsTab } from "./components/updates-settings-tab";
+import { DesktopSettingsRoute } from "./components/desktop-settings-route";
 import { WorkspaceRouteLayout } from "./components/workspace-route-layout";
 import { DesktopRouteErrorPage } from "./components/route-error-page";
 import { useDesktopPrefsStore } from "@/stores/desktop-prefs-store";
@@ -48,39 +42,6 @@ import { useRenderedRouteStore } from "./stores/rendered-route-store";
 
 const WORKSPACE_VIEW_SCOPE = { scope_type: "workspace" } as const;
 const MY_VIEW_SCOPE = { scope_type: "my" } as const;
-
-/**
- * Wraps `SettingsPage` so the desktop-only extra tabs can pull their labels
- * from i18n. The route element has to be a component (not a literal JSX
- * value) for `useT` to run.
- */
-function DesktopSettingsRoute() {
-  const { t } = useT("settings");
-  return (
-    <SettingsPage
-      extraDeviceTabs={[
-        {
-          value: "appearance",
-          label: t(($) => $.desktop.tabs.appearance),
-          icon: PanelTop,
-          content: <AppearanceSettingsTab />,
-        },
-        {
-          value: "daemon",
-          label: t(($) => $.desktop.daemon.title),
-          icon: Server,
-          content: <DaemonSettingsTab />,
-        },
-        {
-          value: "updates",
-          label: t(($) => $.desktop.tabs.updates),
-          icon: Download,
-          content: <UpdatesSettingsTab />,
-        },
-      ]}
-    />
-  );
-}
 
 /**
  * Sets document.title from the deepest matched route's handle.title.

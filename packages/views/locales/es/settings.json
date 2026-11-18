@@ -1463,7 +1463,8 @@
   "desktop": {
     "tabs": {
       "updates": "Actualizaciones",
-      "appearance": "Appearance"
+      "appearance": "Appearance",
+      "custom_options": "Opciones personalizadas"
     },
     "tab_bar": {
       "pin": "Fijar pestaña",

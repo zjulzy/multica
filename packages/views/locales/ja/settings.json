@@ -1452,7 +1452,8 @@
   "desktop": {
     "tabs": {
       "appearance": "Appearance",
-      "updates": "アップデート"
+      "updates": "アップデート",
+      "custom_options": "カスタム設定"
     },
     "tab_bar": {
       "pin": "タブをピン留め",

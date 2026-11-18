@@ -1195,7 +1195,8 @@
   "desktop": {
     "tabs": {
       "appearance": "Appearance",
-      "updates": "업데이트"
+      "updates": "업데이트",
+      "custom_options": "사용자 지정 옵션"
     },
     "tab_bar": {
       "pin": "탭 고정",

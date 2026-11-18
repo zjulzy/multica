@@ -412,6 +412,16 @@ describe("SettingsPage information architecture", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens desktop interface settings independently of the official appearance page", () => {
+    navigationState.search = "tab=interface";
+    renderWithI18n(<SettingsPage extraDeviceTabs={[
+      { value: "interface", label: "Custom options", icon: () => null, content: <div>Dock and interface controls</div> },
+    ]} />);
+    expect(screen.getByText("Dock and interface controls")).toBeInTheDocument();
+    expect(within(nav()).getByRole("link", { name: "Custom options" })).toHaveAttribute("href", "/acme/settings?tab=interface");
+    expect(within(nav()).getByRole("link", { name: "Appearance" })).toHaveAttribute("href", "/acme/settings?tab=appearance");
+  });
+
   it("navigates from the compact selector and clears the old detail", () => {
     navigationState.search = "tab=channels&integration=slack&keep=1";
     renderWithI18n(<SettingsPage />);

@@ -46,7 +46,7 @@ export function AppearanceSettingsTab() {
   const setPinnedIssueCacheEnabled = useDesktopPrefsStore((s) => s.setPinnedIssueCacheEnabled);
 
   return (
-    <SettingsTab title={t(($) => $.desktop.appearance.title)}>
+    <SettingsTab title={t(($) => $.desktop.tabs.custom_options)}>
       <SettingsCard>
         <SettingsRow label={t(($) => $.preferences.theme.title)}>
           <select aria-label={t(($) => $.preferences.theme.title)} value={theme ?? "system"}

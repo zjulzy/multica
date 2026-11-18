@@ -1452,7 +1452,8 @@
   "desktop": {
     "tabs": {
       "appearance": "界面",
-      "updates": "更新"
+      "updates": "更新",
+      "custom_options": "自定义选项"
     },
     "tab_bar": {
       "pin": "固定标签页",

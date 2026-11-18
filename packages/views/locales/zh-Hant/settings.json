@@ -1452,7 +1452,8 @@
   "desktop": {
     "tabs": {
       "appearance": "介面",
-      "updates": "更新"
+      "updates": "更新",
+      "custom_options": "自訂選項"
     },
     "tab_bar": {
       "pin": "固定標籤頁",

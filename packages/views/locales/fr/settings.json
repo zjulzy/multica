@@ -1463,7 +1463,8 @@
   "desktop": {
     "tabs": {
       "appearance": "Appearance",
-      "updates": "Mises à jour"
+      "updates": "Mises à jour",
+      "custom_options": "Options personnalisées"
     },
     "tab_bar": {
       "pin": "Épingler l'onglet",

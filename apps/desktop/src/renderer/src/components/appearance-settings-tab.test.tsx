@@ -10,6 +10,7 @@ const translations = {
     osmanthus_courtyard: "Osmanthus Courtyard", starlit_dream: "Starlit Dream",
   } },
   desktop: {
+    tabs: { custom_options: "Custom options" },
     appearance: {
       title: "Appearance",
       single_tab_mode_title: "Single-tab mode",
@@ -66,6 +67,7 @@ describe("AppearanceSettingsTab", () => {
 
   it("changes the simplified inbox and reply limit independently", () => {
     render(<AppearanceSettingsTab />);
+    expect(screen.getByRole("heading", { name: "Custom options" })).toBeInTheDocument();
     const input = screen.getByRole("spinbutton", { name: "Context replies" });
     fireEvent.change(input, { target: { value: "12" } });
     fireEvent.blur(input);
