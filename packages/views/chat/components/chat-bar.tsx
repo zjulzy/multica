@@ -21,6 +21,7 @@ import { useT } from "../../i18n";
 import { BOTTOM_BAR_ITEM_CLASS } from "../../layout/bottom-bar-styles";
 import { ChatBarHistory } from "./chat-bar-history";
 import { chatActivity, selectChatBarSessions, type ChatBarSession } from "./chat-bar-sessions";
+import { chatBarMaxChips } from "./chat-bar-width";
 
 const EMPTY_SESSIONS: ChatSession[] = [];
 const STAR = starPath(STAR_STROKE);
@@ -40,24 +41,20 @@ const DEFAULT_MAX_CHIPS = 3;
  * history) takes about 560px and a chip up to 170px; a narrow window gives up
  * chips before it squeezes the status.
  */
-function maxChipsForWidth(width: number): number {
-  return Math.min(4, Math.max(1, Math.floor((width - 560) / 170)));
-}
-
 function useMaxChips(ref: React.RefObject<HTMLElement | null>, placement: "top" | "bottom"): number {
   const [max, setMax] = useState(DEFAULT_MAX_CHIPS);
   useEffect(() => {
     const bar = ref.current?.parentElement;
     if (!bar || typeof ResizeObserver === "undefined") return;
+    const status = bar.querySelector<HTMLElement>('[data-slot="team-status"]');
     const update = () => {
       // Unmeasured (hidden, or no layout): keep the default.
-      if (bar.clientWidth > 0) setMax(placement === "top"
-        ? Math.min(4, Math.max(0, Math.floor((bar.clientWidth - 180) / 170)))
-        : maxChipsForWidth(bar.clientWidth));
+      if (bar.clientWidth > 0) setMax(chatBarMaxChips(bar.clientWidth, placement, status?.offsetWidth ?? 0));
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(bar);
+    if (status) observer.observe(status);
     return () => observer.disconnect();
   }, [ref, placement]);
   return max;
@@ -89,7 +86,7 @@ function SessionMark({ item }: { item: ChatBarSession }) {
  * `useChatWindowAnchor` finds it by `data-chat-anchor`, and re-places the
  * window on a click that carries that attribute or `data-chat-anchor-trigger`.
  */
-export function ChatBar({ placement = "bottom" }: { placement?: "top" | "bottom" } = {}) {
+export function ChatBar({ placement = "bottom", inlineChat = false }: { placement?: "top" | "bottom"; inlineChat?: boolean } = {}) {
   const { t } = useT("chat");
   const wsId = useWorkspaceId();
   const isOpen = useChatStore((s) => s.isOpen);
@@ -137,7 +134,7 @@ export function ChatBar({ placement = "bottom" }: { placement?: "top" | "bottom"
     // window by the time the click is measured.
     keepChatInBar(session.id);
     setActiveSession(session.id);
-    setOpen(true);
+    setOpen(!inlineChat);
   };
 
   const toggleSession = (session: ChatSession) => {
@@ -151,6 +148,7 @@ export function ChatBar({ placement = "bottom" }: { placement?: "top" | "bottom"
   };
 
   const askMultica = () => {
+    if (inlineChat) { startNewChat(); setOpen(false); return; }
     if (askPressed) setOpen(false);
     else startNewChat();
   };

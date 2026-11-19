@@ -858,6 +858,47 @@ describe("IssueDetail (shared)", () => {
     useIssueSidebarSectionsStore.getState().reset();
   });
 
+  it("hides only the cached main header when the desktop shell owns it", async () => {
+    const { EmbeddedHeaderModeProvider } = await import("./embedded-header-mode");
+    const queryClient = createTestQueryClient();
+    const { container, rerender } = render(
+      <I18nProvider locale="en" resources={TEST_RESOURCES}><QueryClientProvider client={queryClient}><EmbeddedHeaderModeProvider enabled><IssueDetail issueId="issue-1" /></EmbeddedHeaderModeProvider></QueryClientProvider></I18nProvider>,
+    );
+    await screen.findByText("Implement authentication");
+    expect(container.querySelector('[data-mc="page-header"]')).toBeNull();
+    rerender(<I18nProvider locale="en" resources={TEST_RESOURCES}><QueryClientProvider client={queryClient}><EmbeddedHeaderModeProvider enabled><IssueDetail issueId="issue-1" variant="peek" /></EmbeddedHeaderModeProvider></QueryClientProvider></I18nProvider>);
+    await waitFor(() => expect(container.querySelector('[data-mc="page-header"]')).not.toBeNull());
+  });
+
+  it("handles a shell wakeup command in the active cached issue", async () => {
+    const { EmbeddedHeaderModeProvider } = await import("./embedded-header-mode");
+    const queryClient = createTestQueryClient();
+    useIssueSidebarSectionsStore.getState().setHidden("wakeups", true);
+    const { container } = render(<I18nProvider locale="en" resources={TEST_RESOURCES}><QueryClientProvider client={queryClient}><EmbeddedHeaderModeProvider enabled><IssueDetail issueId="issue-1" /></EmbeddedHeaderModeProvider></QueryClientProvider></I18nProvider>);
+    await screen.findByText("Implement authentication");
+    expect(container.querySelector('[data-issue-sidebar-section="wakeups"]')).toBeNull();
+    act(() => window.dispatchEvent(new CustomEvent("multica:embedded-header-command", { detail: { command: "open-wakeups" } })));
+    await waitFor(() => expect(container.querySelector('[data-issue-sidebar-section="wakeups"]')).not.toBeNull());
+  });
+
+  it("keeps the issue body context menu available while the header is in the shell", async () => {
+    const { EmbeddedHeaderModeProvider } = await import("./embedded-header-mode");
+    const previous = Object.getOwnPropertyDescriptor(window, "desktopAPI");
+    Object.defineProperty(window, "desktopAPI", { configurable: true, value: { pickDirectory: vi.fn() } });
+    try {
+      const queryClient = createTestQueryClient();
+      const { container } = render(<I18nProvider locale="en" resources={TEST_RESOURCES}><QueryClientProvider client={queryClient}><EmbeddedHeaderModeProvider enabled><IssueDetail issueId="issue-1" /></EmbeddedHeaderModeProvider></QueryClientProvider></I18nProvider>);
+      await screen.findByText("Implement authentication");
+      const body = container.querySelector('[data-issue-scroll-container]');
+      expect(body).not.toBeNull();
+      fireEvent.contextMenu(body!, { clientX: 100, clientY: 100 });
+      expect(await screen.findByRole("menu")).toBeInTheDocument();
+    } finally {
+      if (previous) Object.defineProperty(window, "desktopAPI", previous);
+      else Reflect.deleteProperty(window, "desktopAPI");
+    }
+  });
+
   describe("sidebar section settings", () => {
     const wakeupsSlot = (container: HTMLElement) => container.querySelector('[data-issue-sidebar-section="wakeups"]');
     const wakeupsSwitch = async () => {

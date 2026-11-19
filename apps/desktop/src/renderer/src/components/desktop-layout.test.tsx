@@ -170,6 +170,7 @@ describe("DesktopShell sidebar trigger", () => {
     const bar = view.getByTestId("official-bar");
     expect(bar).toHaveAttribute("data-placement", "top");
     expect(bar.closest('[data-slot="main-top-bar"]')).not.toBeNull();
+    expect(bar.compareDocumentPosition(view.getByRole("button", { name: "Search" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
   it("offers the performance entry and respects its preference", () => {
     const view = renderShell();

@@ -128,7 +128,7 @@ function useNativeNavigationGestures() {
 // the start of this bar, so the tabs start past whatever the rail leaves of
 // its width. New issue and search hold the far end; the tabs give way to
 // them.
-function MainTopBar({ railMounted, headerSlotRef }: { railMounted: boolean; headerSlotRef: (el: HTMLDivElement | null) => void }) {
+function MainTopBar({ railMounted, headerSlotRef, chatDockVisible }: { railMounted: boolean; headerSlotRef: (el: HTMLDivElement | null) => void; chatDockVisible: boolean }) {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
   const { isCompact } = useSidebar();
   const clearance = windowToolbarClearance();
@@ -156,16 +156,16 @@ function MainTopBar({ railMounted, headerSlotRef }: { railMounted: boolean; head
       />
       <div
         data-slot="main-top-bar-content"
-        className="relative z-10 flex h-full min-w-0 max-w-full flex-1 items-center"
+        className="relative z-10 flex h-full min-w-[min(20rem,55%)] max-w-full flex-1 items-center"
       >
         {singleTabMode ? <SingleTabHeaderSlot headerSlotRef={headerSlotRef} /> : <TabBar />}
       </div>
       {railMounted && <>
+        <AppBottomBar placement="top" chatDockVisible={chatDockVisible} />
         <div data-slot="title-bar-actions" className="relative z-10 flex shrink-0 items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <NewIssueButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
           <SearchButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
         </div>
-        <AppBottomBar placement="top" />
       </>}
     </header>
   );
@@ -290,8 +290,8 @@ function DesktopInboxBridge() {
   return null;
 }
 
-function MaybeEmbeddedGuestHost({ children }: { children: ReactNode }) {
-  return import.meta.env.PROD || import.meta.env.VITE_NATIVE_ISSUE_CACHE_EXPERIMENT === "1" ? <EmbeddedGuestHost>{children}</EmbeddedGuestHost> : children;
+function MaybeEmbeddedGuestHost({ children, headerTarget }: { children: ReactNode; headerTarget: HTMLElement | null }) {
+  return import.meta.env.PROD || import.meta.env.VITE_NATIVE_ISSUE_CACHE_EXPERIMENT === "1" ? <EmbeddedGuestHost headerTarget={headerTarget}>{children}</EmbeddedGuestHost> : children;
 }
 
 export function DesktopShell() {
@@ -339,6 +339,7 @@ export function DesktopShell() {
   const setInboxDockOpen = useDesktopPrefsStore((s) => s.setInboxDockOpen);
   const [temporaryDockWorkspace, setTemporaryDockWorkspace] = useState<string | null>(null);
   const [dockRequest, setDockRequest] = useState<{ workspaceId: string; key: string } | null>(null);
+  const [chatDockVisible, setChatDockVisible] = useState(false);
   const [agentDockRequest, setAgentDockRequest] = useState<{ workspaceId: string; agentId: string } | null>(null);
   const temporaryDockVisible = !inboxDockEnabled && temporaryDockWorkspace === resolvedWorkspace?.id;
   const openHubUnread = useCallback((workspaceId: string, key: string) => {
@@ -425,7 +426,7 @@ export function DesktopShell() {
                 {slug && <CompactNavSheet globalActions={false} hiddenSpaces={inboxDockEnabled ? ["chat"] : []} extraItems={<>{liworkMonitorEnabled && <LiworkRailItem slug={slug} />}{performanceMonitorEnabled && <PerformanceRailItem slug={slug} />}</>} bottomSlot={agentStatusHubEnabled ? <AgentStatusHub compact onOpenUnread={openHubUnread} onOpenAgent={openHubAgent} /> : null} />}
                 {/* Right side: header + content card */}
                 <div className="flex flex-1 min-w-0 flex-col">
-                  <MainTopBar railMounted={Boolean(slug)} headerSlotRef={setHeaderSlot} />
+                  <MainTopBar railMounted={Boolean(slug)} headerSlotRef={setHeaderSlot} chatDockVisible={chatDockVisible} />
                   <MainCanvas railMounted={Boolean(slug)} showWorkspaceLoading={!slug}>
                     {/* Same indicator, same anchor as web: DashboardLayout puts
                         it at the top of the content column, and this is
@@ -434,7 +435,8 @@ export function DesktopShell() {
                         click just froze until the destination committed
                         (MUL-6404). */}
                     <NavigationProgress />
-                    <LightweightInboxProvider value={{ enabled: lightweightInboxEnabled, replyLimit: lightweightInboxReplyLimit }}><MaybeEmbeddedGuestHost><DesktopInboxDockLayout
+                    <LightweightInboxProvider value={{ enabled: lightweightInboxEnabled, replyLimit: lightweightInboxReplyLimit }}><MaybeEmbeddedGuestHost headerTarget={singleTabMode ? headerSlot : null}><DesktopInboxDockLayout
+                      onChatVisibleChange={setChatDockVisible}
                       enabled={inboxDockEnabled || temporaryDockVisible}
                       workspaceId={resolvedWorkspace?.id ?? null}
                       workspaceSlug={resolvedWorkspace?.slug ?? null}

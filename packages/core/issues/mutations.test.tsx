@@ -107,6 +107,22 @@ function createWrapper(qc: QueryClient) {
   };
 }
 
+describe("embedded issue synchronization metadata", () => {
+  it("tags successful single issue updates and deletions with their workspace", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    setApiInstance({ updateIssue: vi.fn().mockResolvedValue(makeIssue(1)), deleteIssue: vi.fn().mockResolvedValue(undefined) } as unknown as ApiClient);
+    const { result } = renderHook(() => ({ update: useUpdateIssue(), remove: useDeleteIssue() }), { wrapper: createWrapper(qc) });
+    await act(async () => { await result.current.update.mutateAsync({ id: "issue-1", title: "Updated" }); });
+    await act(async () => { await result.current.remove.mutateAsync("issue-1"); });
+    const successful = qc.getMutationCache().getAll().filter((mutation) => mutation.state.status === "success");
+    expect(successful.map((mutation) => mutation.options.meta)).toEqual([
+      { embeddedIssueSync: "update", workspaceId: WS_ID },
+      { embeddedIssueSync: "delete", workspaceId: WS_ID },
+    ]);
+    qc.clear();
+  });
+});
+
 describe("useCreateCommentSubIssue", () => {
   it("applies the normal issue-create cache coordination", async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

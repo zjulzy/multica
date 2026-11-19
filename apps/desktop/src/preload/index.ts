@@ -178,6 +178,20 @@ const desktopAPI = {
   removeEmbeddedGuest: (token: string) => ipcRenderer.invoke("embedded-guest:remove", token),
   sendEmbeddedGuestReady: () => ipcRenderer.send("embedded-guest:ready"),
   setEmbeddedGuestPresentation: (token: string, presentation: unknown) => ipcRenderer.invoke("embedded-guest:presentation", token, presentation),
+  acknowledgeEmbeddedGuestPresentation: (requestId: number) => ipcRenderer.send("embedded-guest:presentation-ack", requestId),
+  sendEmbeddedHeaderCommand: (request: unknown) => ipcRenderer.invoke("embedded-guest:header-command", request),
+    acknowledgeEmbeddedGuestRefresh: (requestId: number, success: boolean) => ipcRenderer.send("embedded-guest:refresh-ack", { requestId, success }),
+  sendEmbeddedHeaderState: (state: { sidebarOpen: boolean }) => ipcRenderer.send("embedded-guest:header-state", state),
+  onEmbeddedHeaderState: (callback: (state: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);
+    ipcRenderer.on("embedded-guest:header-state", handler);
+    return () => ipcRenderer.removeListener("embedded-guest:header-state", handler);
+  },
+  onEmbeddedHeaderCommand: (callback: (command: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, command: unknown) => callback(command);
+    ipcRenderer.on("embedded-guest:header-command", handler);
+    return () => ipcRenderer.removeListener("embedded-guest:header-command", handler);
+  },
   sendEmbeddedGuestAction: (action: "done" | "delete") => ipcRenderer.send("embedded-guest:action", action),
   onEmbeddedGuestPresentation: (callback: (presentation: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, value: unknown) => callback(value);

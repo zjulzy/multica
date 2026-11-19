@@ -149,6 +149,7 @@ function useIssueCreateMutation<TVariables>(
   const qc = useQueryClient();
   const wsId = useWorkspaceId();
   return useMutation({
+    meta: { embeddedIssueSync: "create", workspaceId: wsId },
     mutationFn,
     onSuccess: (newIssue) => {
       for (const [key, data] of qc.getQueriesData<ListIssuesCache>({ queryKey: issueKeys.list(wsId) })) {
@@ -194,6 +195,7 @@ export function useUpdateIssue() {
   const qc = useQueryClient();
   const wsId = useWorkspaceId();
   return useMutation({
+    meta: { embeddedIssueSync: "update", workspaceId: wsId },
     mutationKey: issueWriteMutationKey(wsId),
     mutationFn: ({ id, move_intent: moveIntent, ...data }: UpdateIssueMutationInput) => {
       if (!moveIntent) return api.updateIssue(id, data);
@@ -438,6 +440,7 @@ export function useDeleteIssue() {
   const qc = useQueryClient();
   const wsId = useWorkspaceId();
   return useMutation({
+    meta: { embeddedIssueSync: "delete", workspaceId: wsId },
     mutationFn: (id: string) => api.deleteIssue(id),
     onMutate: async (id) => {
       await Promise.all([
@@ -554,6 +557,7 @@ export function useBatchUpdateIssues() {
     }
   };
   return useMutation({
+    meta: { embeddedIssueSync: "update-many", workspaceId: wsId },
     mutationKey: issueWriteMutationKey(wsId),
     mutationFn: ({
       ids,
@@ -738,6 +742,7 @@ export function useBatchDeleteIssues() {
   const qc = useQueryClient();
   const wsId = useWorkspaceId();
   return useMutation({
+    meta: { embeddedIssueSync: "delete-many", workspaceId: wsId },
     mutationFn: (ids: string[]) => api.batchDeleteIssues(ids),
     onMutate: async (ids) => {
       await Promise.all([

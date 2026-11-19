@@ -32,7 +32,7 @@ vi.mock("./panels/team-status", () => ({ useTeamAgentStatus: () => h.team }));
 vi.mock("./app-shell-context", () => ({ useAppShell: () => null }));
 vi.mock("../chat/components/chat-bar", () => ({ ChatBar: () => <div data-testid="chat-bar" /> }));
 
-function renderBar(pathname = "/acme/issues") {
+function renderBar(pathname = "/acme/issues", placement: "top" | "bottom" = "bottom") {
   const adapter: NavigationAdapter = {
     push: vi.fn(),
     replace: vi.fn(),
@@ -44,7 +44,7 @@ function renderBar(pathname = "/acme/issues") {
   };
   return renderWithI18n(
     <NavigationProvider value={adapter}>
-      <AppBottomBar />
+      <AppBottomBar placement={placement} />
     </NavigationProvider>,
   );
 }
@@ -57,6 +57,15 @@ beforeEach(() => {
 });
 
 describe("AppBottomBar", () => {
+  it("keeps desktop top chat available on the full chat page", () => {
+    renderBar("/acme/chat", "top");
+    expect(screen.getByTestId("chat-bar")).toBeInTheDocument();
+  });
+  it("keeps top chat available in a narrow desktop window", () => {
+    h.isMobile = true;
+    renderBar("/acme/issues", "top");
+    expect(screen.getByTestId("chat-bar")).toBeInTheDocument();
+  });
   it("shows quick chat and no team status while the team is idle", () => {
     renderBar();
 

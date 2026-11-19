@@ -413,6 +413,7 @@ export function ChatWindow({ placement = "bottom" }: { placement?: "top" | "bott
        *  agent has been archived (read-only); locked out entirely when there's
        *  no agent (the EmptyState above carries the CTA). */}
       <ChatInput
+        preserveDraftOnUnmount
         hidden={!isOpen}
         onSend={c.handleSend}
         restoreDraftRequest={c.restoreDraftRequest}

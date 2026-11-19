@@ -71,6 +71,7 @@ function isAttachmentReferenced(content: string, attachment: Attachment): boolea
 }
 
 interface ChatInputProps {
+  preserveDraftOnUnmount?: boolean;
   onSend: (
     content: string,
     attachmentIds: string[] | undefined,
@@ -203,6 +204,7 @@ export function ChatInput({
   editorKeyOverride,
   hidden = false,
   annotations: annotationSlot,
+  preserveDraftOnUnmount = false,
 }: ChatInputProps) {
   const { t } = useT("chat");
   const { t: tEditor } = useT("editor");
@@ -864,6 +866,7 @@ export function ChatInput({
             onUploadingChange={uploadGate.onUploadingChange}
             attachments={draftAttachments}
             debounceMs={100}
+            flushPendingOnUnmount={preserveDraftOnUnmount}
             mentionMode={contextItems ? "context" : "default"}
             mentionContextItems={contextItems}
             enableSlashCommands

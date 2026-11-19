@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   createMemoryRouter,
   RouterProvider,
@@ -23,9 +23,11 @@ import { IssueDetailPage } from "../pages/issue-detail-page";
 import { IssueWindowNavigationProvider } from "../platform/issue-window-navigation";
 import { EmbeddedIssueNavigationProvider } from "../platform/embedded-issue-navigation";
 import { useCanonicalIssue } from "@multica/core/issues/canonical-id";
+import { issueKeys } from "@multica/core/issues/queries";
 import { parseEmbeddedIssuePresentation, type EmbeddedIssuePresentation } from "../../../shared/embedded-issue-presentation";
 import { useQueryClient } from "@tanstack/react-query";
 import { createEmbeddedChildRefresh } from "./embedded-child-refresh";
+import { EmbeddedHeaderModeProvider } from "@multica/views/issues/components";
 
 /** Boot auth, workspace and shared issue dependencies before assignment. */
 export function EmbeddedPoolWindow({ context }: { context: IssueWindowContext }) {
@@ -127,10 +129,51 @@ function EmbeddedIssueContent({ workspaceSlug, workspaceId }: { workspaceSlug: s
   const refs = useMemo(() => [id, canonicalId, issue?.identifier].filter((value): value is string => !!value), [id, canonicalId, issue?.identifier]);
   const notifyReady = useCallback(() => window.desktopAPI.sendEmbeddedGuestReady(), []);
   const [presentation, setPresentation] = useState<EmbeddedIssuePresentation>({ surface: "main" });
+  const appliedPresentation = useRef<EmbeddedIssuePresentation>({ surface: "main" });
+  const pendingPresentationAck = useRef<number | null>(null);
+  useEffect(() => window.desktopAPI.onEmbeddedHeaderCommand?.((command) => {
+    if (!command || typeof command !== "object") return;
+    const value = command as { command?: string; taskId?: string; refreshRequestId?: number };
+    if (value.command === "toggle-sidebar") window.dispatchEvent(new Event("multica:embedded-toggle-sidebar"));
+    else if (value.command === "refresh-issue" && canonicalId) {
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: issueKeys.detail(workspaceId, canonicalId), exact: true, refetchType: "active" }, { throwOnError: true }),
+        queryClient.invalidateQueries({ queryKey: issueKeys.children(workspaceId, canonicalId), refetchType: "active" }, { throwOnError: true }),
+      ]).then(() => {
+        if (typeof value.refreshRequestId === "number") window.desktopAPI.acknowledgeEmbeddedGuestRefresh?.(value.refreshRequestId, true);
+      }).catch(() => {
+        if (typeof value.refreshRequestId === "number") window.desktopAPI.acknowledgeEmbeddedGuestRefresh?.(value.refreshRequestId, false);
+      });
+    }
+    else window.dispatchEvent(new CustomEvent("multica:embedded-header-command", { detail: value }));
+  }), [canonicalId, queryClient, workspaceId]);
+  useEffect(() => {
+    const handle = (event: Event) => {
+      const detail = (event as CustomEvent<{ sidebarOpen?: unknown }>).detail;
+      if (typeof detail?.sidebarOpen === "boolean") window.desktopAPI.sendEmbeddedHeaderState?.({ sidebarOpen: detail.sidebarOpen });
+    };
+    window.addEventListener("multica:embedded-header-state", handle);
+    return () => window.removeEventListener("multica:embedded-header-state", handle);
+  }, []);
   useEffect(() => window.desktopAPI.onEmbeddedGuestPresentation((raw) => {
     const next = parseEmbeddedIssuePresentation(raw);
-    if (next) { setPresentation(next); void refreshChildren?.(); }
+    if (next) {
+      const requestId = (raw as { presentationRequestId?: unknown }).presentationRequestId;
+      const current = appliedPresentation.current;
+      if (pendingPresentationAck.current === null && current.surface === next.surface && current.shellHeader === next.shellHeader && current.highlightCommentId === next.highlightCommentId && current.highlightRequestToken === next.highlightRequestToken) {
+        if (typeof requestId === "number" && Number.isSafeInteger(requestId)) window.desktopAPI.acknowledgeEmbeddedGuestPresentation?.(requestId);
+        void refreshChildren?.();
+        return;
+      }
+      pendingPresentationAck.current = typeof requestId === "number" && Number.isSafeInteger(requestId) ? requestId : null;
+      setPresentation(next); void refreshChildren?.();
+    }
   }), [refreshChildren]);
+  useLayoutEffect(() => {
+    appliedPresentation.current = presentation;
+    const requestId = pendingPresentationAck.current;
+    if (requestId !== null) { pendingPresentationAck.current = null; window.desktopAPI.acknowledgeEmbeddedGuestPresentation?.(requestId); }
+  }, [presentation]);
   const navigate = useCallback((message: Parameters<typeof window.desktopAPI.sendEmbeddedIssueNavigation>[0]) => {
     if (presentation.surface !== "main" && message && typeof message === "object" && "kind" in message && message.kind === "current-issue") return;
     window.desktopAPI.sendEmbeddedIssueNavigation(message);
@@ -138,10 +181,10 @@ function EmbeddedIssueContent({ workspaceSlug, workspaceId }: { workspaceSlug: s
   const config = window.desktopAPI.runtimeConfig;
   return <EmbeddedIssueNavigationProvider workspaceSlug={workspaceSlug} issueRefs={refs} appUrl={config.ok ? config.config.appUrl : ""} send={navigate}>
     <WorkspacePresencePrefetch />
-    <IssueWindowFrame embedded><IssueDetailPage onInitialContentReady={notifyReady}
+    <IssueWindowFrame embedded><EmbeddedHeaderModeProvider enabled={presentation.surface === "main" && presentation.shellHeader === true}><IssueDetailPage onInitialContentReady={notifyReady}
       inboxPresentation={presentation.surface === "main" ? undefined : { surface: presentation.surface, highlightCommentId: presentation.highlightCommentId, highlightRequestToken: presentation.highlightRequestToken }}
       onDone={presentation.surface === "main" ? undefined : () => window.desktopAPI.sendEmbeddedGuestAction("done")}
-      onDelete={() => presentation.surface === "main" ? window.desktopAPI.sendEmbeddedIssueNavigation({ kind: "back" }) : window.desktopAPI.sendEmbeddedGuestAction("delete")} /></IssueWindowFrame>
+      onDelete={() => presentation.surface === "main" ? window.desktopAPI.sendEmbeddedIssueNavigation({ kind: "back" }) : window.desktopAPI.sendEmbeddedGuestAction("delete")} /></EmbeddedHeaderModeProvider></IssueWindowFrame>
     <ModalRegistry />
   </EmbeddedIssueNavigationProvider>;
 }

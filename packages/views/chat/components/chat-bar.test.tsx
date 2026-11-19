@@ -66,7 +66,7 @@ function session(id: string, minute: number, overrides: Partial<ChatSession> = {
   };
 }
 
-function renderBar(sessions: ChatSession[], running: string[] = []) {
+function renderBar(sessions: ChatSession[], running: string[] = [], inlineChat = false) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -77,7 +77,7 @@ function renderBar(sessions: ChatSession[], running: string[] = []) {
   return renderWithI18n(
     <QueryClientProvider client={qc}>
       <NavigationProvider value={adapter}>
-        <ChatBar />
+        <ChatBar inlineChat={inlineChat} />
       </NavigationProvider>
     </QueryClientProvider>,
   );
@@ -99,6 +99,15 @@ beforeEach(() => {
 });
 
 describe("ChatBar", () => {
+  it("uses the visible chat surface instead of opening a second window", () => {
+    renderBar(SESSIONS, [SESSIONS[1]!.id], true);
+    fireEvent.click(screen.getByRole("button", { name: "Billing progress, Running" }));
+    expect(h.chat.setActiveSession).toHaveBeenCalledWith("Billing progress");
+    expect(h.chat.setOpen).toHaveBeenCalledWith(false);
+    fireEvent.click(screen.getByRole("button", { name: "Ask Multica" }));
+    expect(h.chat.startNewChat).toHaveBeenCalledOnce();
+    expect(h.chat.setOpen).toHaveBeenLastCalledWith(false);
+  });
   it("shows a chip for each running or unread chat, and none for the rest", () => {
     renderBar(SESSIONS, [SESSIONS[1]!.id]);
 

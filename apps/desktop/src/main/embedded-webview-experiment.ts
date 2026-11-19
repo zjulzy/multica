@@ -7,10 +7,11 @@ import { createRendererWebPreferences } from "./renderer-web-preferences";
 import { EmbeddedVisibleSet } from "./embedded-visible-set";
 import { parseEmbeddedIssuePresentation } from "../shared/embedded-issue-presentation";
 import { openExternalSafely } from "./external-url";
+import { parseEmbeddedHeaderCommand } from "../shared/embedded-header-command";
 
 type Dependencies = { isMain: (window: BrowserWindow) => boolean; userId: (window: BrowserWindow) => string | null; workspaceSlug: (window: BrowserWindow) => string | null; locale: () => string; rendererUrl: string };
 type Ticket = { owner: BrowserWindow; userId: string; workspaceId: string; key: string; context: IssueWindowContext; used: boolean; pool: boolean; poolReady: boolean };
-type Guest = { owner: BrowserWindow; key: string; contents: WebContents; frozen: boolean; assignedAt: number; frozenAt: number | null };
+type Guest = { owner: BrowserWindow; key: string; contents: WebContents; frozen: boolean; assignedAt: number; frozenAt: number | null; headerCommandsEnabled: boolean; presentationRequestId: number };
 let deps: Dependencies | null = null;
 const tickets = new Map<string, Ticket>();
 const pending = new Map<BrowserWindow, Ticket[]>();
@@ -18,6 +19,10 @@ const guests = new Map<string, Guest>();
 const byContents = new Map<WebContents, Guest>();
 const active = new Map<BrowserWindow, EmbeddedVisibleSet>();
 const transitions = new Map<BrowserWindow, Promise<void>>();
+let nextPresentationRequestId = 0;
+const pendingPresentations = new Map<number, { guest: Guest; shellHeader: boolean; resolve: (value: boolean) => void; timer: ReturnType<typeof setTimeout> }>();
+const pendingRefreshes = new Map<number, { guest: Guest; resolve: (value: boolean) => void; timer: ReturnType<typeof setTimeout> }>();
+let nextRefreshRequestId = 0;
 function visibleSet(owner: BrowserWindow) {
   let state = active.get(owner);
   if (state) return state;
@@ -45,6 +50,8 @@ function enqueue(owner: BrowserWindow, action: () => Promise<void>) {
 }
 function destroyGuest(token: string) {
   const guest = guests.get(token); if (!guest) return;
+  for (const [id, pending] of pendingPresentations) if (pending.guest === guest) { clearTimeout(pending.timer); pendingPresentations.delete(id); pending.resolve(false); }
+  for (const [id, pending] of pendingRefreshes) if (pending.guest === guest) { clearTimeout(pending.timer); pendingRefreshes.delete(id); pending.resolve(false); }
   guests.delete(token); byContents.delete(guest.contents);
   active.get(guest.owner)?.forget(token);
   if (!guest.contents.isDestroyed()) { if (guest.contents.debugger.isAttached()) guest.contents.debugger.detach(); guest.contents.close(); }
@@ -70,7 +77,7 @@ export function installEmbeddedWebviewHost(owner: BrowserWindow) {
   owner.webContents.on("did-attach-webview", (_event, contents) => {
     const ticket = pending.get(owner)?.shift(); if (!ticket) { contents.close(); return; }
     const token = [...tickets].find(([, value]) => value === ticket)?.[0]; if (!token) { contents.close(); return; }
-    const guest: Guest = { owner, key: ticket.key, contents, frozen: false, assignedAt: performance.now(), frozenAt: null };
+    const guest: Guest = { owner, key: ticket.key, contents, frozen: false, assignedAt: performance.now(), frozenAt: null, headerCommandsEnabled: false, presentationRequestId: 0 };
     guests.set(token, guest); byContents.set(contents, guest);
     console.info("[embedded-guest] attached");
     contents.on("console-message", (details) => {
@@ -162,9 +169,69 @@ export function setupEmbeddedWebviewExperiment(options: Dependencies) {
     const owner = ownerFor(event.sender), presentation = parseEmbeddedIssuePresentation(raw);
     if (!owner || typeof token !== "string" || !presentation) return false;
     const guest = guests.get(token), ticket = tickets.get(token);
-    if (!guest || guest.owner !== owner || guest.contents.isDestroyed() || !ticket || ticket.userId !== options.userId(owner) || ticket.context.workspaceSlug !== options.workspaceSlug(owner)) return false;
-    guest.contents.send("embedded-guest:presentation", presentation);
+    if (!guest || guest.owner !== owner || guest.contents.isDestroyed() || !active.get(owner)?.has(token) || !ticket || ticket.userId !== options.userId(owner) || ticket.context.workspaceSlug !== options.workspaceSlug(owner)) return false;
+    for (const [id, pending] of pendingPresentations) {
+      if (pending.guest === guest) { clearTimeout(pending.timer); pendingPresentations.delete(id); pending.resolve(false); }
+    }
+    const requestId = ++nextPresentationRequestId;
+    guest.presentationRequestId = requestId;
+    if (presentation.surface !== "main" || presentation.shellHeader !== true) guest.headerCommandsEnabled = false;
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => { pendingPresentations.delete(requestId); resolve(false); }, 12000);
+      pendingPresentations.set(requestId, { guest, shellHeader: presentation.surface === "main" && presentation.shellHeader === true, resolve, timer });
+      try { guest.contents.send("embedded-guest:presentation", { ...presentation, presentationRequestId: requestId }); }
+      catch { clearTimeout(timer); pendingPresentations.delete(requestId); resolve(false); }
+    });
+  });
+  ipcMain.on("embedded-guest:presentation-ack", (event, requestId: unknown) => {
+    if (typeof requestId !== "number" || !Number.isSafeInteger(requestId)) return;
+    const pending = pendingPresentations.get(requestId), guest = byContents.get(event.sender);
+    if (!pending || !guest || pending.guest !== guest) return;
+    pendingPresentations.delete(requestId); clearTimeout(pending.timer);
+    const entry = [...guests].find(([token, candidate]) => candidate === guest && active.get(guest.owner)?.has(token));
+    const ticket = entry && tickets.get(entry[0]);
+    const valid = !!entry && !!ticket && !guest.owner.isDestroyed() && !guest.contents.isDestroyed() && ticket.userId === options.userId(guest.owner) && ticket.context.workspaceSlug === options.workspaceSlug(guest.owner) && guest.presentationRequestId === requestId;
+    if (valid) guest.headerCommandsEnabled = pending.shellHeader;
+    pending.resolve(valid);
+  });
+  ipcMain.handle("embedded-guest:header-command", (event, raw: unknown) => {
+    const owner = ownerFor(event.sender), request = parseEmbeddedHeaderCommand(raw);
+    if (!owner || !request) return false;
+    const guest = guests.get(request.token), ticket = tickets.get(request.token);
+    if (!guest || guest.owner !== owner || guest.contents.isDestroyed() || (!guest.headerCommandsEnabled && request.command !== "refresh-issue") || !active.get(owner)?.has(request.token) || !ticket || ticket.userId !== options.userId(owner) || ticket.context.workspaceSlug !== options.workspaceSlug(owner)) return false;
+    if (request.command === "refresh-issue") {
+      const requestId = ++nextRefreshRequestId;
+      return new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => { pendingRefreshes.delete(requestId); resolve(false); }, 15000);
+        pendingRefreshes.set(requestId, { guest, resolve, timer });
+        try { guest.contents.send("embedded-guest:header-command", { ...request, refreshRequestId: requestId }); }
+        catch { clearTimeout(timer); pendingRefreshes.delete(requestId); resolve(false); }
+      });
+    }
+    guest.contents.send("embedded-guest:header-command", request);
     return true;
+  });
+  ipcMain.on("embedded-guest:refresh-ack", (event, raw: unknown) => {
+    if (!raw || typeof raw !== "object") return;
+    const { requestId, success } = raw as { requestId?: unknown; success?: unknown };
+    if (typeof requestId !== "number" || !Number.isSafeInteger(requestId) || typeof success !== "boolean") return;
+    const pending = pendingRefreshes.get(requestId);
+    if (!pending || byContents.get(event.sender) !== pending.guest) return;
+    pendingRefreshes.delete(requestId); clearTimeout(pending.timer);
+    const entry = [...guests].find(([token, candidate]) => candidate === pending.guest && active.get(candidate.owner)?.has(token));
+    const ticket = entry && tickets.get(entry[0]);
+    pending.resolve(success && !!ticket && ticket.userId === options.userId(pending.guest.owner) && ticket.context.workspaceSlug === options.workspaceSlug(pending.guest.owner));
+  });
+  ipcMain.on("embedded-guest:header-state", (event, raw: unknown) => {
+    const guest = byContents.get(event.sender);
+    if (!guest || guest.owner.isDestroyed() || !guest.headerCommandsEnabled || !raw || typeof raw !== "object") return;
+    const sidebarOpen = (raw as Record<string, unknown>).sidebarOpen;
+    if (typeof sidebarOpen !== "boolean") return;
+    const entry = [...guests].find(([token, candidate]) => candidate === guest && active.get(guest.owner)?.has(token));
+    if (!entry) return;
+    const ticket = tickets.get(entry[0]);
+    if (!ticket || ticket.userId !== options.userId(guest.owner) || ticket.context.workspaceSlug !== options.workspaceSlug(guest.owner)) return;
+    guest.owner.webContents.send("embedded-guest:header-state", { token: entry[0], sidebarOpen });
   });
   ipcMain.on("embedded-guest:action", (event, action: unknown) => {
     const guest = byContents.get(event.sender);

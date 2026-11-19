@@ -33,6 +33,7 @@ interface DesktopInboxDockLayoutProps {
   onAgentRequestHandled?: (request: { workspaceId: string; agentId: string }) => void;
   onRequestHandled?: (request: { workspaceId: string; key: string }) => void;
   onTemporaryClose?: () => void;
+  onChatVisibleChange?: (visible: boolean) => void;
 }
 
 function DockInboxSurface({
@@ -116,6 +117,7 @@ export function DesktopInboxDockLayout({
   agentRequest,
   onAgentRequestHandled,
   onTemporaryClose,
+  onChatVisibleChange,
 }: DesktopInboxDockLayoutProps): ReactElement {
   const persistedDockOpen = useDesktopPrefsStore((state) => state.inboxDockOpen);
   const { t } = useT("agents");
@@ -300,6 +302,7 @@ export function DesktopInboxDockLayout({
   };
 
   const chatVisible = !!enabled && !!workspaceId && !!workspaceSlug && inboxDockOpen && effectiveTab === "chat" && !pendingChat;
+  useEffect(() => { onChatVisibleChange?.(chatVisible); return () => onChatVisibleChange?.(false); }, [chatVisible, onChatVisibleChange]);
   return (
     <ChatDockVisibilityProvider value={chatVisible}>
     <div data-slot="dock-region" className="relative flex min-h-0 flex-1 flex-col">

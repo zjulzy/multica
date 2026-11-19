@@ -53,6 +53,12 @@ interface DesktopAPI {
   removeEmbeddedGuest: (token: string) => Promise<void>;
   sendEmbeddedGuestReady: () => void;
   setEmbeddedGuestPresentation: (token: string, presentation: unknown) => Promise<boolean>;
+  acknowledgeEmbeddedGuestPresentation: (requestId: number) => void;
+  sendEmbeddedHeaderCommand: (request: unknown) => Promise<boolean>;
+    acknowledgeEmbeddedGuestRefresh: (requestId: number, success: boolean) => void;
+  sendEmbeddedHeaderState: (state: { sidebarOpen: boolean }) => void;
+  onEmbeddedHeaderState: (callback: (state: unknown) => void) => () => void;
+  onEmbeddedHeaderCommand: (callback: (command: unknown) => void) => () => void;
   sendEmbeddedGuestAction: (action: "done" | "delete") => void;
   onEmbeddedGuestPresentation: (callback: (presentation: unknown) => void) => () => void;
   onEmbeddedGuestAction: (callback: (value: unknown) => void) => () => void;

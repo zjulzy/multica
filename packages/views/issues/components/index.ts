@@ -4,6 +4,8 @@ export { PriorityIcon } from "./priority-icon";
 export { StatusPicker, PriorityPicker, StagePicker, AssigneePicker, canAssignAgent, StartDatePicker, DueDatePicker, LabelPicker } from "./pickers";
 export { IssueDetail, IssueDetailSkeleton, issueHighlightMementoKey } from "./issue-detail";
 export { IssueDetailRoute, CachedIssueDetail } from "./issue-detail-route";
+export { EmbeddedHeaderModeProvider } from "./embedded-header-mode";
+export { EmbeddedIssueShellHeader } from "./embedded-issue-shell-header";
 export { IssuesPage } from "./issues-page";
 export { CommentCard } from "./comment-card";
 export { CommentInput } from "./comment-input";

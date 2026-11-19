@@ -262,16 +262,19 @@ describe("ChatPage URL synchronization", () => {
   it("does not let a retained main chat page overwrite the active dock session", () => {
     renderPage("session=main-session", { dockVisible: true });
     expect(mockSetActiveSession).not.toHaveBeenCalled();
+    expect(screen.queryByText("chat-input")).not.toBeInTheDocument();
   });
 
   it("does not reconcile an invisible dock", () => {
     renderPage("session=dock-session", { dockVisible: true, dock: true, visible: false });
     expect(mockSetActiveSession).not.toHaveBeenCalled();
+    expect(screen.queryByText("chat-input")).not.toBeInTheDocument();
   });
 
   it("reconciles the visible dock session", () => {
     renderPage("session=dock-session", { dockVisible: true, dock: true, visible: true });
     expect(mockSetActiveSession).toHaveBeenCalledWith("dock-session");
+    expect(screen.getByText("chat-input")).toBeInTheDocument();
   });
 
   it.each(["/globex/issues", "/acme/issues"])(

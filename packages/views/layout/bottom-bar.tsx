@@ -28,7 +28,7 @@ function TeamStatus({ wsId }: { wsId: string }) {
   );
 
   return (
-    <div className="flex min-w-0 items-center gap-1">
+    <div data-slot="team-status" className="flex min-w-0 max-w-32 items-center gap-1">
       {waitingTasks > 0 && (
         <AppLink
           href={teamHref}
@@ -48,7 +48,7 @@ function TeamStatus({ wsId }: { wsId: string }) {
  * used to take. Below `md` there is no bar and quick chat is the floating
  * launcher.
  */
-export function AppBottomBar({ placement = "bottom" }: { placement?: "top" | "bottom" } = {}) {
+export function AppBottomBar({ placement = "bottom", chatDockVisible = false }: { placement?: "top" | "bottom"; chatDockVisible?: boolean } = {}) {
   const { t } = useT("layout");
   const wsId = useCurrentWorkspace()?.id;
   const isMobile = useIsMobile();
@@ -56,10 +56,10 @@ export function AppBottomBar({ placement = "bottom" }: { placement?: "top" | "bo
   const { pathname } = useNavigation();
   const chatPath = useWorkspacePaths().chat();
 
-  if (!wsId || isMobile) return null;
+  if (!wsId || (isMobile && placement !== "top")) return null;
   // Same gates as the floating window: the Settings preference, and the Chat
   // tab, which already shows the conversation full-page.
-  const showChat = floatingChatEnabled && !isFloatingChatRouteSuppressed(pathname, chatPath);
+  const showChat = floatingChatEnabled && (placement === "top" || !isFloatingChatRouteSuppressed(pathname, chatPath));
 
   return (
     <footer
@@ -70,11 +70,11 @@ export function AppBottomBar({ placement = "bottom" }: { placement?: "top" | "bo
       // pr: the card's mr-2 plus a gutter that puts the last icon on the same
       // column as the page header's trailing action.
       className={placement === "top"
-        ? "relative z-10 hidden h-full w-[min(45%,42rem)] min-w-0 shrink items-center justify-end gap-2 pr-2 md:flex"
+        ? "relative z-10 flex h-full w-[min(45%,42rem)] min-w-48 shrink items-center justify-end gap-2 pr-2"
         : "hidden h-8 shrink-0 items-center justify-between gap-4 pr-[18px] pl-3 md:flex"}
     >
       <TeamStatus wsId={wsId} />
-      {showChat && <ChatBar placement={placement} />}
+      {showChat && <ChatBar placement={placement} inlineChat={placement === "top" && (chatDockVisible || isFloatingChatRouteSuppressed(pathname, chatPath))} />}
     </footer>
   );
 }

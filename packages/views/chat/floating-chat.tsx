@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useChatStore } from "@multica/core/chat";
 import { useWorkspacePaths } from "@multica/core/paths";
 import { useNavigation } from "../navigation";
@@ -24,6 +25,9 @@ export function FloatingChat({ placement = "bottom" }: { placement?: "top" | "bo
   const { pathname } = useNavigation();
   const wsPaths = useWorkspacePaths();
   const dockVisible = useChatDockVisible();
+  const setOpen = useChatStore((s) => s.setOpen);
+  const inlineChat = dockVisible || isFloatingChatRouteSuppressed(pathname, wsPaths.chat());
+  useEffect(() => { if (inlineChat) setOpen(false); }, [inlineChat, setOpen]);
 
   if (!enabled || dockVisible) return null;
   // Suppress on the Chat tab — it renders the same conversation full-page.
@@ -32,7 +36,7 @@ export function FloatingChat({ placement = "bottom" }: { placement?: "top" | "bo
   return (
     <>
       <ChatWindow placement={placement} />
-      <ChatFab />
+      {placement !== "top" && <ChatFab />}
     </>
   );
 }

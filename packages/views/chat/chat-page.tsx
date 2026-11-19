@@ -402,7 +402,8 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
         onClear={c.handleClearQueuedTasks}
       />
 
-      <ChatInput
+      {isCurrentChatRoute && <ChatInput
+        preserveDraftOnUnmount
         onSend={c.handleSend}
         restoreDraftRequest={c.restoreDraftRequest}
         conversationStarterRequest={c.conversationStarterRequest}
@@ -430,7 +431,7 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
         isProjectUpdating={c.isProjectUpdating}
         focusRequest={c.focusInputRequest}
         annotations={annotations}
-      />
+      />}
     </div>
   );
 

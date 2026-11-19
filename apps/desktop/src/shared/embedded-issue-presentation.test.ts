@@ -10,4 +10,9 @@ describe("embedded issue presentation", () => {
   it("accepts the regular main surface", () => {
     expect(parseEmbeddedIssuePresentation({ surface: "main" })).toEqual({ surface: "main" });
   });
+  it("allows the shell header only on the main surface", () => {
+    expect(parseEmbeddedIssuePresentation({ surface: "main", shellHeader: true })).toEqual({ surface: "main", shellHeader: true });
+    expect(parseEmbeddedIssuePresentation({ surface: "dock", shellHeader: true })).toBeNull();
+    expect(parseEmbeddedIssuePresentation({ surface: "main", shellHeader: "yes" })).toBeNull();
+  });
 });

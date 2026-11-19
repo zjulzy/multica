@@ -45,6 +45,7 @@ import {
   ArrowDown,
 } from "@multica/ui/icons";
 import { BreadcrumbHeader, type BreadcrumbSegment } from "../../layout/breadcrumb-header";
+import { useEmbeddedHeaderMode } from "./embedded-header-mode";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { Button } from "@multica/ui/components/ui/button";
 import { IconButton } from "@multica/ui/components/common/icon-button";
@@ -1487,6 +1488,7 @@ export function IssueDetail(props: IssueDetailProps) {
 }
 
 function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onUnsubscribeArchive, defaultSidebarOpen = true, layoutId = ISSUE_DETAIL_LAYOUT_ID, enableGlobalFindShortcut = true, highlightCommentId: linkedCommentId, highlightRequestToken: linkedRequestToken, highlightAppRequestId, leadingAction, variant = "page", trailingActions, notice, readsInbox = true, skipInitialRefetch = false, openDeliverable, onDeliverableLinkDone }: IssueDetailProps) {
+  const shellHeader = useEmbeddedHeaderMode() && variant !== "peek";
   const descriptionSectionId = useId();
   const isPeek = variant === "peek";
   const { t } = useT("issues");
@@ -3024,6 +3026,15 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
     });
   }, [beginDesktopSidebarToggle, isMobile, sidebarRef]);
 
+  useEffect(() => {
+    if (!shellHeader) return;
+    window.addEventListener("multica:embedded-toggle-sidebar", handleToggleSidebar);
+    return () => window.removeEventListener("multica:embedded-toggle-sidebar", handleToggleSidebar);
+  }, [handleToggleSidebar, shellHeader]);
+  useEffect(() => {
+    if (shellHeader) window.dispatchEvent(new CustomEvent("multica:embedded-header-state", { detail: { sidebarOpen } }));
+  }, [shellHeader, sidebarOpen]);
+
   // The header's wakeup chip opens the sidebar and brings the Wakeups section
   // into view with focus on its heading, showing it on this issue even when
   // the reader hid it from the sidebar. The reveal lasts until the reader
@@ -3039,6 +3050,17 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
       heading?.focus({ preventScroll: true });
     });
   }, [handleToggleSidebar, id, sidebarOpen]);
+
+  useEffect(() => {
+    if (!shellHeader) return;
+    const handle = (event: Event) => {
+      const detail = (event as CustomEvent<{ command?: string; taskId?: string }>).detail;
+      if (detail?.command === "open-wakeups") openWakeups();
+      else if (detail?.command === "jump-to-run" && detail.taskId) jumpToRun(detail.taskId);
+    };
+    window.addEventListener("multica:embedded-header-command", handle);
+    return () => window.removeEventListener("multica:embedded-header-command", handle);
+  }, [jumpToRun, openWakeups, shellHeader]);
 
   useRightSidebarShortcut(rightSidebarShortcutTargetRef, handleToggleSidebar);
 
@@ -3642,10 +3664,10 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
         {find.open && (
           <FindBar
             find={find}
-            className={cn("absolute top-14 z-30", isMobile ? "right-4" : "right-10")}
+            className={cn("absolute z-30", shellHeader ? "top-2" : "top-14", isMobile ? "right-4" : "right-10")}
           />
         )}
-        <BreadcrumbHeader
+        {!shellHeader && <BreadcrumbHeader
           leading={leadingAction}
           segments={breadcrumbSegments}
           leaf={
@@ -3742,7 +3764,16 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
             )}
             </>
           }
-        />
+        />}
+        {shellHeader && <IssueActionsDropdown
+          issue={issue}
+          align="end"
+          onDeletedFallbackPath={onDelete ? undefined : paths.issues()}
+          archivedInboxItemId={archivedInboxItemId}
+          onShowInSidebar={isPeek ? undefined : (showInSidebar ?? undefined)}
+          rowMenu={pageMenu.rowMenu}
+          trigger={<button type="button" hidden tabIndex={-1} aria-hidden="true" />}
+        />}
         {notice}
 
         {/* scrollbar-gutter both-edges: with classic (space-taking) scrollbars —
