@@ -73,6 +73,8 @@ vi.mock("@multica/views/layout", () => ({
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   PersistentPinsProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   AppBottomBar: ({ placement }: { placement?: string }) => <div data-testid="official-bar" data-placement={placement} />,
+  SearchButton: () => <button data-action="search">Search</button>,
+  NewIssueButton: () => <button data-action="new-issue">New issue</button>,
   AppShellProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   CompactNavSheet: () => null,
   GlobalShortcuts: () => null,
@@ -157,6 +159,12 @@ beforeEach(() => {
 });
 
 describe("DesktopShell sidebar trigger", () => {
+  it("keeps search and new issue actions accessible in the top bar", () => {
+    const view = renderShell();
+    const header = view.container.querySelector('[data-slot="main-top-bar"]');
+    expect(header?.querySelector('[data-action="search"]')).toBeInTheDocument();
+    expect(header?.querySelector('[data-action="new-issue"]')).toBeInTheDocument();
+  });
   it("places the official chat controls in the top bar", () => {
     const view = renderShell();
     const bar = view.getByTestId("official-bar");

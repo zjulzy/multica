@@ -80,6 +80,8 @@ vi.mock("@multica/views/platform", () => ({
 // which of them the shell decided to mount.
 vi.mock("@multica/views/layout", () => ({
   AppBottomBar: () => <div data-testid="app-bottom-bar" />,
+  SearchButton: () => <button data-action="search">Search</button>,
+  NewIssueButton: () => <button data-action="new-issue">New issue</button>,
   AppRail: () => <div data-testid="app-rail" />,
   AgentStatusHub: () => null,
   PageHeaderPortalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,

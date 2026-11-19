@@ -24,6 +24,8 @@ import {
   CompactNavSheet,
   GlobalShortcuts,
   NavigationProgress,
+  NewIssueButton,
+  SearchButton,
   ShellRouteDataPrefetch,
   SpacePanel,
 } from "@multica/views/layout";
@@ -63,6 +65,7 @@ import liworkLogo from "../assets/liwork-logo.svg?raw";
 
 const TOP_BAR_HEIGHT_CLASS = "h-10";
 const RAIL_WIDTH = 56;
+const TITLE_BAR_ACTION_CLASS = "flex size-7 items-center justify-center rounded-md text-faint-foreground transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 [&_svg]:size-4";
 
 function RailTopSpacer() {
   const singleTabMode = useDesktopPrefsStore((s) => s.singleTabMode);
@@ -157,7 +160,13 @@ function MainTopBar({ railMounted, headerSlotRef }: { railMounted: boolean; head
       >
         {singleTabMode ? <SingleTabHeaderSlot headerSlotRef={headerSlotRef} /> : <TabBar />}
       </div>
-      {railMounted && <AppBottomBar placement="top" />}
+      {railMounted && <>
+        <div data-slot="title-bar-actions" className="relative z-10 flex shrink-0 items-center gap-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          <NewIssueButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
+          <SearchButton className={TITLE_BAR_ACTION_CLASS} tooltipSide="bottom" />
+        </div>
+        <AppBottomBar placement="top" />
+      </>}
     </header>
   );
 }
