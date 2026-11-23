@@ -480,7 +480,7 @@ export function ChatPage({ dock = false, visible = true }: { dock?: boolean; vis
     <div data-slot={dock ? undefined : "desktop-list-page"} className="flex min-h-0 flex-1">
       {dock ? <aside className="flex h-full w-56 shrink-0 flex-col overflow-hidden border-r">
         {listHeader}
-        <div className="flex-1 min-h-0 overflow-y-auto">{listBody}</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{listBody}</div>
       </aside> : <ListColumn collapsed={listCollapsed} width="list">
         {listHeader}
         <div className="flex-1 min-h-0 overflow-y-auto">{listBody}{persistentPins && <div className="px-2"><SharedPinnedSection /></div>}</div>

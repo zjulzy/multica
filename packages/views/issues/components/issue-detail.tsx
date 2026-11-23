@@ -43,6 +43,7 @@ import {
   Unlink,
   Users,
   ArrowDown,
+  ArrowUp,
 } from "@multica/ui/icons";
 import { BreadcrumbHeader, type BreadcrumbSegment } from "../../layout/breadcrumb-header";
 import { useEmbeddedHeaderMode } from "./embedded-header-mode";
@@ -621,23 +622,31 @@ function shallowEqualEntries(a: TimelineEntry[], b: TimelineEntry[]): boolean {
   return true;
 }
 
-function JumpToLatestButton({
+function TimelineJumpButtons({
   onClick,
   label,
+  onTop,
+  topLabel,
   hasNew = false,
 }: {
   onClick: () => void;
   label: string;
+  onTop: () => void;
+  topLabel: string;
   /** New comments arrived while the reader was away; `label` counts them. */
   hasNew?: boolean;
 }) {
   return (
-    <Button
+    <div className="absolute bottom-full left-1/2 mb-6 flex -translate-x-1/2 items-center gap-2">
+      <Button type="button" variant="outline" size="sm" onClick={onTop} className="bg-background shadow-md dark:bg-background dark:hover:bg-muted">
+        <ArrowUp />{topLabel}
+      </Button>
+      <Button
       type="button"
       variant="outline"
       size="sm"
       onClick={onClick}
-      className="absolute bottom-full left-1/2 mb-6 -translate-x-1/2 bg-background shadow-md dark:bg-background dark:hover:bg-muted"
+      className="bg-background shadow-md dark:bg-background dark:hover:bg-muted"
     >
       {hasNew ? (
         <>
@@ -651,7 +660,8 @@ function JumpToLatestButton({
           {label}
         </>
       )}
-    </Button>
+      </Button>
+    </div>
   );
 }
 
@@ -1631,6 +1641,10 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
     if (scrollContainerEl) clearReplyFoldSpacer(scrollContainerEl);
     jumpToLatest.jump();
   }, [scrollContainerEl, jumpToLatest.jump]);
+  const jumpToTopWithoutSpacer = useCallback(() => {
+    if (scrollContainerEl) clearReplyFoldSpacer(scrollContainerEl);
+    jumpToLatest.jumpToTop();
+  }, [scrollContainerEl, jumpToLatest.jumpToTop]);
   // Read by the image rules in editor/styles/attachment.css.
   const commentImageLayout = useCommentComposerStore((s) => s.imageLayout);
 
@@ -4419,7 +4433,7 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
               it to the viewport bottom until the composer scrolls in. */}
           {!stickyComposer && jumpToLatest.visible && (
             <div className="sticky bottom-0 z-10 h-0">
-              <JumpToLatestButton onClick={jumpToLatestWithoutSpacer} label={t(($) => $.timeline.jump_to_latest)} />
+              <TimelineJumpButtons onClick={jumpToLatestWithoutSpacer} label={t(($) => $.timeline.jump_to_latest)} onTop={jumpToTopWithoutSpacer} topLabel={t(($) => $.timeline.jump_to_top)} />
             </div>
           )}
           <IssueAppRequests issueId={id} highlightId={highlightAppRequestId} highlightToken={highlightRequestToken} />
@@ -4438,7 +4452,7 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
                 next keystroke would flush it into the new issue's
                 draft key. */}
             {stickyComposer && jumpToLatest.visible && (
-              <JumpToLatestButton onClick={jumpToLatestWithoutSpacer} label={t(($) => $.timeline.jump_to_latest)} />
+              <TimelineJumpButtons onClick={jumpToLatestWithoutSpacer} label={t(($) => $.timeline.jump_to_latest)} onTop={jumpToTopWithoutSpacer} topLabel={t(($) => $.timeline.jump_to_top)} />
             )}
             <CommentInput
               key={id}

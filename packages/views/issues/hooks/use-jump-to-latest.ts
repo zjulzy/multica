@@ -49,5 +49,10 @@ export function useJumpToLatest(scrollContainerEl: HTMLElement | null) {
     deadline = setTimeout(stop, JUMP_FOLLOW_MS);
   }, [scrollContainerEl]);
 
-  return { visible: !!scrollContainerEl, jump };
+  const jumpToTop = useCallback(() => {
+    cancelJumpRef.current?.();
+    if (scrollContainerEl) scrollContainerEl.scrollTop = 0;
+  }, [scrollContainerEl]);
+
+  return { visible: !!scrollContainerEl, jump, jumpToTop };
 }

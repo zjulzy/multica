@@ -119,6 +119,28 @@ html:root[data-desktop-theme="starlit-dream"] {
   --sidebar-accent:#414967; --sidebar-accent-foreground:#edf0fb; --sidebar-border:#4d5872; --sidebar-ring:#b7c7ff;
   --brand:#b7c7ff; --brand-foreground:#1f2844; --tooltip:#303850; --theme-glow:rgba(160,181,255,.1);
 }
+/* Keep each palette's colours while giving navigation and cards a shared,
+   subtle surface treatment. These tokens only apply to desktop themes. */
+html:root[data-desktop-theme] {
+  --board-card-border-color: color-mix(in srgb, var(--brand) 20%, var(--surface-border));
+  --board-card-shadow: 0 1px 3px color-mix(in srgb, var(--foreground) 5%, transparent);
+  --board-card-hover-background: var(--surface-hover);
+}
+html[data-desktop-theme] [data-mc="nav-item"][data-active="true"]:not(:focus-visible) {
+  box-shadow: inset 3px 0 var(--brand), inset 0 0 0 1px color-mix(in srgb, var(--brand) 15%, transparent);
+}
+html[data-desktop-theme] [data-slot="button"][data-variant="default"]:not(:disabled):not(:focus-visible) {
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  html[data-desktop-theme][data-interface-motion="on"] [data-mc="board-card"] {
+    transition: translate 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+  }
+  html[data-desktop-theme][data-interface-motion="on"] [data-mc="board-card"]:hover {
+    translate: 0 -1px;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 11%, transparent);
+  }
+}
 html[data-desktop-theme] :is([data-slot="button"], [data-slot="input"], [data-slot="textarea"], [data-slot="dialog-content"], [data-slot="popover-content"], [data-slot="dropdown-menu-content"], [data-slot="select-content"], [data-slot="select-trigger"], [data-slot="inbox-dock-header"]) {
   background-image:linear-gradient(140deg,var(--theme-glow),transparent 70%);
 }

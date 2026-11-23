@@ -7,7 +7,7 @@ let resizeCallback: ResizeObserverCallback;
 const disconnect = vi.fn();
 function Harness({ metrics }: { metrics: { scrollHeight: number; clientHeight: number } }) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
-  const { visible, jump } = useJumpToLatest(element);
+  const { visible, jump, jumpToTop } = useJumpToLatest(element);
   return <div data-testid="scroller" ref={(node) => {
     if (!node || node === element) return;
     let top = 0;
@@ -17,7 +17,7 @@ function Harness({ metrics }: { metrics: { scrollHeight: number; clientHeight: n
       scrollTop: { configurable: true, get: () => top, set: (value: number) => { top = Math.max(0, Math.min(value, metrics.scrollHeight - metrics.clientHeight)); } },
     });
     setElement(node);
-  }}><div data-testid="content" />{visible && <button onClick={jump}>latest</button>}</div>;
+  }}><div data-testid="content" />{visible && <><button onClick={jump}>latest</button><button onClick={jumpToTop}>top</button></>}</div>;
 }
 beforeEach(() => {
   vi.useFakeTimers();
@@ -27,6 +27,18 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("useJumpToLatest", () => {
+  it("jumps to the top and cancels any pending follow-to-bottom", () => {
+    const metrics = { scrollHeight: 2000, clientHeight: 500 };
+    render(<Harness metrics={metrics} />);
+    const scroller = screen.getByTestId("scroller");
+    fireEvent.click(screen.getByRole("button", { name: "latest" }));
+    metrics.scrollHeight = 2600;
+    act(() => resizeCallback([], {} as ResizeObserver));
+    fireEvent.click(screen.getByRole("button", { name: "top" }));
+    expect(scroller.scrollTop).toBe(0);
+    act(() => vi.advanceTimersByTime(JUMP_FOLLOW_MS));
+    expect(scroller.scrollTop).toBe(0);
+  });
   it("keeps the button visible without monitoring or measuring while idle", () => {
     const observer = vi.spyOn(globalThis, "ResizeObserver");
     render(<Harness metrics={{ scrollHeight: 900, clientHeight: 500 }} />);

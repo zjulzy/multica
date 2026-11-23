@@ -858,6 +858,16 @@ describe("IssueDetail (shared)", () => {
     useIssueSidebarSectionsStore.getState().reset();
   });
 
+  it("offers a jump to the issue top beside the latest button", async () => {
+    const { container } = renderIssueDetail();
+    const button = await screen.findByRole("button", { name: "Jump to top" });
+    expect(screen.getByRole("button", { name: "Jump to latest" })).toBeInTheDocument();
+    const scroller = container.querySelector<HTMLElement>("[data-issue-scroll-container]")!;
+    scroller.scrollTop = 500;
+    fireEvent.click(button);
+    expect(scroller.scrollTop).toBe(0);
+  });
+
   it("hides only the cached main header when the desktop shell owns it", async () => {
     const { EmbeddedHeaderModeProvider } = await import("./embedded-header-mode");
     const queryClient = createTestQueryClient();

@@ -30,4 +30,25 @@ describe("desktop theme colors", () => {
     }
     expect(contrast(token("--brand-foreground"), token("--brand"))).toBeGreaterThanOrEqual(4.5);
   });
+  it("distinguishes the active navigation row in custom themes without changing the default theme", () => {
+    const style = document.createElement("style");
+    style.id = "theme-test";
+    style.textContent = css;
+    document.head.append(style);
+    const active = document.createElement("a");
+    active.dataset.mc = "nav-item";
+    active.dataset.active = "true";
+    const inactive = document.createElement("a");
+    inactive.dataset.mc = "nav-item";
+    inactive.dataset.active = "false";
+    document.body.append(active, inactive);
+    try {
+      expect(getComputedStyle(active).boxShadow).toBe("");
+      document.documentElement.dataset.desktopTheme = "sakura-blush";
+      expect(getComputedStyle(active).boxShadow).not.toBe("");
+      expect(getComputedStyle(inactive).boxShadow).toBe("");
+      delete document.documentElement.dataset.desktopTheme;
+      expect(getComputedStyle(active).boxShadow).toBe("");
+    } finally { active.remove(); inactive.remove(); }
+  });
 });
