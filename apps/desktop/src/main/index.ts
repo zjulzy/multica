@@ -22,6 +22,7 @@ import {
 } from "./daemon-manager";
 import { setupLocalDirectory } from "./local-directory";
 import { getLiworkSnapshot, switchLiworkSession } from "./liwork-monitor";
+import { listIssueChanges, listChangeFiles, diffChangeFile, revertChangeFile } from "./p4-dock";
 import { buildPerformanceSnapshot } from "./performance-monitor";
 import { setupThemeFolder } from "./theme-folder";
 import { setupVoiceInput } from "./voice";
@@ -843,6 +844,31 @@ if (!gotTheLock) {
     ipcMain.handle("liwork:switch-session", (event, sessionId: unknown) => {
       if (!BrowserWindow.fromWebContents(event.sender) || typeof sessionId !== "string") throw new Error("Invalid LiWork request");
       return switchLiworkSession(sessionId);
+    });
+
+    ipcMain.handle("p4-dock:changes", (event, ids: string[]) => {
+      if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");
+      return listIssueChanges(ids);
+    });
+    ipcMain.handle("p4-dock:files", (event, ids: string[], client: string, change: string) => {
+      if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");
+      return listChangeFiles(ids, client, change);
+    });
+    ipcMain.handle("p4-dock:diff", (event, ids: string[], client: string, change: string, file: string) => {
+      if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");
+      return diffChangeFile(ids, client, change, file);
+    });
+    ipcMain.handle("p4-dock:revert", async (event, ids: string[], client: string, change: string, file: string) => {
+      const window = BrowserWindow.fromWebContents(event.sender);
+      if (!window) throw new Error("Unknown window");
+      const files = await listChangeFiles(ids, client, change);
+      const target = files.find((row) => row.depotFile === file);
+      if (!target) throw new Error("File is not in this changelist");
+      if (target.action?.startsWith("move/")) throw new Error("移动文件需要成对撤销，暂不支持单文件撤销。");
+      const result = await dialog.showMessageBox(window, { type: "warning", title: "撤销 P4 文件", message: "确认撤销这个文件的本地修改？", detail: `工作区：${client}\nCL：${change}\n文件：${file}\n\n撤销后本地修改可能无法恢复。`, buttons: ["取消", "撤销文件"], defaultId: 0, cancelId: 0, noLink: true });
+      if (result.response !== 1) return false;
+      await revertChangeFile(ids, client, change, file);
+      return true;
     });
 
     // Renderer requests its own window close (e.g. Cmd+W on the last main

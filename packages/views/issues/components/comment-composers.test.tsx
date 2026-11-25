@@ -782,6 +782,27 @@ describe("comment composers", () => {
     expect(focusCalls.blurred).toBe(0);
   });
 
+  it("appends selected code to the matching issue draft without sending", async () => {
+    const onSubmit = vi.fn();
+    insertMarkdownBehavior.succeed = false;
+    useCommentDraftStore.getState().setDraft("new:issue-1", "已有草稿");
+    renderCommentInput(onSubmit);
+    act(() => window.dispatchEvent(new CustomEvent("multica:append-issue-comment", { detail: { issueId: "other", text: "wrong" } })));
+    expect(useCommentDraftStore.getState().getDraft("new:issue-1")).toBe("已有草稿");
+    act(() => window.dispatchEvent(new CustomEvent("multica:append-issue-comment", { detail: { issueId: "issue-1", text: "代码片段" } })));
+    await waitFor(() => expect(useCommentDraftStore.getState().getDraft("new:issue-1")).toBe("已有草稿\n\n代码片段"));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("inserts into an active editor without replacing its unsaved content", () => {
+    insertMarkdownBehavior.succeed = true;
+    insertMarkdownSpy.mockClear();
+    renderCommentInput(vi.fn());
+    activateComposer("comment-composer-shell");
+    act(() => window.dispatchEvent(new CustomEvent("multica:append-issue-comment", { detail: { issueId: "issue-1", text: "diff snippet" } })));
+    expect(insertMarkdownSpy).toHaveBeenCalledWith("diff snippet");
+  });
+
   // Same coupling on the reply side: the blur is bound to having actually wiped
   // the editor, not merely to acceptance.
   it("does not blur a reply box whose mid-flight draft was kept", async () => {

@@ -435,9 +435,9 @@ function PinRow({
     const separator = rest.match(/^(?:\s*[:：—–-]\s*|\s+)/u);
     const shortened = separator ? rest.slice(separator[0].length).trimStart() : "";
     const baseTitle = shortened || issue.title;
-    // Imported bug titles start with their build changelist, not the Multica ID.
+    // Imported titles may start with an external issue ID and build changelist.
     // Keep all following category tags and never turn a title into an empty row.
-    const withoutChangelist = baseTitle.replace(/^(?:\[BUG-\d+\]\s*)?(?:【CL\s*\d+】\s*)?/i, "");
+    const withoutChangelist = baseTitle.replace(/^(?:\[(?:BUG|STORY)-\d+\]\s*)?(?:【CL\s*\d+】\s*)?/i, "");
     const displayTitle = withoutChangelist || baseTitle;
     const tooltip = identifier && !shortened && issue.title.toUpperCase() !== identifier.toUpperCase()
       ? `${identifier} · ${issue.title}`

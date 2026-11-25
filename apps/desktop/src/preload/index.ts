@@ -215,6 +215,10 @@ const desktopAPI = {
     return () => ipcRenderer.removeListener("embedded-issue:navigation", handler);
   },
   getLiworkSnapshot: () => ipcRenderer.invoke("liwork:monitor-snapshot"),
+  p4IssueChanges: (ids: string[]) => ipcRenderer.invoke("p4-dock:changes", ids),
+  p4ChangeFiles: (ids: string[], client: string, change: string) => ipcRenderer.invoke("p4-dock:files", ids, client, change),
+  p4FileDiff: (ids: string[], client: string, change: string, file: string) => ipcRenderer.invoke("p4-dock:diff", ids, client, change, file),
+  p4RevertFile: (ids: string[], client: string, change: string, file: string) => ipcRenderer.invoke("p4-dock:revert", ids, client, change, file),
   getDesktopPerformanceSnapshot: () => ipcRenderer.invoke("performance:desktop-snapshot"),
   switchLiworkSession: (sessionId: string) => ipcRenderer.invoke("liwork:switch-session", sessionId),
   /** App version + normalized OS. Read once at preload time so the renderer

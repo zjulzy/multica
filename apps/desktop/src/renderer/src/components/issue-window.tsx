@@ -133,7 +133,7 @@ function EmbeddedIssueContent({ workspaceSlug, workspaceId }: { workspaceSlug: s
   const pendingPresentationAck = useRef<number | null>(null);
   useEffect(() => window.desktopAPI.onEmbeddedHeaderCommand?.((command) => {
     if (!command || typeof command !== "object") return;
-    const value = command as { command?: string; taskId?: string; refreshRequestId?: number };
+    const value = command as { command?: string; taskId?: string; issueId?: string; text?: string; refreshRequestId?: number };
     if (value.command === "toggle-sidebar") window.dispatchEvent(new Event("multica:embedded-toggle-sidebar"));
     else if (value.command === "refresh-issue" && canonicalId) {
       void Promise.all([
@@ -145,6 +145,7 @@ function EmbeddedIssueContent({ workspaceSlug, workspaceId }: { workspaceSlug: s
         if (typeof value.refreshRequestId === "number") window.desktopAPI.acknowledgeEmbeddedGuestRefresh?.(value.refreshRequestId, false);
       });
     }
+    else if (value.command === "append-comment" && value.issueId === canonicalId && typeof value.text === "string") window.dispatchEvent(new CustomEvent("multica:append-issue-comment", { detail: { issueId: canonicalId, text: value.text } }));
     else window.dispatchEvent(new CustomEvent("multica:embedded-header-command", { detail: value }));
   }), [canonicalId, queryClient, workspaceId]);
   useEffect(() => {

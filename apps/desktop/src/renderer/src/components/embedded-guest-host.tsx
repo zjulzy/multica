@@ -20,6 +20,7 @@ import { embeddedCanonicalIssuePath, parsePinnedIssueRoute } from "./pinned-issu
 import { observeSurfaceBounds } from "./surface-bounds";
 import { EmbeddedIssueShellHeader } from "@multica/views/issues/components";
 import { parseEmbeddedIssueMutation } from "./embedded-issue-mutation";
+import { toast } from "sonner";
 
 type Guest = { key: string; token: string; url: string; workspaceId: string; issueId: string; userId: string; ready: boolean };
 type PoolGuest = { token: string; url: string; workspaceId: string; slug: string; userId: string; ready: boolean };
@@ -114,6 +115,15 @@ export function EmbeddedGuestHost({ children, headerTarget = null }: { children:
   const wantedRef = useRef(wanted); wantedRef.current = wanted;
   const secondaryWantedRef = useRef(secondaryWanted); secondaryWantedRef.current = secondaryWanted;
   const selected = guests.find((guest) => guest.key === wanted);
+  useEffect(() => {
+    const handle = (event: Event) => {
+      const detail = (event as CustomEvent<{ issueId?: string; text?: string }>).detail;
+      if (!detail || !selected || selected.key !== wantedRef.current || selected.issueId !== detail.issueId || visible !== selected.key || typeof detail.text !== "string") return;
+      void window.desktopAPI.sendEmbeddedHeaderCommand({ token: selected.token, command: "append-comment", issueId: detail.issueId, text: detail.text }).then((sent) => { if (!sent) toast.error("无法写入当前任务的评论框，请重新打开任务后重试。"); }).catch(() => toast.error("无法写入当前任务的评论框，请重新打开任务后重试。"));
+    };
+    window.addEventListener("multica:append-issue-comment", handle);
+    return () => window.removeEventListener("multica:append-issue-comment", handle);
+  }, [selected?.token, selected?.issueId, visible]);
   const shellHeader = !!mainRoute && !!headerTarget && !!issue.issue && issue.canonicalId === selected?.issueId;
   const sidebarShortcut = useShortcut("toggleRightSidebar");
   const secondary = guests.find((guest) => guest.key === secondaryWanted);

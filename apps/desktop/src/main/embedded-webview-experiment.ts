@@ -198,7 +198,8 @@ export function setupEmbeddedWebviewExperiment(options: Dependencies) {
     const owner = ownerFor(event.sender), request = parseEmbeddedHeaderCommand(raw);
     if (!owner || !request) return false;
     const guest = guests.get(request.token), ticket = tickets.get(request.token);
-    if (!guest || guest.owner !== owner || guest.contents.isDestroyed() || (!guest.headerCommandsEnabled && request.command !== "refresh-issue") || !active.get(owner)?.has(request.token) || !ticket || ticket.userId !== options.userId(owner) || ticket.context.workspaceSlug !== options.workspaceSlug(owner)) return false;
+    if (!guest || guest.owner !== owner || guest.contents.isDestroyed() || (!guest.headerCommandsEnabled && request.command !== "refresh-issue" && request.command !== "append-comment") || !active.get(owner)?.has(request.token) || !ticket || ticket.userId !== options.userId(owner) || ticket.context.workspaceSlug !== options.workspaceSlug(owner)) return false;
+    if (request.command === "append-comment" && request.issueId !== ticket.context.issueId) return false;
     if (request.command === "refresh-issue") {
       const requestId = ++nextRefreshRequestId;
       return new Promise<boolean>((resolve) => {

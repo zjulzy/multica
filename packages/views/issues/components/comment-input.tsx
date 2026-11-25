@@ -125,6 +125,17 @@ function CommentInput({ issueId, onSubmit, onAccepted, onEditAnnotation, annotat
   // so tab close / mobile background doesn't lose work. Cleared on submit.
   const setDraft = useCommentDraftStore((s) => s.setDraft);
   useEffect(() => {
+    const append = (event: Event) => {
+      const detail = (event as CustomEvent<{ issueId?: unknown; text?: unknown }>).detail;
+      if (!detail || detail.issueId !== issueId || typeof detail.text !== "string" || !detail.text || detail.text.length > 50000) return;
+      if (editorRef.current?.insertMarkdownAtEnd(detail.text)) { editorRef.current.focus(); return; }
+      const existing = editorRef.current?.getMarkdown() ?? useCommentDraftStore.getState().getDraft(draftKey) ?? "";
+      setDraft(draftKey, existing.trim() ? `${existing}\n\n${detail.text}` : detail.text);
+    };
+    window.addEventListener("multica:append-issue-comment", append);
+    return () => window.removeEventListener("multica:append-issue-comment", append);
+  }, [draftKey, issueId, setDraft]);
+  useEffect(() => {
     // Only an actual stored value is an external update. An absent entry is
     // not a command to erase the editor: it is normal during the synchronous
     // keystroke -> store handoff and after explicit submit cleanup.
