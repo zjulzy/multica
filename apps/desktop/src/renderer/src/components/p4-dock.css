@@ -1,0 +1,34 @@
+.p4-dock {
+  --p4-panel: color-mix(in srgb, var(--surface) 89%, var(--primary) 11%);
+  --p4-panel-soft: color-mix(in srgb, var(--surface) 95%, var(--primary) 5%);
+  --p4-border: color-mix(in srgb, var(--surface-border) 85%, var(--primary) 15%);
+  --p4-add: color-mix(in srgb, var(--success) 10%, var(--surface));
+  --p4-remove: color-mix(in srgb, var(--destructive) 10%, var(--surface));
+  background: var(--surface);
+  color: var(--foreground);
+}
+.p4-dock .border-b, .p4-dock .border-r { border-color: var(--p4-border); }
+.p4-dock-toolbar, .p4-dock-diff-header { background: var(--p4-panel-soft); }
+.p4-dock-icon { background: var(--p4-panel); color: var(--primary); }
+.p4-dock-list { background: var(--p4-panel-soft); }
+.p4-dock-list-heading { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.85rem 0.35rem; color: var(--muted-foreground); font-size: 0.75rem; font-weight: 600; }
+.p4-dock-count, .p4-dock-file-action { border-radius: 0.35rem; padding: 0.1rem 0.4rem; background: var(--p4-panel); color: var(--muted-foreground); font-size: 0.7rem; }
+.p4-dock-file-action { flex-shrink: 0; }
+.p4-dock-item { position: relative; display: block; border: 1px solid transparent; border-radius: 0.45rem; margin-bottom: 0.2rem; padding: 0.55rem 0.6rem; }
+.p4-dock-item:hover { background: var(--surface-hover); }
+.p4-dock-item[aria-pressed="true"] { background: var(--surface-selected); border-color: var(--p4-border); color: var(--surface-selected-foreground); }
+.p4-dock-item[aria-pressed="true"]::before { position: absolute; content: ""; inset: 0.45rem auto 0.45rem 0; width: 3px; border-radius: 2px; background: var(--primary); }
+.p4-dock-item:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.p4-dock-item.flex { display: flex; }
+.p4-dock-list-empty { padding: 0.8rem 0.55rem; color: var(--muted-foreground); font-size: 0.75rem; }
+.p4-dock-empty { display: flex; flex: 1; min-height: 0; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; padding: 1rem; text-align: center; color: var(--muted-foreground); }
+.p4-dock-empty svg { width: 1.2rem; height: 1.2rem; color: var(--primary); opacity: 0.7; }
+.p4-dock-action { color: var(--muted-foreground); }
+.p4-dock-action:hover:not(:disabled) { background: var(--surface-hover); color: var(--foreground); }
+.p4-dock-ask { background: var(--primary); color: var(--primary-foreground); }
+.p4-dock-ask:hover:not(:disabled) { filter: brightness(1.08); }
+.p4-dock [data-kind="add"] { background: var(--p4-add); }
+.p4-dock [data-kind="remove"] { background: var(--p4-remove); }
+.p4-dock [data-kind="hunk"] { background: var(--p4-panel); }
+.p4-dock [role="region"][aria-label="Diff"] { background: var(--surface); }
+@media (prefers-reduced-motion: no-preference) { html[data-interface-motion="on"] .p4-dock-item { transition: background-color 120ms ease, border-color 120ms ease; } }

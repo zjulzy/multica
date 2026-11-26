@@ -17,7 +17,7 @@ export const P4DiffView = memo(function P4DiffView({ diff, path, onSelection }: 
     const selected = window.getSelection();
     onSelection(selected && element.contains(selected.anchorNode) && element.contains(selected.focusNode) ? selected.toString() : "");
   };
-  return <div tabIndex={0} role="region" aria-label="Diff" className="transcript-code min-h-0 flex-1 select-text overflow-auto bg-background font-mono text-xs leading-6" onMouseUp={(event) => capture(event.currentTarget)} onKeyUp={(event) => capture(event.currentTarget)}>
+  return <div tabIndex={0} role="region" aria-label="Diff" className="transcript-code min-h-0 min-w-0 flex-1 select-text overflow-auto bg-background font-mono text-xs leading-6" onMouseUp={(event) => capture(event.currentTarget)} onKeyUp={(event) => capture(event.currentTarget)}>
     <pre className="m-0 min-w-max whitespace-pre py-2 font-inherit">{lines.map((line, index) => {
       if (line.kind === "hunk" || line.kind === "message") return <Fragment key={index}><span data-kind={line.kind} className={line.kind === "hunk" ? "select-none bg-muted/40 px-4 text-muted-foreground" : "px-4 text-muted-foreground"}>{line.text}</span>{"\n"}</Fragment>;
       const oldHtml = line.kind !== "add" ? highlighted?.old?.[oldIndex++] : undefined;
