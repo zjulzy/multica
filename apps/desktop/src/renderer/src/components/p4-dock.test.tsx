@@ -27,6 +27,19 @@ describe("P4 dock", () => {
     vi.spyOn(api, "listMembers").mockResolvedValue([{ user_id: "me", role: "member" }] as never);
     vi.spyOn(api, "listTasksByIssue").mockResolvedValue([{ issue_id: "issue-1", agent_id: agentId, created_at: "2026-11-26T00:00:00Z" }] as never);
   });
+  it("opens file search from the file list without triggering page search", async () => {
+    const pageListener = vi.fn();
+    document.addEventListener("keydown", pageListener);
+    renderDock();
+    fireEvent.click(await screen.findByText("CL 123"));
+    const fileButton = await screen.findByRole("button", { name: /file\.cs/ });
+    fireEvent.click(fileButton);
+    await screen.findByText("code");
+    fireEvent.keyDown(fileButton, { key: "f", ctrlKey: true });
+    expect(screen.getByRole("textbox", { name: "搜索当前文件" })).toBeInTheDocument();
+    expect(pageListener).not.toHaveBeenCalled();
+    document.removeEventListener("keydown", pageListener);
+  });
   it("loads matching CLs and files, then offers the selected diff as an issue draft", async () => {
     const listener = vi.fn(); window.addEventListener("multica:append-issue-comment", listener);
     renderDock();

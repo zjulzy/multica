@@ -854,9 +854,9 @@ if (!gotTheLock) {
       if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");
       return listChangeFiles(ids, client, change);
     });
-    ipcMain.handle("p4-dock:diff", (event, ids: string[], client: string, change: string, file: string) => {
+    ipcMain.handle("p4-dock:diff", (event, ids: string[], client: string, change: string, file: string, fullContext?: boolean) => {
       if (!BrowserWindow.fromWebContents(event.sender)) throw new Error("Unknown window");
-      return diffChangeFile(ids, client, change, file);
+      return diffChangeFile(ids, client, change, file, fullContext === true);
     });
     ipcMain.handle("p4-dock:revert", async (event, ids: string[], client: string, change: string, file: string) => {
       const window = BrowserWindow.fromWebContents(event.sender);

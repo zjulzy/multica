@@ -36,6 +36,10 @@ describe("P4 file operation guards", () => {
     expect(await diffChangeFile(["ZGA-1"], "local", "123", "//depot/file.cs")).toContain("-old content");
     expect(state.calls.at(-1)).toEqual(["-c", "local", "print", "-q", "//depot/file.cs#3"]);
   });
+  it("requests the full context only when explicitly requested", async () => {
+    await diffChangeFile(["ZGA-1"], "local", "123", "//depot/file.cs", true);
+    expect(state.calls.at(-1)).toEqual(["-c", "local", "diff", "-du1000000", "//depot/file.cs"]);
+  });
   it("shows added text from the verified local workspace", async () => {
     state.action = "add";
     expect(await diffChangeFile(["ZGA-1"], "local", "123", "//depot/file.cs")).toContain("+new content");

@@ -70,7 +70,7 @@ async function verifiedFile(ids: string[], client: string, change: string, file:
   return row;
 }
 
-export async function diffChangeFile(ids: string[], client: string, change: string, file: string): Promise<string> {
+export async function diffChangeFile(ids: string[], client: string, change: string, file: string, fullContext = false): Promise<string> {
   const row = await verifiedFile(ids, client, change, file);
   if (/^(binary|apple|resource|ubinary)/i.test(row.type ?? "")) return "二进制文件不支持文本 Diff。";
   if (row.action === "add" || row.action === "move/add") {
@@ -91,7 +91,7 @@ export async function diffChangeFile(ids: string[], client: string, change: stri
     if (contents.includes("\0")) throw new Error("Binary or unsupported text encoding");
     return `--- ${file}\n+++ /dev/null\n${contents.split(/\r?\n/).map((line) => `-${line}`).join("\n")}`;
   }
-  return p4(["-c", client, "diff", "-du", file]);
+  return p4(["-c", client, "diff", fullContext === true ? "-du1000000" : "-du", file]);
 }
 
 export async function revertChangeFile(ids: string[], client: string, change: string, file: string): Promise<void> {

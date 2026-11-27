@@ -86,7 +86,12 @@ export function P4Dock({ workspaceId }: { workspaceId: string }) {
     }
   };
   const buttonStyle = "rounded-md focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-40";
-  return <div className="p4-dock flex min-h-0 min-w-0 flex-1 flex-col text-sm">
+  return <div className="p4-dock flex min-h-0 min-w-0 flex-1 flex-col text-sm" onKeyDown={(event) => {
+    if (!event.defaultPrevented && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+      const trigger = event.currentTarget.querySelector<HTMLButtonElement>(".p4-find-trigger");
+      if (trigger) { event.preventDefault(); event.stopPropagation(); trigger.click(); }
+    }
+  }}>
     <div className="p4-dock-toolbar flex min-h-11 items-center gap-3 border-b px-4">
       <span className="p4-dock-icon grid size-7 place-items-center rounded-md"><GitCompareArrows aria-hidden className="size-4" /></span>
       <strong className="shrink-0">P4</strong><span className="h-4 w-px bg-border" />
@@ -120,7 +125,7 @@ export function P4Dock({ workspaceId }: { workspaceId: string }) {
           <button type="button" title={selection ? "将选中代码带入当前任务评论草稿" : "先选中需要提问的代码"} disabled={!selection || selection.length > 45000 || asking} className={`${buttonStyle} p4-dock-ask flex shrink-0 items-center gap-1.5 px-3 py-1.5 font-medium`} onClick={() => void ask()}>{asking ? <Loader2 aria-hidden className="size-3.5 animate-spin" /> : <Sparkles aria-hidden className="size-3.5" />}问 AI</button>
           <button type="button" disabled={!file || !selected} className={`${buttonStyle} p4-dock-action flex shrink-0 items-center gap-1.5 px-2.5 py-1.5`} onClick={() => { if (selected && file) void window.desktopAPI.p4RevertFile(ids, selected.client, selected.change, file.depotFile).then((done) => { if (done) setRefresh((n) => n + 1); }).catch((e) => setError(String(e))); }}><Undo2 aria-hidden className="size-3.5" />撤销文件</button>
         </div>
-        {loadingDiff ? <div className="p4-dock-empty"><Loader2 aria-hidden className="animate-spin" /><span>正在加载 Diff…</span></div> : diff ? <P4DiffView diff={diff} path={file?.depotFile ?? ""} onSelection={setSelection} /> : <div className="p4-dock-empty"><GitCompareArrows aria-hidden /><span>{file ? "没有可显示的文本 Diff。" : "选择文件查看代码差异"}</span><span className="text-xs">{file ? "" : "选中代码后，可以带入当前任务向 AI 提问"}</span></div>}
+        {loadingDiff ? <div className="p4-dock-empty"><Loader2 aria-hidden className="animate-spin" /><span>正在加载 Diff…</span></div> : diff && file && selected ? <P4DiffView key={`${selected.client}:${selected.change}:${file.depotFile}`} diff={diff} path={file.depotFile} onSelection={setSelection} onLoadFullContext={() => window.desktopAPI.p4FileDiff(ids, selected.client, selected.change, file.depotFile, true)} /> : <div className="p4-dock-empty"><GitCompareArrows aria-hidden /><span>{file ? "没有可显示的文本 Diff。" : "选择文件查看代码差异"}</span><span className="text-xs">{file ? "" : "选中代码后，可以带入当前任务向 AI 提问"}</span></div>}
       </section>
     </div>}
   </div>;

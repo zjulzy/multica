@@ -31,4 +31,12 @@
 .p4-dock [data-kind="remove"] { background: var(--p4-remove); }
 .p4-dock [data-kind="hunk"] { background: var(--p4-panel); }
 .p4-dock [role="region"][aria-label="Diff"] { background: var(--surface); }
+.p4-diff-controls { background: var(--p4-panel-soft); border-color: var(--p4-border); min-height: 34px; }
+.p4-diff-button { display: inline-flex; align-items: center; justify-content: center; min-height: 26px; min-width: 26px; border-radius: 4px; color: var(--muted-foreground); }
+.p4-diff-button:hover:not(:disabled) { background: var(--surface-hover); color: var(--foreground); }
+.p4-diff-button:disabled { opacity: .4; }
+.p4-diff-button:focus-visible, .p4-diff-search:focus-visible { outline: 2px solid var(--ring); }
+.p4-diff-search { width: 150px; min-width: 60px; border: 1px solid var(--p4-border); border-radius: 4px; background: var(--surface); padding: 2px 6px; color: var(--foreground); }
+::highlight(p4-find) { background: #facc1580; color: inherit; }
+::highlight(p4-find-active) { background: #f59e0bcc; color: inherit; }
 @media (prefers-reduced-motion: no-preference) { html[data-interface-motion="on"] .p4-dock-item { transition: background-color 120ms ease, border-color 120ms ease; } }

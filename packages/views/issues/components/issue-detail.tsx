@@ -17,6 +17,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { finishIssuePerformance, hasPendingIssuePerformance } from "@multica/core/issue-performance";
 import { useIssueScrollPerformance } from "../hooks/scroll-performance";
 import { clearReplyFoldSpacer } from "./reply-fold-anchor";
+import { scheduleTimelineScrollSynchronization } from "./timeline-scroll-initialization";
 import { useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { AppLink, useBackOrReplace } from "../../navigation";
 import { IssueDuplicateBanner, IssueDuplicatesSection, isDuplicateIssue } from "./issue-duplicates";
@@ -2169,6 +2170,12 @@ function IssueDetailBody({ issueId, onDelete, onDone, onInitialContentReady, onU
   const isFlatTimeline = find.open || fullThreadExperiment;
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const virtualTimelineRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isFlatTimeline || !scrollContainerEl || virtualItems.length === 0) return;
+    const wrapper = virtualTimelineRef.current;
+    if (!wrapper) return;
+    return scheduleTimelineScrollSynchronization(scrollContainerEl, () => wrapper.querySelector<HTMLElement>("[data-virtuoso-scroller]"));
+  }, [id, isFlatTimeline, scrollContainerEl, virtualItems.length]);
   // Scroll a freshly posted comment into view, aligned so its bottom sits just
   // above the sticky composer (never behind it). A reply lives inside its root
   // CommentCard, so the containing top-level row is the scroll target. Flat and

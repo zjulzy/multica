@@ -68,7 +68,7 @@ interface DesktopAPI {
   getLiworkSnapshot: () => Promise<import("../shared/liwork-monitor").LiworkSnapshot>;
   p4IssueChanges: (ids: string[]) => Promise<Record<string, string>[]>;
   p4ChangeFiles: (ids: string[], client: string, change: string) => Promise<Record<string, string>[]>;
-  p4FileDiff: (ids: string[], client: string, change: string, file: string) => Promise<string>;
+  p4FileDiff: (ids: string[], client: string, change: string, file: string, fullContext?: boolean) => Promise<string>;
   p4RevertFile: (ids: string[], client: string, change: string, file: string) => Promise<boolean>;
   getDesktopPerformanceSnapshot: () => Promise<import("../shared/performance-monitor").DesktopPerformanceSnapshot>;
   switchLiworkSession: (sessionId: string) => Promise<void>;
